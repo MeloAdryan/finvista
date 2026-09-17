@@ -1,0 +1,1531 @@
+/* =========================================================
+   FINVISTA — ESTRUTURA GLOBAL
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  background: #f4f6f8;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.finvista-app {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  width: 100%;
+  min-height: 100vh;
+  background: #f4f6f8;
+}
+
+/* =========================================================
+   SIDEBAR — BASE
+   ========================================================= */
+
+.finvista-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+
+  width: 240px;
+  min-height: 100vh;
+
+  padding: 26px 20px;
+
+  color: #ffffff;
+  background:
+    linear-gradient(
+      180deg,
+      #1a2942 0%,
+      #0f2a44 100%
+    );
+
+  border-right: 1px solid
+    rgba(255, 255, 255, 0.06);
+
+  box-shadow:
+    8px 0 30px
+    rgba(15, 42, 68, 0.08);
+
+  z-index: 100;
+}
+
+.finvista-sidebar-placeholder {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+/* =========================================================
+   WORKSPACE
+   ========================================================= */
+
+.finvista-workspace {
+  grid-column: 2;
+
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+}
+
+/* =========================================================
+   TOPBAR
+   ========================================================= */
+
+.finvista-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  min-height: 82px;
+
+  padding: 17px 32px;
+
+  background:
+    rgba(255, 255, 255, 0.94);
+
+  border-bottom:
+    1px solid #e2e8f0;
+
+  box-shadow:
+    0 2px 12px
+    rgba(15, 42, 68, 0.035);
+}
+
+.finvista-topbar-eyebrow {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: #b8763d;
+
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: 0.15em;
+}
+
+.finvista-topbar h1 {
+  margin: 0;
+
+  color: #0f2a44;
+
+  font-size: 20px;
+  font-weight: 800;
+
+  letter-spacing: -0.025em;
+}
+
+/* =========================================================
+   CONTEÚDO PRINCIPAL
+   ========================================================= */
+
+.finvista-main {
+  flex: 1;
+
+  width: 100%;
+  min-width: 0;
+
+  padding: 28px 32px 38px;
+}
+
+/*
+   O Dashboard passa a utilizar a largura
+   disponível dentro do workspace.
+*/
+
+.finvista-main > * {
+  width: 100%;
+  max-width: none;
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.finvista-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  min-height: 58px;
+
+  padding: 16px 32px;
+
+  color:
+    rgba(255, 255, 255, 0.7);
+
+  background: #0f2a44;
+
+  border-top:
+    1px solid
+    rgba(255, 255, 255, 0.06);
+}
+
+.finvista-footer > span {
+  color: #ffffff;
+
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.finvista-footer small {
+  font-size: 10px;
+}
+
+/* =========================================================
+   RESPONSIVIDADE BASE
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+  .finvista-app {
+    display: block;
+  }
+
+  .finvista-sidebar {
+    display: none;
+  }
+
+  .finvista-workspace {
+    width: 100%;
+  }
+
+  .finvista-main {
+    padding:
+      22px 18px 32px;
+  }
+
+  .finvista-topbar {
+    padding:
+      16px 18px;
+  }
+
+  .finvista-footer {
+    padding:
+      16px 18px;
+  }
+}
+
+@media (max-width: 600px) {
+
+  .finvista-topbar {
+    min-height: 70px;
+  }
+
+  .finvista-topbar h1 {
+    font-size: 18px;
+  }
+
+  .finvista-footer {
+    flex-direction: column;
+    align-items: flex-start;
+
+    gap: 5px;
+  }
+}
+/* =========================================================
+   SIDEBAR FINVISTA — NOVO DESIGN
+   ========================================================= */
+
+.finvista-sidebar-inner {
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+  min-height: 100vh;
+
+  padding: 26px 16px 18px;
+}
+
+
+/* =========================================================
+   MARCA
+   ========================================================= */
+
+.finvista-brand {
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  min-height: 48px;
+  padding: 0 8px;
+}
+
+.finvista-brand-mark {
+  position: relative;
+
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+
+  flex: 0 0 42px;
+
+  width: 42px;
+  height: 42px;
+
+  gap: 3px;
+
+  padding: 9px 8px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #173b5d,
+      #0b2238
+    );
+
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 18px rgba(0, 0, 0, 0.16);
+}
+
+.finvista-brand-mark span {
+  display: block;
+
+  width: 6px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #e89b3d,
+      #b8763d
+    );
+
+  border-radius: 3px 3px 1px 1px;
+
+  box-shadow:
+    0 2px 7px rgba(232, 155, 61, 0.2);
+}
+
+.finvista-brand-mark span:nth-child(1) {
+  height: 10px;
+}
+
+.finvista-brand-mark span:nth-child(2) {
+  height: 17px;
+}
+
+.finvista-brand-mark span:nth-child(3) {
+  height: 24px;
+}
+
+.finvista-brand-text {
+  display: flex;
+  flex-direction: column;
+
+  min-width: 0;
+}
+
+.finvista-brand-text strong {
+  color: #ffffff;
+
+  font-size: 19px;
+  font-weight: 800;
+
+  letter-spacing: -0.025em;
+}
+
+.finvista-brand-text small {
+  margin-top: 2px;
+
+  color: #8298ab;
+
+  font-size: 9px;
+  font-weight: 600;
+
+  letter-spacing: 0.04em;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   DIVISOR
+   ========================================================= */
+
+.finvista-sidebar-divider {
+  width: calc(100% - 16px);
+  height: 1px;
+
+  margin: 22px 8px 20px;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.03),
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.03)
+    );
+}
+
+
+/* =========================================================
+   NAVEGAÇÃO
+   ========================================================= */
+
+.finvista-navigation {
+  display: flex;
+  flex-direction: column;
+
+  gap: 5px;
+
+  width: 100%;
+}
+
+.finvista-navigation-label {
+  display: block;
+
+  margin: 0 10px 7px;
+
+  color: #607a90;
+
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: 0.14em;
+}
+
+.finvista-navigation-group {
+  margin-top: 19px;
+}
+
+.finvista-nav-item {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  width: 100%;
+  min-height: 44px;
+
+  padding: 8px 11px;
+
+  color: #a9bac8;
+
+  text-decoration: none;
+
+  border: 1px solid transparent;
+  border-radius: 11px;
+
+  font-size: 12px;
+  font-weight: 650;
+
+  transition:
+    color 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.finvista-nav-item:hover {
+  color: #ffffff;
+
+  background: rgba(255, 255, 255, 0.055);
+
+  border-color: rgba(255, 255, 255, 0.055);
+
+  transform: translateX(2px);
+}
+
+.finvista-nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 30px;
+
+  width: 30px;
+  height: 30px;
+
+  color: #8298ab;
+
+  border-radius: 8px;
+
+  transition:
+    color 0.18s ease,
+    background 0.18s ease;
+}
+
+.finvista-nav-icon svg {
+  width: 18px;
+  height: 18px;
+
+  fill: none;
+
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.finvista-nav-item:hover .finvista-nav-icon {
+  color: #d7e2ea;
+
+  background: rgba(255, 255, 255, 0.05);
+}
+
+
+/* =========================================================
+   ITEM ATIVO
+   ========================================================= */
+
+.finvista-nav-item-active {
+  color: #ffffff;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(184, 118, 61, 0.18),
+      rgba(232, 155, 61, 0.07)
+    );
+
+  border-color: rgba(232, 155, 61, 0.16);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 5px 14px rgba(0, 0, 0, 0.08);
+}
+
+.finvista-nav-item-active::before {
+  content: "";
+
+  position: absolute;
+
+  top: 9px;
+  bottom: 9px;
+  left: -16px;
+
+  width: 3px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #e89b3d,
+      #b8763d
+    );
+
+  border-radius: 0 4px 4px 0;
+
+  box-shadow:
+    0 0 10px rgba(232, 155, 61, 0.28);
+}
+
+.finvista-nav-item-active .finvista-nav-icon {
+  color: #e89b3d;
+
+  background: rgba(232, 155, 61, 0.09);
+}
+
+
+/* =========================================================
+   PARTE INFERIOR
+   ========================================================= */
+
+.finvista-sidebar-bottom {
+  display: flex;
+  flex-direction: column;
+
+  gap: 14px;
+
+  margin-top: auto;
+  padding-top: 28px;
+}
+
+.finvista-system-status {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 12px;
+
+  background: rgba(255, 255, 255, 0.035);
+
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 11px;
+}
+
+.finvista-system-status-dot {
+  flex: 0 0 auto;
+
+  width: 7px;
+  height: 7px;
+
+  background: #10b981;
+
+  border-radius: 50%;
+
+  box-shadow:
+    0 0 0 4px rgba(16, 185, 129, 0.09),
+    0 0 10px rgba(16, 185, 129, 0.15);
+}
+
+.finvista-system-status > div {
+  display: flex;
+  flex-direction: column;
+
+  min-width: 0;
+}
+
+.finvista-system-status strong {
+  overflow: hidden;
+
+  color: #cbd7e0;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finvista-system-status small {
+  margin-top: 3px;
+
+  color: #6f879a;
+
+  font-size: 9px;
+}
+
+.finvista-sidebar-version {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 8px;
+
+  color: #526d82;
+
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.finvista-sidebar-version span {
+  padding: 3px 6px;
+
+  color: #71889a;
+
+  background: rgba(255, 255, 255, 0.035);
+
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  border-radius: 5px;
+}
+
+
+/* =========================================================
+   SIDEBAR — AJUSTE
+   ========================================================= */
+
+@media (max-height: 720px) and (min-width: 901px) {
+  .finvista-sidebar-inner {
+    padding-top: 18px;
+    padding-bottom: 14px;
+  }
+
+  .finvista-sidebar-divider {
+    margin-top: 15px;
+    margin-bottom: 14px;
+  }
+
+  .finvista-navigation-group {
+    margin-top: 10px;
+  }
+
+  .finvista-nav-item {
+    min-height: 39px;
+  }
+
+  .finvista-sidebar-bottom {
+    padding-top: 16px;
+  }
+}
+/* =========================================================
+   NAVEGAÇÃO ENTRE SEÇÕES
+   ========================================================= */
+
+html {
+  scroll-behavior: smooth;
+}
+
+#dashboard,
+#projecao,
+#fluxo-caixa,
+#centros-custo,
+#despesas,
+#orcamentos,
+#historico {
+  scroll-margin-top: 110px;
+}
+/* =========================================================
+   SIDEBAR — RECOLHER / EXPANDIR
+   ========================================================= */
+
+.finvista-app,
+.finvista-sidebar {
+  transition:
+    grid-template-columns 0.28s ease,
+    width 0.28s ease;
+}
+
+/* Botão lateral */
+
+.finvista-sidebar-toggle {
+  position: absolute;
+  top: 30px;
+  right: -16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 32px;
+  height: 32px;
+
+  padding: 0;
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #e89b3d 0%,
+      #b8763d 100%
+    );
+
+  color: #ffffff;
+
+  box-shadow:
+    0 5px 14px rgba(15, 42, 68, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+
+  cursor: pointer;
+  z-index: 110;
+
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease;
+}
+
+.finvista-sidebar-toggle:hover {
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 7px 18px rgba(15, 42, 68, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26);
+
+  filter: brightness(1.05);
+}
+
+.finvista-sidebar-toggle:active {
+  transform: translateY(1px);
+
+  box-shadow:
+    0 2px 7px rgba(15, 42, 68, 0.25),
+    inset 0 2px 4px rgba(74, 39, 13, 0.18);
+}
+
+.finvista-sidebar-toggle svg {
+  width: 17px;
+  height: 17px;
+
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+
+/* =========================================================
+   ESTADO RECOLHIDO
+   ========================================================= */
+
+.finvista-app.finvista-app-sidebar-collapsed {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.finvista-app-sidebar-collapsed .finvista-sidebar {
+  width: 72px;
+}
+
+.finvista-app-sidebar-collapsed .finvista-sidebar-inner {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+
+/* Marca */
+
+.finvista-app-sidebar-collapsed .finvista-brand {
+  justify-content: center;
+}
+
+.finvista-app-sidebar-collapsed .finvista-brand-text {
+  display: none;
+}
+
+.finvista-app-sidebar-collapsed .finvista-brand-mark {
+  margin: 0;
+}
+
+
+/* Títulos dos grupos */
+
+.finvista-app-sidebar-collapsed
+.finvista-navigation-label {
+  height: 0;
+  margin: 0;
+  overflow: hidden;
+  opacity: 0;
+}
+
+
+/* Navegação */
+
+.finvista-app-sidebar-collapsed .finvista-navigation {
+  align-items: center;
+}
+
+.finvista-app-sidebar-collapsed .finvista-nav-item {
+  justify-content: center;
+
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+
+  padding: 0;
+}
+
+.finvista-app-sidebar-collapsed
+.finvista-nav-item > span:not(.finvista-nav-icon) {
+  display: none;
+}
+
+.finvista-app-sidebar-collapsed .finvista-nav-icon {
+  margin: 0;
+}
+
+
+/* Indicador ativo */
+
+.finvista-app-sidebar-collapsed
+.finvista-nav-item-active::before {
+  left: -10px;
+}
+
+
+/* Área inferior */
+
+.finvista-app-sidebar-collapsed
+.finvista-system-status {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.finvista-app-sidebar-collapsed
+.finvista-system-status > div {
+  display: none;
+}
+
+.finvista-app-sidebar-collapsed
+.finvista-sidebar-version {
+  justify-content: center;
+  font-size: 0;
+}
+
+.finvista-app-sidebar-collapsed
+.finvista-sidebar-version span {
+  font-size: 10px;
+}
+
+
+/* Botão acompanha a borda da sidebar */
+
+.finvista-app-sidebar-collapsed
+.finvista-sidebar-toggle {
+  right: -16px;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .finvista-sidebar-toggle {
+    display: none;
+  }
+
+  .finvista-app.finvista-app-sidebar-collapsed {
+    display: block;
+  }
+}
+/* =========================================================
+   SIDEBAR MOBILE — DRAWER
+   ========================================================= */
+
+/* Desktop: elementos exclusivos do mobile ficam escondidos */
+.finvista-mobile-menu-button,
+.finvista-mobile-overlay {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  /* O layout deixa de reservar espaço para a sidebar */
+  .finvista-app,
+  .finvista-app.finvista-app-sidebar-collapsed {
+    display: block;
+    width: 100%;
+  }
+
+  .finvista-workspace {
+    width: 100%;
+  }
+
+  /* Sidebar vira um painel sobreposto */
+  .finvista-sidebar,
+  .finvista-app-sidebar-collapsed .finvista-sidebar {
+    display: block;
+
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+
+    width: min(280px, 84vw);
+    min-height: 100vh;
+
+    padding: 0;
+
+    transform: translateX(-105%);
+
+    visibility: hidden;
+    pointer-events: none;
+
+    z-index: 1000;
+
+    box-shadow:
+      18px 0 45px rgba(15, 42, 68, 0.24);
+
+    transition:
+      transform 0.28s ease,
+      visibility 0.28s ease;
+  }
+
+  .finvista-sidebar.finvista-sidebar-mobile-open {
+    transform: translateX(0);
+
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  /* No mobile sempre mostramos a sidebar completa */
+  .finvista-app-sidebar-collapsed .finvista-sidebar-inner {
+    padding: 26px 16px 18px;
+  }
+
+  .finvista-app-sidebar-collapsed .finvista-brand {
+    justify-content: flex-start;
+  }
+
+  .finvista-app-sidebar-collapsed .finvista-brand-text {
+    display: flex;
+  }
+
+  .finvista-app-sidebar-collapsed .finvista-navigation {
+    align-items: stretch;
+  }
+
+  .finvista-app-sidebar-collapsed
+  .finvista-navigation-label {
+    height: auto;
+    margin: initial;
+    overflow: visible;
+    opacity: 1;
+  }
+
+  .finvista-app-sidebar-collapsed .finvista-nav-item {
+    justify-content: flex-start;
+
+    width: 100%;
+    min-width: 0;
+    height: auto;
+
+    padding: 11px 12px;
+  }
+
+  .finvista-app-sidebar-collapsed
+  .finvista-nav-item > span:not(.finvista-nav-icon) {
+    display: inline;
+  }
+
+  .finvista-app-sidebar-collapsed
+  .finvista-system-status {
+    justify-content: flex-start;
+  }
+
+  .finvista-app-sidebar-collapsed
+  .finvista-system-status > div {
+    display: flex;
+  }
+
+  .finvista-app-sidebar-collapsed
+  .finvista-sidebar-version {
+    justify-content: initial;
+    font-size: inherit;
+  }
+
+  .finvista-app-sidebar-collapsed
+  .finvista-sidebar-version span {
+    font-size: inherit;
+  }
+
+  /* Botão desktop não aparece no drawer */
+  .finvista-sidebar-toggle {
+    display: none;
+  }
+
+  /* Botão hambúrguer */
+  .finvista-mobile-menu-button {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+
+    width: 42px;
+    height: 42px;
+
+    margin: 0;
+    padding: 0;
+
+    gap: 5px;
+
+    border: 1px solid rgba(15, 42, 68, 0.1);
+    border-radius: 11px;
+
+    background: #ffffff;
+
+    box-shadow:
+      0 4px 12px rgba(15, 42, 68, 0.09),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+    cursor: pointer;
+
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.18s ease;
+  }
+
+  .finvista-mobile-menu-button:hover {
+    transform: translateY(-1px);
+
+    box-shadow:
+      0 6px 16px rgba(15, 42, 68, 0.13);
+  }
+
+  .finvista-mobile-menu-button:active {
+    transform: translateY(1px);
+  }
+
+  .finvista-mobile-menu-button span {
+    display: block;
+
+    width: 19px;
+    height: 2px;
+
+    border-radius: 999px;
+
+    background: #0f2a44;
+  }
+
+  /* Topbar acomoda botão + título */
+  .finvista-topbar {
+    display: flex;
+    align-items: center;
+
+    gap: 14px;
+  }
+
+  /* Fundo escuro atrás da sidebar */
+  .finvista-mobile-overlay {
+    display: block;
+
+    position: fixed;
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    margin: 0;
+    padding: 0;
+
+    border: 0;
+
+    background: rgba(15, 42, 68, 0.42);
+
+    backdrop-filter: blur(2px);
+
+    cursor: pointer;
+
+    z-index: 900;
+  }
+}
+/* =========================================================
+   TOPBAR EXECUTIVO — FINVISTA
+   ========================================================= */
+
+.finvista-topbar {
+  position: relative;
+  gap: 24px;
+}
+
+.finvista-topbar-left {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 14px;
+}
+
+.finvista-topbar-title {
+  min-width: 0;
+}
+
+.finvista-topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-left: auto;
+}
+
+/* Status do ambiente */
+
+.finvista-topbar-status,
+.finvista-topbar-period {
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 7px 14px;
+  border: 1px solid rgba(15, 42, 68, 0.08);
+  border-radius: 12px;
+  background: rgba(244, 246, 248, 0.72);
+}
+
+.finvista-topbar-status {
+  gap: 10px;
+}
+
+.finvista-topbar-status-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+
+.finvista-topbar-status > div,
+.finvista-topbar-period {
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.finvista-topbar-status small,
+.finvista-topbar-period small {
+  margin-bottom: 2px;
+  color: #8190a3;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.12em;
+}
+
+.finvista-topbar-status strong,
+.finvista-topbar-period strong {
+  color: #0f2a44;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* Separação visual do período */
+
+.finvista-topbar-period {
+  position: relative;
+  min-width: 132px;
+}
+
+/* Botão reservado para futura sincronização */
+
+.finvista-topbar-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  min-height: 46px;
+  padding: 0 14px;
+
+  border: 1px solid rgba(184, 118, 61, 0.25);
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(232, 155, 61, 0.11),
+      rgba(184, 118, 61, 0.07)
+    );
+
+  color: #9c6839;
+
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+
+  box-shadow:
+    0 3px 9px rgba(15, 42, 68, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.finvista-topbar-refresh svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* O botão ainda não possui integração real */
+.finvista-topbar-refresh:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+/* =========================================================
+   TOPBAR — TABLET
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .finvista-topbar-period {
+    display: none;
+  }
+}
+
+/* =========================================================
+   TOPBAR — MOBILE
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .finvista-topbar {
+    justify-content: space-between;
+  }
+
+  .finvista-topbar-left {
+    flex: 1;
+  }
+
+  .finvista-topbar-actions {
+    margin-left: 0;
+  }
+
+  .finvista-topbar-status {
+    min-height: 42px;
+    padding: 6px 10px;
+  }
+
+  .finvista-topbar-refresh {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .finvista-topbar {
+    gap: 10px;
+  }
+
+  .finvista-topbar-left {
+    gap: 10px;
+  }
+
+  .finvista-topbar-status {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .finvista-topbar-status > div {
+    display: none;
+  }
+
+  .finvista-topbar-status-dot {
+    width: 9px;
+    height: 9px;
+  }
+}
+/* =========================================================
+   AJUSTE — STATUS DO TOPBAR
+   ========================================================= */
+
+.finvista-topbar-status > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+
+  gap: 3px;
+  min-width: 76px;
+}
+
+.finvista-topbar-status small {
+  display: block;
+  line-height: 1;
+}
+
+.finvista-topbar-status strong {
+  display: block;
+  line-height: 1.15;
+}
+/* =========================================================
+   FOOTER EXECUTIVO — FINVISTA
+   ========================================================= */
+
+.finvista-footer {
+  min-height: 72px;
+
+  padding: 14px 32px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #1a2942 0%,
+      #0f2a44 100%
+    );
+
+  border-top:
+    1px solid rgba(255, 255, 255, 0.07);
+}
+
+.finvista-footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.finvista-footer-mark {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+
+  width: 34px;
+  height: 34px;
+
+  padding: 7px;
+
+  gap: 3px;
+
+  border:
+    1px solid rgba(232, 155, 61, 0.22);
+
+  border-radius: 9px;
+
+  background:
+    rgba(255, 255, 255, 0.045);
+}
+
+.finvista-footer-mark span {
+  display: block;
+
+  width: 4px;
+
+  border-radius: 3px 3px 1px 1px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #e89b3d,
+      #b8763d
+    );
+}
+
+.finvista-footer-mark span:nth-child(1) {
+  height: 9px;
+}
+
+.finvista-footer-mark span:nth-child(2) {
+  height: 14px;
+}
+
+.finvista-footer-mark span:nth-child(3) {
+  height: 19px;
+}
+
+.finvista-footer-brand > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.finvista-footer-brand strong {
+  color: #ffffff;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.finvista-footer-brand small {
+  color: rgba(255, 255, 255, 0.48);
+
+  font-size: 9px;
+}
+
+
+/* Informações */
+
+.finvista-footer-info {
+  display: flex;
+  align-items: center;
+
+  gap: 18px;
+}
+
+.finvista-footer-item {
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+}
+
+.finvista-footer-item small {
+  color: rgba(255, 255, 255, 0.38);
+
+  font-size: 7px;
+  font-weight: 800;
+
+  letter-spacing: 0.13em;
+}
+
+.finvista-footer-item > span {
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+
+  color: rgba(255, 255, 255, 0.72);
+
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.finvista-footer-status-dot {
+  display: inline-block;
+
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: #10b981;
+
+  box-shadow:
+    0 0 0 3px rgba(16, 185, 129, 0.08);
+}
+
+.finvista-footer-separator {
+  width: 1px;
+  height: 26px;
+
+  background:
+    rgba(255, 255, 255, 0.08);
+}
+
+.finvista-footer-copyright {
+  color: rgba(255, 255, 255, 0.36);
+
+  font-size: 9px;
+}
+
+
+/* =========================================================
+   FOOTER — RESPONSIVO
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .finvista-footer {
+    padding: 14px 18px;
+  }
+}
+
+@media (max-width: 700px) {
+  .finvista-footer {
+    flex-direction: column;
+    align-items: flex-start;
+
+    gap: 16px;
+
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  .finvista-footer-info {
+    width: 100%;
+
+    flex-wrap: wrap;
+
+    gap: 12px 16px;
+  }
+
+  .finvista-footer-separator {
+    height: 22px;
+  }
+}
+
+@media (max-width: 430px) {
+  .finvista-footer-info {
+    align-items: flex-start;
+  }
+
+  .finvista-footer-copyright {
+    width: 100%;
+  }
+
+  .finvista-footer-info
+  .finvista-footer-separator:last-of-type {
+    display: none;
+  }
+}

@@ -1,0 +1,24 @@
+# VS Code / IDE
+.vscode/
+.idea/
+
+# Java crash logs
+hs_err_pid*.log
+replay_pid*.log
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Variaveis de ambiente
+.env
+.env.*
+!.env.example
+
+# Backend
+finvista-backend/target/
+
+# Frontend
+finvista-frontend/node_modules/
+finvista-frontend/dist/
+finvista-frontend/dist-ssr/
