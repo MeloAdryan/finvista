@@ -9,8 +9,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/dashboard")
@@ -27,25 +28,32 @@ public class DashboardController {
     @GetMapping
     public Map<String, Object> getDashboard() {
 
-        FinancialHistory ultimoRegistro =
-                repository
-                        .findFirstByOrderByPeriodoDesc()
-                        .orElseThrow(
-                                () -> new RuntimeException(
-                                        "Nenhum histórico financeiro encontrado."
-                                )
-                        );
+        Optional<FinancialHistory> ultimoRegistro =
+                repository.findFirstByOrderByPeriodoDesc();
 
-        BigDecimal receita =
-                ultimoRegistro.getReceita();
+        BigDecimal receita = BigDecimal.ZERO;
+        BigDecimal despesa = BigDecimal.ZERO;
 
-        BigDecimal despesa =
-                ultimoRegistro.getDespesa();
+        if (ultimoRegistro.isPresent()) {
+            FinancialHistory historico = ultimoRegistro.get();
+
+            receita = historico.getReceita() != null
+                    ? historico.getReceita()
+                    : BigDecimal.ZERO;
+
+            despesa = historico.getDespesa() != null
+                    ? historico.getDespesa()
+                    : BigDecimal.ZERO;
+        }
 
         BigDecimal resultado =
                 receita.subtract(despesa);
 
-        BigDecimal margem = BigDecimal.ZERO;
+        BigDecimal margem =
+                BigDecimal.ZERO.setScale(
+                        2,
+                        RoundingMode.HALF_UP
+                );
 
         if (receita.compareTo(BigDecimal.ZERO) > 0) {
             margem = resultado
@@ -64,7 +72,7 @@ public class DashboardController {
         }
 
         Map<String, Object> dados =
-                new HashMap<>();
+                new LinkedHashMap<>();
 
         dados.put("receita", receita);
         dados.put("despesa", despesa);
