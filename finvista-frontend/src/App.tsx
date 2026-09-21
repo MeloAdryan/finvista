@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
+
 import Dashboard from './pages/Dashboard'
+import ImportData from './pages/ImportData'
+
 import './styles/app-layout.css'
 
 function DashboardIcon() {
@@ -77,12 +80,36 @@ function HistoryIcon() {
   )
 }
 
+function ImportIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 3V15" />
+      <path d="M7 10L12 15L17 10" />
+      <path d="M5 20H19" />
+      <path d="M5 17V20" />
+      <path d="M19 17V20" />
+    </svg>
+  )
+}
+
 function App() {
-  const [secaoAtiva, setSecaoAtiva] = useState('dashboard')
-  const [sidebarRecolhida, setSidebarRecolhida] = useState(false)
-  const [menuMobileAberto, setMenuMobileAberto] = useState(false)
+  const [paginaAtiva, setPaginaAtiva] =
+    useState<'dashboard' | 'importacao'>('dashboard')
+
+  const [secaoAtiva, setSecaoAtiva] =
+    useState('dashboard')
+
+  const [sidebarRecolhida, setSidebarRecolhida] =
+    useState(false)
+
+  const [menuMobileAberto, setMenuMobileAberto] =
+    useState(false)
 
   useEffect(() => {
+    if (paginaAtiva !== 'dashboard') {
+      return
+    }
+
     const ids = [
       'dashboard',
       'projecao',
@@ -99,13 +126,15 @@ function App() {
       let secaoAtual = 'dashboard'
 
       for (const id of ids) {
-        const elemento = document.getElementById(id)
+        const elemento =
+          document.getElementById(id)
 
         if (!elemento) {
           continue
         }
 
-        const topo = elemento.getBoundingClientRect().top
+        const topo =
+          elemento.getBoundingClientRect().top
 
         if (topo <= pontoDeLeitura) {
           secaoAtual = id
@@ -129,10 +158,27 @@ function App() {
         atualizarSecaoAtiva,
       )
     }
-  }, [])
+  }, [paginaAtiva])
 
   const fecharMenuMobile = () => {
     setMenuMobileAberto(false)
+  }
+
+  const abrirDashboard = () => {
+    setPaginaAtiva('dashboard')
+    setSecaoAtiva('dashboard')
+    fecharMenuMobile()
+  }
+
+  const abrirImportacao = () => {
+    setPaginaAtiva('importacao')
+    setSecaoAtiva('importacao')
+    fecharMenuMobile()
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
   }
 
   return (
@@ -209,12 +255,13 @@ function App() {
 
             <a
               className={`finvista-nav-item ${
+                paginaAtiva === 'dashboard' &&
                 secaoAtiva === 'dashboard'
                   ? 'finvista-nav-item-active'
                   : ''
               }`}
               href="#dashboard"
-              onClick={fecharMenuMobile}
+              onClick={abrirDashboard}
             >
               <span className="finvista-nav-icon">
                 <DashboardIcon />
@@ -229,12 +276,13 @@ function App() {
 
             <a
               className={`finvista-nav-item ${
+                paginaAtiva === 'dashboard' &&
                 secaoAtiva === 'projecao'
                   ? 'finvista-nav-item-active'
                   : ''
               }`}
               href="#projecao"
-              onClick={fecharMenuMobile}
+              onClick={abrirDashboard}
             >
               <span className="finvista-nav-icon">
                 <ProjectionIcon />
@@ -245,12 +293,13 @@ function App() {
 
             <a
               className={`finvista-nav-item ${
+                paginaAtiva === 'dashboard' &&
                 secaoAtiva === 'fluxo-caixa'
                   ? 'finvista-nav-item-active'
                   : ''
               }`}
               href="#fluxo-caixa"
-              onClick={fecharMenuMobile}
+              onClick={abrirDashboard}
             >
               <span className="finvista-nav-icon">
                 <CashFlowIcon />
@@ -261,12 +310,13 @@ function App() {
 
             <a
               className={`finvista-nav-item ${
+                paginaAtiva === 'dashboard' &&
                 secaoAtiva === 'centros-custo'
                   ? 'finvista-nav-item-active'
                   : ''
               }`}
               href="#centros-custo"
-              onClick={fecharMenuMobile}
+              onClick={abrirDashboard}
             >
               <span className="finvista-nav-icon">
                 <CostCenterIcon />
@@ -277,12 +327,13 @@ function App() {
 
             <a
               className={`finvista-nav-item ${
+                paginaAtiva === 'dashboard' &&
                 secaoAtiva === 'despesas'
                   ? 'finvista-nav-item-active'
                   : ''
               }`}
               href="#despesas"
-              onClick={fecharMenuMobile}
+              onClick={abrirDashboard}
             >
               <span className="finvista-nav-icon">
                 <ExpenseIcon />
@@ -293,12 +344,13 @@ function App() {
 
             <a
               className={`finvista-nav-item ${
+                paginaAtiva === 'dashboard' &&
                 secaoAtiva === 'orcamentos'
                   ? 'finvista-nav-item-active'
                   : ''
               }`}
               href="#orcamentos"
-              onClick={fecharMenuMobile}
+              onClick={abrirDashboard}
             >
               <span className="finvista-nav-icon">
                 <BudgetIcon />
@@ -309,18 +361,42 @@ function App() {
 
             <a
               className={`finvista-nav-item ${
+                paginaAtiva === 'dashboard' &&
                 secaoAtiva === 'historico'
                   ? 'finvista-nav-item-active'
                   : ''
               }`}
               href="#historico"
-              onClick={fecharMenuMobile}
+              onClick={abrirDashboard}
             >
               <span className="finvista-nav-icon">
                 <HistoryIcon />
               </span>
 
               <span>Histórico</span>
+            </a>
+
+            <span className="finvista-navigation-label finvista-navigation-group">
+              DADOS
+            </span>
+
+            <a
+              className={`finvista-nav-item ${
+                paginaAtiva === 'importacao'
+                  ? 'finvista-nav-item-active'
+                  : ''
+              }`}
+              href="#importacao"
+              onClick={(event) => {
+                event.preventDefault()
+                abrirImportacao()
+              }}
+            >
+              <span className="finvista-nav-icon">
+                <ImportIcon />
+              </span>
+
+              <span>Importar dados</span>
             </a>
           </nav>
 
@@ -353,115 +429,123 @@ function App() {
 
       <div className="finvista-workspace">
         <header className="finvista-topbar">
-  <div className="finvista-topbar-left">
-    <button
-      type="button"
-      className="finvista-mobile-menu-button"
-      onClick={() =>
-        setMenuMobileAberto(
-          (valorAtual) => !valorAtual,
-        )
-      }
-      aria-label={
-        menuMobileAberto
-          ? 'Fechar menu'
-          : 'Abrir menu'
-      }
-      aria-expanded={menuMobileAberto}
-    >
-      <span />
-      <span />
-      <span />
-    </button>
+          <div className="finvista-topbar-left">
+            <button
+              type="button"
+              className="finvista-mobile-menu-button"
+              onClick={() =>
+                setMenuMobileAberto(
+                  (valorAtual) => !valorAtual,
+                )
+              }
+              aria-label={
+                menuMobileAberto
+                  ? 'Fechar menu'
+                  : 'Abrir menu'
+              }
+              aria-expanded={menuMobileAberto}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
 
-    <div className="finvista-topbar-title">
-      <span className="finvista-topbar-eyebrow">
-        FINVISTA
-      </span>
+            <div className="finvista-topbar-title">
+              <span className="finvista-topbar-eyebrow">
+                FINVISTA
+              </span>
 
-      <h1>Painel executivo</h1>
-    </div>
-  </div>
+              <h1>
+                {paginaAtiva === 'dashboard'
+                  ? 'Painel executivo'
+                  : 'Importação de dados'}
+              </h1>
+            </div>
+          </div>
 
-  <div className="finvista-topbar-actions">
-    <div className="finvista-topbar-status">
-      <span className="finvista-topbar-status-dot" />
+          <div className="finvista-topbar-actions">
+            <div className="finvista-topbar-status">
+              <span className="finvista-topbar-status-dot" />
 
-      <div>
-        <small>AMBIENTE</small>
-        <strong>Dados locais</strong>
-      </div>
-    </div>
+              <div>
+                <small>AMBIENTE</small>
+                <strong>Dados locais</strong>
+              </div>
+            </div>
 
-    <div className="finvista-topbar-period">
-      <small>REFERÊNCIA</small>
-      <strong>Setembro 2026</strong>
-    </div>
+            <div className="finvista-topbar-period">
+              <small>REFERÊNCIA</small>
+              <strong>Setembro 2026</strong>
+            </div>
 
-    <button
-      type="button"
-      className="finvista-topbar-refresh"
-      title="Atualização automática será integrada posteriormente"
-      aria-label="Atualizar dados"
-      disabled
-    >
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path d="M20 6V10H16" />
-        <path d="M4 18V14H8" />
-        <path d="M18.5 9A7 7 0 0 0 6.3 6.3L4 10" />
-        <path d="M5.5 15A7 7 0 0 0 17.7 17.7L20 14" />
-      </svg>
+            <button
+              type="button"
+              className="finvista-topbar-refresh"
+              title="Atualização automática será integrada posteriormente"
+              aria-label="Atualizar dados"
+              disabled
+            >
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path d="M20 6V10H16" />
+                <path d="M4 18V14H8" />
+                <path d="M18.5 9A7 7 0 0 0 6.3 6.3L4 10" />
+                <path d="M5.5 15A7 7 0 0 0 17.7 17.7L20 14" />
+              </svg>
 
-      <span>Atualizar</span>
-    </button>
-  </div>
-</header>
+              <span>Atualizar</span>
+            </button>
+          </div>
+        </header>
 
         <main className="finvista-main">
-          <Dashboard />
+          {paginaAtiva === 'dashboard' ? (
+            <Dashboard />
+          ) : (
+            <ImportData />
+          )}
         </main>
 
         <footer className="finvista-footer">
-  <div className="finvista-footer-brand">
-    <div className="finvista-footer-mark">
-      <span />
-      <span />
-      <span />
-    </div>
+          <div className="finvista-footer-brand">
+            <div className="finvista-footer-mark">
+              <span />
+              <span />
+              <span />
+            </div>
 
-    <div>
-      <strong>FinVista</strong>
-      <small>Inteligência financeira</small>
-    </div>
-  </div>
+            <div>
+              <strong>FinVista</strong>
+              <small>Inteligência financeira</small>
+            </div>
+          </div>
 
-  <div className="finvista-footer-info">
-    <div className="finvista-footer-item">
-      <small>DADOS</small>
+          <div className="finvista-footer-info">
+            <div className="finvista-footer-item">
+              <small>DADOS</small>
 
-      <span>
-        <i className="finvista-footer-status-dot" />
-        Ambiente local
-      </span>
-    </div>
+              <span>
+                <i className="finvista-footer-status-dot" />
+                Ambiente local
+              </span>
+            </div>
 
-    <div className="finvista-footer-separator" />
+            <div className="finvista-footer-separator" />
 
-    <div className="finvista-footer-item">
-      <small>VERSÃO</small>
-      <span>v1.0</span>
-    </div>
+            <div className="finvista-footer-item">
+              <small>VERSÃO</small>
+              <span>v1.0</span>
+            </div>
 
-    <div className="finvista-footer-separator" />
+            <div className="finvista-footer-separator" />
 
-    <span className="finvista-footer-copyright">
-      © 2026 FinVista
-    </span>
-  </div>
-</footer>
+            <span className="finvista-footer-copyright">
+              © 2026 FinVista
+            </span>
+          </div>
+        </footer>
       </div>
     </div>
   )

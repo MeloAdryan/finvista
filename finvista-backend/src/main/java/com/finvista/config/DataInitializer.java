@@ -11,6 +11,7 @@ import com.finvista.repository.CashFlowRepository;
 import com.finvista.repository.CostCenterRepository;
 import com.finvista.repository.ExpenseDistributionRepository;
 import com.finvista.repository.FinancialHistoryRepository;
+import java.time.LocalDate;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -256,55 +257,60 @@ public class DataInitializer {
     }
 
     private void carregarOrcamentos(
-            BudgetRepository repository
-    ) {
-        if (repository.count() > 0) {
-            return;
-        }
-
-        repository.save(
-                new Budget(
-                        "Madeireira Norte",
-                        new BigDecimal("120000.00"),
-                        "Proposta enviada",
-                        70
-                )
-        );
-
-        repository.save(
-                new Budget(
-                        "Construtora Acre",
-                        new BigDecimal("85000.00"),
-                        "Negociação",
-                        80
-                )
-        );
-
-        repository.save(
-                new Budget(
-                        "Grupo Florestal",
-                        new BigDecimal("150000.00"),
-                        "Em análise",
-                        50
-                )
-        );
-
-        repository.save(
-                new Budget(
-                        "Indústria Amazônia",
-                        new BigDecimal("65000.00"),
-                        "Contato inicial",
-                        30
-                )
-        );
-
-        repository.save(
-                new Budget(
-                        "Madeiras Brasil",
-                        new BigDecimal("95000.00"),
-                        "Negociação",
-                        90
-                )
-        );
+        BudgetRepository repository
+) {
+    if (repository.count() > 0) {
+        return;
     }
+
+    repository.save(
+            new Budget(
+                    "Madeireira Norte",
+                    new BigDecimal("120000.00"),
+                    "Proposta enviada",
+                    70,
+                    LocalDate.of(2026, 11, 15)
+            )
+    );
+
+    repository.save(
+            new Budget(
+                    "Construtora Acre",
+                    new BigDecimal("85000.00"),
+                    "Negociação",
+                    80,
+                    LocalDate.of(2026, 12, 10)
+            )
+    );
+
+    repository.save(
+            new Budget(
+                    "Grupo Florestal",
+                    new BigDecimal("150000.00"),
+                    "Em análise",
+                    50,
+                    LocalDate.of(2026, 12, 20)
+            )
+    );
+
+    repository.save(
+            new Budget(
+                    "Indústria Amazônia",
+                    new BigDecimal("65000.00"),
+                    "Contato inicial",
+                    30,
+                    LocalDate.of(2027, 1, 15)
+            )
+    );
+
+    repository.save(
+            new Budget(
+                    "Madeiras Brasil",
+                    new BigDecimal("95000.00"),
+                    "Negociação",
+                    90,
+                    LocalDate.of(2027, 2, 10)
+            )
+    );
+}
 }

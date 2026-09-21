@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "orcamentos")
@@ -29,6 +30,9 @@ public class Budget {
     @Column(nullable = false)
     private Integer probabilidade;
 
+    @Column(name = "data_previsao_fechamento")
+    private LocalDate dataPrevisaoFechamento;
+
     public Budget() {
     }
 
@@ -42,6 +46,21 @@ public class Budget {
         this.valor = valor;
         this.status = status;
         this.probabilidade = probabilidade;
+    }
+
+    public Budget(
+            String cliente,
+            BigDecimal valor,
+            String status,
+            Integer probabilidade,
+            LocalDate dataPrevisaoFechamento
+    ) {
+        this.cliente = cliente;
+        this.valor = valor;
+        this.status = status;
+        this.probabilidade = probabilidade;
+        this.dataPrevisaoFechamento =
+                dataPrevisaoFechamento;
     }
 
     public Long getId() {
@@ -78,5 +97,16 @@ public class Budget {
 
     public void setProbabilidade(Integer probabilidade) {
         this.probabilidade = probabilidade;
+    }
+
+    public LocalDate getDataPrevisaoFechamento() {
+        return dataPrevisaoFechamento;
+    }
+
+    public void setDataPrevisaoFechamento(
+            LocalDate dataPrevisaoFechamento
+    ) {
+        this.dataPrevisaoFechamento =
+                dataPrevisaoFechamento;
     }
 }
