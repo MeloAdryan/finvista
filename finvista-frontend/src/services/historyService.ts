@@ -10,23 +10,22 @@ export interface HistoryData {
 
 export async function getHistory(
   inicio?: string,
-  fim?: string
+  fim?: string,
 ): Promise<HistoryData[]> {
-
   const parametros =
     new URLSearchParams()
 
   if (inicio) {
     parametros.append(
       'inicio',
-      inicio
+      inicio,
     )
   }
 
   if (fim) {
     parametros.append(
       'fim',
-      fim
+      fim,
     )
   }
 
@@ -34,15 +33,20 @@ export async function getHistory(
     parametros.toString()
 
   const url = query
-  ? `${API_URL}/api/historico?${query}`
-  : `${API_URL}/api/historico`
+    ? `${API_URL}/api/historico?${query}`
+    : `${API_URL}/api/historico`
 
-  const response =
-    await fetch(url)
+  const response = await fetch(
+    url,
+    {
+      method: 'GET',
+      credentials: 'include',
+    },
+  )
 
   if (!response.ok) {
     throw new Error(
-      `Erro ao carregar o histórico financeiro: HTTP ${response.status}`
+      `Erro ao carregar o histórico financeiro: HTTP ${response.status}`,
     )
   }
 

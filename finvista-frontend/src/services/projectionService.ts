@@ -8,13 +8,20 @@ export interface ProjectionData {
   saldo: number
 }
 
-export async function getProjection(): Promise<ProjectionData[]> {
-const response = await fetch(
-  `${API_URL}/api/projecao`
-)
+export async function getProjection():
+Promise<ProjectionData[]> {
+  const response = await fetch(
+    `${API_URL}/api/projecao`,
+    {
+      method: 'GET',
+      credentials: 'include',
+    },
+  )
 
   if (!response.ok) {
-    throw new Error('Erro ao carregar a projeção financeira')
+    throw new Error(
+      'Erro ao carregar a projeção financeira',
+    )
   }
 
   return response.json()

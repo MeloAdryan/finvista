@@ -86,6 +86,7 @@ export async function previewEstrutura(
     `${API_URL}/api/importacoes/preview-estrutura`,
     {
       method: 'POST',
+      credentials: 'include',
       body: criarFormData(arquivo),
     },
   )
@@ -102,6 +103,7 @@ export async function previewCsv(
     `${API_URL}/api/importacoes/csv/preview`,
     {
       method: 'POST',
+      credentials: 'include',
       body: criarFormData(arquivo),
     },
   )
@@ -118,6 +120,7 @@ export async function importarCsv(
     `${API_URL}/api/importacoes/csv/importar`,
     {
       method: 'POST',
+      credentials: 'include',
       body: criarFormData(arquivo),
     },
   )
@@ -134,6 +137,7 @@ export async function previewExcel(
     `${API_URL}/api/importacoes/excel/preview`,
     {
       method: 'POST',
+      credentials: 'include',
       body: criarFormData(arquivo),
     },
   )
@@ -150,6 +154,7 @@ export async function importarExcel(
     `${API_URL}/api/importacoes/excel/importar`,
     {
       method: 'POST',
+      credentials: 'include',
       body: criarFormData(arquivo),
     },
   )
@@ -163,6 +168,10 @@ export async function listarLancamentosImportados():
 Promise<ImportedTransactionsResult> {
   const response = await fetch(
     `${API_URL}/api/importacoes/lancamentos`,
+    {
+      method: 'GET',
+      credentials: 'include',
+    },
   )
 
   return lerResposta<ImportedTransactionsResult>(

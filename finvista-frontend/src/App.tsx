@@ -1,10 +1,35 @@
-import { useEffect, useState } from 'react'
+import {
+  type MouseEvent,
+  useEffect,
+  useState,
+} from 'react'
 
 import Dashboard from './pages/Dashboard'
 import SpendingGoals from './pages/SpendingGoals'
 import ImportData from './pages/ImportData'
+import Login from './pages/Login'
+
+import {
+  logout,
+  obterUsuarioAtual,
+  type AuthUser,
+} from './services/authService'
 
 import './styles/app-layout.css'
+
+type PaginaAtiva =
+  | 'dashboard'
+  | 'metas'
+  | 'importacao'
+
+type SecaoDashboard =
+  | 'dashboard'
+  | 'projecao'
+  | 'fluxo-caixa'
+  | 'centros-custo'
+  | 'despesas'
+  | 'orcamentos'
+  | 'historico'
 
 function DashboardIcon() {
   return (
@@ -16,6 +41,7 @@ function DashboardIcon() {
     </svg>
   )
 }
+
 function GoalsIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -104,14 +130,28 @@ function ImportIcon() {
   )
 }
 
+function LogoutIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M10 5H5V19H10" />
+      <path d="M14 8L18 12L14 16" />
+      <path d="M18 12H9" />
+    </svg>
+  )
+}
+
 function App() {
+  const [usuario, setUsuario] =
+    useState<AuthUser | null>(null)
+
+  const [verificandoSessao, setVerificandoSessao] =
+    useState(true)
+
   const [paginaAtiva, setPaginaAtiva] =
-    useState<'dashboard' | 'metas' | 'importacao'>(
-  'dashboard',
-)
+    useState<PaginaAtiva>('metas')
 
   const [secaoAtiva, setSecaoAtiva] =
-    useState('dashboard')
+    useState('metas')
 
   const [sidebarRecolhida, setSidebarRecolhida] =
     useState(false)
@@ -120,11 +160,45 @@ function App() {
     useState(false)
 
   useEffect(() => {
+    let ativo = true
+
+    const verificarSessao = async () => {
+      try {
+        const usuarioAtual =
+          await obterUsuarioAtual()
+
+        if (ativo) {
+          setUsuario(usuarioAtual)
+        }
+      } catch (error) {
+        console.error(
+          'Erro ao verificar sessão:',
+          error,
+        )
+
+        if (ativo) {
+          setUsuario(null)
+        }
+      } finally {
+        if (ativo) {
+          setVerificandoSessao(false)
+        }
+      }
+    }
+
+    void verificarSessao()
+
+    return () => {
+      ativo = false
+    }
+  }, [])
+
+  useEffect(() => {
     if (paginaAtiva !== 'dashboard') {
       return
     }
 
-    const ids = [
+    const ids: SecaoDashboard[] = [
       'dashboard',
       'projecao',
       'fluxo-caixa',
@@ -135,9 +209,8 @@ function App() {
     ]
 
     const atualizarSecaoAtiva = () => {
-      const pontoDeLeitura = 160
-
-      let secaoAtual = 'dashboard'
+      const pontoDeLeitura = 190
+      let secaoAtual: SecaoDashboard = 'dashboard'
 
       for (const id of ids) {
         const elemento =
@@ -178,23 +251,63 @@ function App() {
     setMenuMobileAberto(false)
   }
 
+  const abrirMetas = () => {
+    setPaginaAtiva('metas')
+    setSecaoAtiva('metas')
+    fecharMenuMobile()
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
+  }
+
   const abrirDashboard = () => {
     setPaginaAtiva('dashboard')
     setSecaoAtiva('dashboard')
     fecharMenuMobile()
-  }
-  const abrirMetas = () => {
-  setPaginaAtiva('metas')
-  setSecaoAtiva('metas')
-  fecharMenuMobile()
 
-  window.scrollTo({
-    top: 0,
-    behavior: 'smooth',
-  })
-}
+    window.setTimeout(() => {
+      document
+        .getElementById('dashboard')
+        ?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        })
+    }, 0)
+  }
+
+  const abrirSecaoDashboard = (
+    secao: SecaoDashboard,
+  ) => {
+    setPaginaAtiva('dashboard')
+    setSecaoAtiva(secao)
+    fecharMenuMobile()
+
+    window.setTimeout(() => {
+      document
+        .getElementById(secao)
+        ?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        })
+    }, 0)
+  }
+
+  const navegarParaSecao = (
+    event: MouseEvent<HTMLAnchorElement>,
+    secao: SecaoDashboard,
+  ) => {
+    event.preventDefault()
+    abrirSecaoDashboard(secao)
+  }
 
   const abrirImportacao = () => {
+    if (usuario?.perfil !== 'ADMIN') {
+      abrirMetas()
+      return
+    }
+
     setPaginaAtiva('importacao')
     setSecaoAtiva('importacao')
     fecharMenuMobile()
@@ -204,6 +317,48 @@ function App() {
       behavior: 'smooth',
     })
   }
+
+  const realizarLogout = async () => {
+    try {
+      await logout()
+    } catch (error) {
+      console.error(
+        'Erro ao encerrar sessão:',
+        error,
+      )
+    } finally {
+      setUsuario(null)
+      setPaginaAtiva('metas')
+      setSecaoAtiva('metas')
+      fecharMenuMobile()
+    }
+  }
+
+  if (verificandoSessao) {
+    return (
+      <main className="finvista-auth-loading">
+        <div className="finvista-auth-loading-brand">
+          <strong>FinVista</strong>
+          <span>Verificando acesso...</span>
+        </div>
+      </main>
+    )
+  }
+
+  if (!usuario) {
+    return (
+      <Login
+        onLogin={(usuarioAutenticado) => {
+          setUsuario(usuarioAutenticado)
+          setPaginaAtiva('metas')
+          setSecaoAtiva('metas')
+        }}
+      />
+    )
+  }
+
+  const usuarioAdmin =
+    usuario.perfil === 'ADMIN'
 
   return (
     <div
@@ -263,7 +418,9 @@ function App() {
 
             <div className="finvista-brand-text">
               <strong>FinVista</strong>
-              <small>Financial Intelligence</small>
+              <small>
+                Financial Intelligence
+              </small>
             </div>
           </div>
 
@@ -279,13 +436,35 @@ function App() {
 
             <a
               className={`finvista-nav-item ${
+                paginaAtiva === 'metas'
+                  ? 'finvista-nav-item-active'
+                  : ''
+              }`}
+              href="#metas"
+              onClick={(event) => {
+                event.preventDefault()
+                abrirMetas()
+              }}
+            >
+              <span className="finvista-nav-icon">
+                <GoalsIcon />
+              </span>
+
+              <span>Metas</span>
+            </a>
+
+            <a
+              className={`finvista-nav-item ${
                 paginaAtiva === 'dashboard' &&
                 secaoAtiva === 'dashboard'
                   ? 'finvista-nav-item-active'
                   : ''
               }`}
               href="#dashboard"
-              onClick={abrirDashboard}
+              onClick={(event) => {
+                event.preventDefault()
+                abrirDashboard()
+              }}
             >
               <span className="finvista-nav-icon">
                 <DashboardIcon />
@@ -293,24 +472,7 @@ function App() {
 
               <span>Painel executivo</span>
             </a>
-             <a
-  className={`finvista-nav-item ${
-    paginaAtiva === 'metas'
-      ? 'finvista-nav-item-active'
-      : ''
-  }`}
-  href="#metas"
-  onClick={(event) => {
-    event.preventDefault()
-    abrirMetas()
-  }}
->
-  <span className="finvista-nav-icon">
-    <GoalsIcon />
-  </span>
 
-  <span>Metas</span>
-</a>
             <span className="finvista-navigation-label finvista-navigation-group">
               FINANCEIRO
             </span>
@@ -323,7 +485,12 @@ function App() {
                   : ''
               }`}
               href="#projecao"
-              onClick={abrirDashboard}
+              onClick={(event) =>
+                navegarParaSecao(
+                  event,
+                  'projecao',
+                )
+              }
             >
               <span className="finvista-nav-icon">
                 <ProjectionIcon />
@@ -340,7 +507,12 @@ function App() {
                   : ''
               }`}
               href="#fluxo-caixa"
-              onClick={abrirDashboard}
+              onClick={(event) =>
+                navegarParaSecao(
+                  event,
+                  'fluxo-caixa',
+                )
+              }
             >
               <span className="finvista-nav-icon">
                 <CashFlowIcon />
@@ -357,7 +529,12 @@ function App() {
                   : ''
               }`}
               href="#centros-custo"
-              onClick={abrirDashboard}
+              onClick={(event) =>
+                navegarParaSecao(
+                  event,
+                  'centros-custo',
+                )
+              }
             >
               <span className="finvista-nav-icon">
                 <CostCenterIcon />
@@ -374,7 +551,12 @@ function App() {
                   : ''
               }`}
               href="#despesas"
-              onClick={abrirDashboard}
+              onClick={(event) =>
+                navegarParaSecao(
+                  event,
+                  'despesas',
+                )
+              }
             >
               <span className="finvista-nav-icon">
                 <ExpenseIcon />
@@ -391,7 +573,12 @@ function App() {
                   : ''
               }`}
               href="#orcamentos"
-              onClick={abrirDashboard}
+              onClick={(event) =>
+                navegarParaSecao(
+                  event,
+                  'orcamentos',
+                )
+              }
             >
               <span className="finvista-nav-icon">
                 <BudgetIcon />
@@ -408,7 +595,12 @@ function App() {
                   : ''
               }`}
               href="#historico"
-              onClick={abrirDashboard}
+              onClick={(event) =>
+                navegarParaSecao(
+                  event,
+                  'historico',
+                )
+              }
             >
               <span className="finvista-nav-icon">
                 <HistoryIcon />
@@ -417,28 +609,32 @@ function App() {
               <span>Histórico</span>
             </a>
 
-            <span className="finvista-navigation-label finvista-navigation-group">
-              DADOS
-            </span>
+            {usuarioAdmin && (
+              <>
+                <span className="finvista-navigation-label finvista-navigation-group">
+                  DADOS
+                </span>
 
-            <a
-              className={`finvista-nav-item ${
-                paginaAtiva === 'importacao'
-                  ? 'finvista-nav-item-active'
-                  : ''
-              }`}
-              href="#importacao"
-              onClick={(event) => {
-                event.preventDefault()
-                abrirImportacao()
-              }}
-            >
-              <span className="finvista-nav-icon">
-                <ImportIcon />
-              </span>
+                <a
+                  className={`finvista-nav-item ${
+                    paginaAtiva === 'importacao'
+                      ? 'finvista-nav-item-active'
+                      : ''
+                  }`}
+                  href="#importacao"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    abrirImportacao()
+                  }}
+                >
+                  <span className="finvista-nav-icon">
+                    <ImportIcon />
+                  </span>
 
-              <span>Importar dados</span>
-            </a>
+                  <span>Importar dados</span>
+                </a>
+              </>
+            )}
           </nav>
 
           <div className="finvista-sidebar-bottom">
@@ -446,8 +642,13 @@ function App() {
               <span className="finvista-system-status-dot" />
 
               <div>
-                <strong>Sistema operacional</strong>
-                <small>Dados atualizados</small>
+                <strong>
+                  Sistema operacional
+                </strong>
+
+                <small>
+                  Dados atualizados
+                </small>
               </div>
             </div>
 
@@ -497,16 +698,49 @@ function App() {
               </span>
 
               <h1>
-  {paginaAtiva === 'dashboard'
-    ? 'Painel executivo'
-    : paginaAtiva === 'metas'
-      ? 'Metas financeiras'
-      : 'Importação de dados'}
-</h1>
+                {paginaAtiva === 'dashboard'
+                  ? 'Painel executivo'
+                  : paginaAtiva === 'metas'
+                    ? 'Metas financeiras'
+                    : 'Importação de dados'}
+              </h1>
             </div>
           </div>
 
           <div className="finvista-topbar-actions">
+            <div className="finvista-topbar-user">
+              <div className="finvista-topbar-user-avatar">
+                {usuario.nome
+                  .trim()
+                  .charAt(0)
+                  .toUpperCase()}
+              </div>
+
+              <div className="finvista-topbar-user-info">
+                <small>
+                  {usuario.perfil === 'ADMIN'
+                    ? 'ADMINISTRADOR'
+                    : 'CLIENTE'}
+                </small>
+
+                <strong>
+                  {usuario.nome}
+                </strong>
+              </div>
+
+              <button
+                type="button"
+                className="finvista-topbar-logout"
+                onClick={() => {
+                  void realizarLogout()
+                }}
+                title="Sair do FinVista"
+              >
+                <LogoutIcon />
+                <span>Sair</span>
+              </button>
+            </div>
+
             <div className="finvista-topbar-status">
               <span className="finvista-topbar-status-dot" />
 
@@ -543,15 +777,17 @@ function App() {
           </div>
         </header>
 
-    <main className="finvista-main">
-  {paginaAtiva === 'dashboard' ? (
-    <Dashboard />
-  ) : paginaAtiva === 'metas' ? (
-    <SpendingGoals />
-  ) : (
-    <ImportData />
-  )}
-</main>
+        <main className="finvista-main">
+          {paginaAtiva === 'dashboard' ? (
+            <Dashboard />
+          ) : paginaAtiva === 'metas' ? (
+            <SpendingGoals />
+          ) : usuarioAdmin ? (
+            <ImportData />
+          ) : (
+            <SpendingGoals />
+          )}
+        </main>
 
         <footer className="finvista-footer">
           <div className="finvista-footer-brand">
@@ -563,7 +799,9 @@ function App() {
 
             <div>
               <strong>FinVista</strong>
-              <small>Inteligência financeira</small>
+              <small>
+                Inteligência financeira
+              </small>
             </div>
           </div>
 

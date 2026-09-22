@@ -7,11 +7,20 @@ export interface DashboardData {
   margem: number
 }
 
-export async function getDashboard(): Promise<DashboardData> {
-  const response = await fetch(`${API_URL}/api/dashboard`)
+export async function getDashboard():
+Promise<DashboardData> {
+  const response = await fetch(
+    `${API_URL}/api/dashboard`,
+    {
+      method: 'GET',
+      credentials: 'include',
+    },
+  )
 
   if (!response.ok) {
-    throw new Error('Erro ao carregar os dados do dashboard')
+    throw new Error(
+      'Erro ao carregar os dados do dashboard',
+    )
   }
 
   return response.json()

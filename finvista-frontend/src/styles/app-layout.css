@@ -1529,3 +1529,604 @@ html {
     display: none;
   }
 }
+.finvista-auth-loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #0f2a44;
+}
+
+.finvista-auth-loading-brand {
+  display: grid;
+  gap: 8px;
+  text-align: center;
+}
+
+.finvista-auth-loading-brand strong {
+  color: #ffffff;
+  font-size: 28px;
+  letter-spacing: -0.8px;
+}
+
+.finvista-auth-loading-brand span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 12px;
+  letter-spacing: 0.6px;
+}
+/* =========================================================
+   FINVISTA — USUÁRIO AUTENTICADO + TOPBAR
+   ========================================================= */
+
+.finvista-topbar {
+  min-height: 76px;
+  padding: 13px 24px;
+}
+
+.finvista-topbar-actions {
+  min-width: 0;
+  gap: 9px;
+}
+
+/* =========================================================
+   USUÁRIO AUTENTICADO
+   ========================================================= */
+
+.finvista-topbar-user {
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+
+  min-width: 0;
+  min-height: 48px;
+
+  gap: 10px;
+  padding: 5px 7px 5px 6px;
+
+  border: 1px solid rgba(15, 42, 68, 0.08);
+  border-radius: 13px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff 0%,
+      #f8fafb 100%
+    );
+
+  box-shadow:
+    0 4px 13px rgba(15, 42, 68, 0.055),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.finvista-topbar-user-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+
+  width: 36px;
+  height: 36px;
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #173b5d,
+      #0f2a44
+    );
+
+  color: #ffffff;
+
+  box-shadow:
+    0 5px 12px rgba(15, 42, 68, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.finvista-topbar-user-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  min-width: 84px;
+  max-width: 150px;
+
+  gap: 3px;
+}
+
+.finvista-topbar-user-info small {
+  display: block;
+
+  overflow: hidden;
+
+  color: #b8763d;
+
+  font-size: 7px;
+  font-weight: 850;
+  line-height: 1;
+
+  letter-spacing: 0.12em;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finvista-topbar-user-info strong {
+  display: block;
+
+  overflow: hidden;
+
+  color: #17344f;
+
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.15;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finvista-topbar-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+
+  min-height: 34px;
+
+  gap: 6px;
+  padding: 0 10px;
+
+  border: 1px solid rgba(184, 118, 61, 0.2);
+  border-radius: 9px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #fffaf6 0%,
+      #f8eee5 100%
+    );
+
+  color: #9c6232;
+
+  box-shadow:
+    0 3px 7px rgba(15, 42, 68, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+
+  cursor: pointer;
+
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+
+  transition:
+    transform 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.finvista-topbar-logout svg {
+  width: 14px;
+  height: 14px;
+
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.finvista-topbar-logout:hover {
+  border-color: rgba(184, 118, 61, 0.4);
+
+  background:
+    linear-gradient(
+      180deg,
+      #fff7f0 0%,
+      #f3e4d7 100%
+    );
+
+  color: #81491f;
+
+  box-shadow:
+    0 5px 12px rgba(184, 118, 61, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+
+  transform: translateY(-1px);
+}
+
+.finvista-topbar-logout:active {
+  transform: translateY(1px);
+
+  box-shadow:
+    0 1px 4px rgba(15, 42, 68, 0.08),
+    inset 0 2px 4px rgba(126, 75, 34, 0.08);
+}
+
+/* =========================================================
+   ÁREA ÚTIL
+   ========================================================= */
+
+.finvista-main {
+  padding:
+    22px 24px 34px;
+}
+
+#dashboard,
+#projecao,
+#fluxo-caixa,
+#centros-custo,
+#despesas,
+#orcamentos,
+#historico {
+  scroll-margin-top: 72px;
+}
+
+/* =========================================================
+   TELAS INTERMEDIÁRIAS
+   ========================================================= */
+
+@media (max-width: 1280px) {
+  .finvista-topbar {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .finvista-main {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .finvista-topbar-user-info {
+    min-width: 72px;
+    max-width: 105px;
+  }
+
+  .finvista-topbar-status,
+  .finvista-topbar-period {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .finvista-topbar-user-info {
+    display: flex;
+    min-width: 68px;
+    max-width: 90px;
+  }
+
+  .finvista-topbar-period {
+    display: none;
+  }
+
+  .finvista-topbar-refresh {
+    display: none;
+  }
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .finvista-topbar {
+    min-height: 70px;
+  }
+
+  .finvista-topbar-user {
+    margin-left: auto;
+  }
+
+  .finvista-topbar-status {
+    display: none;
+  }
+
+  .finvista-main {
+    padding:
+      18px 14px 28px;
+  }
+}
+
+@media (max-width: 650px) {
+  .finvista-topbar {
+    padding:
+      10px 12px;
+  }
+
+  .finvista-topbar-eyebrow {
+    display: none;
+  }
+
+  .finvista-topbar h1 {
+    font-size: 16px;
+  }
+
+  .finvista-topbar-user {
+    gap: 6px;
+    padding: 4px;
+  }
+
+  .finvista-topbar-user-avatar {
+    width: 32px;
+    height: 32px;
+
+    border-radius: 8px;
+
+    font-size: 11px;
+  }
+
+  .finvista-topbar-user-info {
+    display: none;
+  }
+
+  .finvista-topbar-logout {
+    width: 32px;
+    min-height: 32px;
+    padding: 0;
+  }
+
+  .finvista-topbar-logout span {
+    display: none;
+  }
+
+}
+/* =========================================================
+   FINVISTA — ÁREA FINANCEIRA PANORÂMICA
+   Rolagem horizontal real do conteúdo
+   ========================================================= */
+
+/*
+ * Segurança: a antiga navegação horizontal não faz mais
+ * parte da interface. A navegação oficial permanece na sidebar.
+ */
+.finvista-horizontal-nav {
+  display: none !important;
+}
+
+/*
+ * O workspace fica preso à largura disponível da janela.
+ * Somente a área financeira poderá se deslocar lateralmente.
+ */
+.finvista-workspace {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+/*
+ * Viewport das informações financeiras.
+ * A barra aparece quando o conteúdo interno ultrapassa
+ * a largura disponível do workspace.
+ */
+.finvista-main {
+  width: 100%;
+  min-width: 0;
+
+  padding: 22px 24px 34px;
+
+  overflow-x: auto;
+  overflow-y: visible;
+
+  scrollbar-width: auto;
+  scrollbar-color: #b8763d #e7edf2;
+}
+
+/*
+ * No desktop, o conteúdo preserva uma largura confortável.
+ * Em telas menores que 1440px úteis, ele não é espremido:
+ * o usuário pode mover a área para a esquerda e para a direita.
+ */
+@media (min-width: 901px) {
+  .finvista-main > * {
+    width: max(100%, 1440px);
+    min-width: 1440px;
+  }
+}
+
+/* Chrome / Edge */
+.finvista-main::-webkit-scrollbar {
+  height: 13px;
+}
+
+.finvista-main::-webkit-scrollbar-track {
+  margin: 0 12px;
+
+  border: 1px solid #d9e2e9;
+  border-radius: 999px;
+
+  background: #e7edf2;
+}
+
+.finvista-main::-webkit-scrollbar-thumb {
+  min-width: 100px;
+
+  border: 3px solid #e7edf2;
+  border-radius: 999px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #b8763d,
+      #e89b3d
+    );
+}
+
+.finvista-main::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(
+      90deg,
+      #a86732,
+      #d98a39
+    );
+}
+
+/*
+ * Destinos acessados pela sidebar mantêm uma margem visual
+ * confortável quando a página rola até cada seção.
+ */
+#dashboard,
+#projecao,
+#fluxo-caixa,
+#centros-custo,
+#despesas,
+#orcamentos,
+#historico {
+  scroll-margin-top: 24px;
+}
+
+/*
+ * Em monitores grandes o conteúdo volta a acompanhar 100%
+ * da área disponível, sem largura artificial desnecessária.
+ */
+@media (min-width: 1720px) {
+  .finvista-main > * {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/*
+ * Celulares continuam com o layout responsivo próprio.
+ * Não forçamos uma interface desktop de 1440px no mobile.
+ */
+@media (max-width: 900px) {
+  .finvista-main {
+    padding: 18px 14px 28px;
+    overflow-x: visible;
+  }
+
+  .finvista-main > * {
+    width: 100%;
+    min-width: 0;
+  }
+}
+/* =========================================================
+   FINVISTA — SCROLLBAR HORIZONTAL FIXA E SINCRONIZADA
+   ========================================================= */
+
+/*
+ * Desktop:
+ * a área financeira continua rolando horizontalmente,
+ * mas a scrollbar nativa do conteúdo fica escondida.
+ * A barra fixa inferior controla o mesmo scroll.
+ */
+@media (min-width: 901px) {
+
+  /* Área financeira */
+  .finvista-main {
+    padding-bottom: 48px;
+    scrollbar-width: none;
+  }
+
+  .finvista-main::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  /* Estrutura fixa da barra */
+  .finvista-horizontal-scrollbar-shell {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 240px;
+
+    height: 26px;
+    padding: 5px 14px;
+
+    border-top: 1px solid #d9e2e9;
+    background: rgba(244, 246, 248, 0.96);
+
+    box-shadow:
+      0 -4px 14px rgba(15, 42, 68, 0.07);
+
+    backdrop-filter: blur(8px);
+
+    z-index: 250;
+
+    transition:
+      left 0.28s ease;
+  }
+
+  /* Ajuste quando a sidebar estiver recolhida */
+  .finvista-app-sidebar-collapsed
+    .finvista-horizontal-scrollbar-shell {
+    left: 72px;
+  }
+
+  /* Área realmente rolável */
+  .finvista-horizontal-scrollbar {
+    width: 100%;
+    height: 16px;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    scrollbar-width: auto;
+    scrollbar-color:
+      #b8763d
+      #e7edf2;
+  }
+
+  /*
+   * Elemento invisível responsável por dar à barra
+   * a mesma largura do conteúdo financeiro.
+   */
+  .finvista-horizontal-scrollbar-spacer {
+    min-width: 100%;
+    height: 1px;
+  }
+
+  /* Chrome / Edge */
+  .finvista-horizontal-scrollbar::-webkit-scrollbar {
+    height: 12px;
+  }
+
+  .finvista-horizontal-scrollbar::-webkit-scrollbar-track {
+    border: 1px solid #d9e2e9;
+    border-radius: 999px;
+
+    background: #e7edf2;
+  }
+
+  .finvista-horizontal-scrollbar::-webkit-scrollbar-thumb {
+    min-width: 110px;
+
+    border: 3px solid #e7edf2;
+    border-radius: 999px;
+
+    background:
+      linear-gradient(
+        90deg,
+        #b8763d,
+        #e89b3d
+      );
+  }
+
+  .finvista-horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
+    background:
+      linear-gradient(
+        90deg,
+        #a86732,
+        #d98a39
+      );
+  }
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+  /*
+   * Em telas pequenas usamos o comportamento responsivo
+   * normal e escondemos a scrollbar fixa.
+   */
+  .finvista-horizontal-scrollbar-shell {
+    display: none;
+  }
+}

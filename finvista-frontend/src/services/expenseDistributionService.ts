@@ -6,13 +6,18 @@ export interface ExpenseDistributionData {
 }
 
 export async function getExpenseDistribution():
-  Promise<ExpenseDistributionData[]> {
-
-  const response = await fetch(`${API_URL}/api/distribuicao-despesas`)
+Promise<ExpenseDistributionData[]> {
+  const response = await fetch(
+    `${API_URL}/api/distribuicao-despesas`,
+    {
+      method: 'GET',
+      credentials: 'include',
+    },
+  )
 
   if (!response.ok) {
     throw new Error(
-      'Erro ao carregar a distribuição das despesas'
+      'Erro ao carregar a distribuição das despesas',
     )
   }
 

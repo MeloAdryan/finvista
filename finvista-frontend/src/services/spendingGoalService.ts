@@ -1,5 +1,4 @@
-const API_URL =
-  import.meta.env.VITE_API_URL || 'http://localhost:8080'
+import { API_URL } from '../config/api'
 
 export type SpendingGoalStatus =
   | 'NORMAL'
@@ -27,9 +26,14 @@ export interface CreateSpendingGoalRequest {
   percentualAlerta: number
 }
 
-export async function listarMetas(): Promise<SpendingGoal[]> {
+export async function listarMetas():
+Promise<SpendingGoal[]> {
   const response = await fetch(
     `${API_URL}/api/metas-gastos`,
+    {
+      method: 'GET',
+      credentials: 'include',
+    },
   )
 
   if (!response.ok) {
@@ -48,6 +52,7 @@ export async function criarMeta(
     `${API_URL}/api/metas-gastos`,
     {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
       },

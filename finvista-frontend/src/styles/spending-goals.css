@@ -567,3 +567,80 @@
     flex: 1;
   }
 }
+/* =========================================================
+   FINVISTA — REFINAMENTO DE LEGIBILIDADE DAS METAS
+   ========================================================= */
+
+.metas-header p {
+  font-size: 15px;
+}
+
+.metas-eyebrow,
+.metas-section-heading span,
+.metas-formulario-header span {
+  font-size: 12px;
+}
+
+.metas-resumo article > span {
+  font-size: 12px;
+}
+
+.metas-resumo article small {
+  font-size: 12px;
+}
+
+.metas-section-heading h3 {
+  font-size: 19px;
+}
+
+.meta-card {
+  padding: 21px;
+}
+
+.meta-card-top h3 {
+  font-size: 18px;
+}
+
+.meta-card-top small {
+  font-size: 12px;
+}
+
+.meta-tipo {
+  font-size: 11px;
+}
+
+.meta-status {
+  padding: 7px 11px;
+  font-size: 11px;
+}
+
+.meta-valores {
+  gap: 12px;
+  margin: 22px 0;
+}
+
+.meta-valores > div {
+  padding: 13px;
+}
+
+.meta-valores span {
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+
+.meta-valores strong {
+  font-size: 14px;
+}
+
+.meta-progresso-header {
+  font-size: 12px;
+}
+
+.meta-progresso-header strong {
+  font-size: 13px;
+}
+
+.meta-card-footer {
+  font-size: 11px;
+  line-height: 1.5;
+}

@@ -9,12 +9,19 @@ export interface BudgetPipelineData {
   valorPonderado: number
 }
 
-export async function getBudgetPipeline(): Promise<BudgetPipelineData[]> {
-  const response = await fetch(`${API_URL}/api/orcamentos`)
+export async function getBudgetPipeline():
+Promise<BudgetPipelineData[]> {
+  const response = await fetch(
+    `${API_URL}/api/orcamentos`,
+    {
+      method: 'GET',
+      credentials: 'include',
+    },
+  )
 
   if (!response.ok) {
     throw new Error(
-      'Erro ao carregar os orçamentos'
+      'Erro ao carregar os orçamentos',
     )
   }
 

@@ -1,0 +1,9 @@
+package com.finvista.dto.auth;
+
+public record LoginResponse(
+        Long id,
+        String nome,
+        String email,
+        String perfil
+) {
+}
