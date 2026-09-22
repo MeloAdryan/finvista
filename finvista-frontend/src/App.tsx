@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import Dashboard from './pages/Dashboard'
+import SpendingGoals from './pages/SpendingGoals'
 import ImportData from './pages/ImportData'
 
 import './styles/app-layout.css'
@@ -12,6 +13,17 @@ function DashboardIcon() {
       <rect x="14" y="3" width="7" height="7" rx="2" />
       <rect x="3" y="14" width="7" height="7" rx="2" />
       <rect x="14" y="14" width="7" height="7" rx="2" />
+    </svg>
+  )
+}
+function GoalsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="12" cy="12" r="1" />
+      <path d="M15 9L20 4" />
+      <path d="M17 4H20V7" />
     </svg>
   )
 }
@@ -94,7 +106,9 @@ function ImportIcon() {
 
 function App() {
   const [paginaAtiva, setPaginaAtiva] =
-    useState<'dashboard' | 'importacao'>('dashboard')
+    useState<'dashboard' | 'metas' | 'importacao'>(
+  'dashboard',
+)
 
   const [secaoAtiva, setSecaoAtiva] =
     useState('dashboard')
@@ -169,6 +183,16 @@ function App() {
     setSecaoAtiva('dashboard')
     fecharMenuMobile()
   }
+  const abrirMetas = () => {
+  setPaginaAtiva('metas')
+  setSecaoAtiva('metas')
+  fecharMenuMobile()
+
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth',
+  })
+}
 
   const abrirImportacao = () => {
     setPaginaAtiva('importacao')
@@ -269,7 +293,24 @@ function App() {
 
               <span>Painel executivo</span>
             </a>
+             <a
+  className={`finvista-nav-item ${
+    paginaAtiva === 'metas'
+      ? 'finvista-nav-item-active'
+      : ''
+  }`}
+  href="#metas"
+  onClick={(event) => {
+    event.preventDefault()
+    abrirMetas()
+  }}
+>
+  <span className="finvista-nav-icon">
+    <GoalsIcon />
+  </span>
 
+  <span>Metas</span>
+</a>
             <span className="finvista-navigation-label finvista-navigation-group">
               FINANCEIRO
             </span>
@@ -456,10 +497,12 @@ function App() {
               </span>
 
               <h1>
-                {paginaAtiva === 'dashboard'
-                  ? 'Painel executivo'
-                  : 'Importação de dados'}
-              </h1>
+  {paginaAtiva === 'dashboard'
+    ? 'Painel executivo'
+    : paginaAtiva === 'metas'
+      ? 'Metas financeiras'
+      : 'Importação de dados'}
+</h1>
             </div>
           </div>
 
@@ -500,13 +543,15 @@ function App() {
           </div>
         </header>
 
-        <main className="finvista-main">
-          {paginaAtiva === 'dashboard' ? (
-            <Dashboard />
-          ) : (
-            <ImportData />
-          )}
-        </main>
+    <main className="finvista-main">
+  {paginaAtiva === 'dashboard' ? (
+    <Dashboard />
+  ) : paginaAtiva === 'metas' ? (
+    <SpendingGoals />
+  ) : (
+    <ImportData />
+  )}
+</main>
 
         <footer className="finvista-footer">
           <div className="finvista-footer-brand">
