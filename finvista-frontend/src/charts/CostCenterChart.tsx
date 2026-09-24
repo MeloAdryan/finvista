@@ -2,87 +2,68 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  LabelList,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
-} from 'recharts'
+} from "recharts";
 
-import type { CostCenterData } from '../services/costCenterService'
+import type { CostCenterData } from "../services/costCenterService";
 
 interface CostCenterChartProps {
-  dados: CostCenterData[]
+  dados: CostCenterData[];
 }
 
-function CostCenterChart({
-  dados,
-}: CostCenterChartProps) {
+function CostCenterChart({ dados }: CostCenterChartProps) {
   const formatarCompacto = (valor: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      notation: 'compact',
-      compactDisplay: 'short',
-    }).format(valor)
-  }
+    return new Intl.NumberFormat("pt-BR", {
+      notation: "compact",
+      compactDisplay: "short",
+    }).format(valor);
+  };
 
   const formatarMoeda = (valor: number) => {
-    return Number(valor).toLocaleString(
-      'pt-BR',
-      {
-        style: 'currency',
-        currency: 'BRL',
-      }
-    )
-  }
+    return Number(valor).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  };
 
   const totalCustos = dados.reduce(
-    (total, item) =>
-      total + Number(item.valor),
-    0
-  )
+    (total, item) => total + Number(item.valor),
+    0,
+  );
 
-  const maiorCentro = dados.reduce<
-    CostCenterData | undefined
-  >(
+  const maiorCentro = dados.reduce<CostCenterData | undefined>(
     (maior, item) => {
-      if (
-        !maior ||
-        Number(item.valor) >
-          Number(maior.valor)
-      ) {
-        return item
+      if (!maior || Number(item.valor) > Number(maior.valor)) {
+        return item;
       }
 
-      return maior
+      return maior;
     },
-    undefined
-  )
+    undefined,
+  );
 
   const participacaoMaiorCentro =
     maiorCentro && totalCustos > 0
-      ? (
-          Number(maiorCentro.valor) /
-          totalCustos
-        ) * 100
-      : 0
+      ? (Number(maiorCentro.valor) / totalCustos) * 100
+      : 0;
 
-  const mediaCustos =
-    dados.length > 0
-      ? totalCustos / dados.length
-      : 0
+  const mediaCustos = dados.length > 0 ? totalCustos / dados.length : 0;
 
   return (
     <section className="cost-center-card">
       <div className="cost-center-header">
         <div>
-          <span className="cost-center-eyebrow">
-            ANÁLISE DE CUSTOS
-          </span>
+          <span className="cost-center-eyebrow">ANÁLISE DE CUSTOS</span>
 
           <h2>Centros de Custo</h2>
 
           <p>
-            Acompanhe a distribuição das despesas
-            entre as áreas da empresa.
+            Acompanhe a distribuição das despesas entre as áreas da empresa.
           </p>
         </div>
 
@@ -94,78 +75,50 @@ function CostCenterChart({
 
       <div className="cost-center-summary">
         <div className="cost-center-summary-item">
-          <span>
-            Custo total
-          </span>
+          <span>Custo total</span>
 
-          <strong>
-            {formatarMoeda(totalCustos)}
-          </strong>
+          <strong>{formatarMoeda(totalCustos)}</strong>
 
-          <small>
-            Soma dos centros de custo
-          </small>
+          <small>Soma dos centros de custo</small>
         </div>
 
         <div className="cost-center-summary-item">
-          <span>
-            Maior centro
-          </span>
+          <span>Maior centro</span>
 
-          <strong>
-            {maiorCentro?.nome ?? '—'}
-          </strong>
+          <strong>{maiorCentro?.nome ?? "—"}</strong>
 
           <small className="cost-center-highlight">
             {maiorCentro
-              ? `${participacaoMaiorCentro.toFixed(
-                  1
-                )}% do total`
-              : 'Sem dados'}
+              ? `${participacaoMaiorCentro.toFixed(1)}% do total`
+              : "Sem dados"}
           </small>
         </div>
 
         <div className="cost-center-summary-item">
-          <span>
-            Média por centro
-          </span>
+          <span>Média por centro</span>
 
-          <strong>
-            {formatarMoeda(mediaCustos)}
-          </strong>
+          <strong>{formatarMoeda(mediaCustos)}</strong>
 
           <small>
-            {dados.length}{' '}
-            {dados.length === 1
-              ? 'centro analisado'
-              : 'centros analisados'}
+            {dados.length}{" "}
+            {dados.length === 1 ? "centro analisado" : "centros analisados"}
           </small>
         </div>
       </div>
 
       <div className="cost-center-chart-header">
         <div>
-          <h3>
-            Distribuição por área
-          </h3>
+          <h3>Distribuição por área</h3>
 
-          <p>
-            Comparativo das despesas por
-            centro de custo
-          </p>
+          <p>Comparativo das despesas por centro de custo</p>
         </div>
 
-        <span className="cost-center-total-badge">
-          {dados.length} centros
-        </span>
+        <span className="cost-center-total-badge">{dados.length} centros</span>
       </div>
 
       <div className="cost-center-chart-container">
         {dados.length > 0 ? (
-          <ResponsiveContainer
-            width="100%"
-            height="100%"
-          >
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={dados}
               margin={{
@@ -186,7 +139,7 @@ function CostCenterChart({
                 axisLine={false}
                 tickLine={false}
                 tick={{
-                  fill: '#64748b',
+                  fill: "#64748b",
                   fontSize: 12,
                 }}
                 dy={10}
@@ -197,7 +150,7 @@ function CostCenterChart({
                 axisLine={false}
                 tickLine={false}
                 tick={{
-                  fill: '#94a3b8',
+                  fill: "#94a3b8",
                   fontSize: 12,
                 }}
                 width={60}
@@ -205,53 +158,76 @@ function CostCenterChart({
 
               <Tooltip
                 cursor={{
-                  fill: 'rgba(37, 99, 235, 0.05)',
+                  fill: "rgba(37, 99, 235, 0.05)",
                 }}
                 contentStyle={{
-                  border:
-                    '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  boxShadow:
-                    '0 12px 30px rgba(15, 23, 42, 0.12)',
-                  padding: '12px 14px',
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  boxShadow: "0 12px 30px rgba(15, 23, 42, 0.12)",
+                  padding: "12px 14px",
                 }}
                 labelStyle={{
                   fontWeight: 700,
-                  marginBottom: '8px',
-                  color: '#0f172a',
+                  marginBottom: "8px",
+                  color: "#0f172a",
                 }}
-                formatter={(value) => [
-                  formatarMoeda(
-                    Number(value)
-                  ),
-                  'Despesa',
-                ]}
+                formatter={(value) => [formatarMoeda(Number(value)), "Despesa"]}
               />
-
               <Bar
                 dataKey="valor"
                 name="Despesa"
-                fill="#2563eb"
-                radius={[8, 8, 3, 3]}
+                radius={[10, 10, 4, 4]}
                 maxBarSize={70}
-              />
+                isAnimationActive
+                animationDuration={900}
+                style={{
+                  filter: "drop-shadow(0 8px 8px rgba(15, 23, 42, 0.16))",
+                }}
+              >
+                {dados.map((item, index) => {
+                  const maior = item.nome === maiorCentro?.nome;
+
+                  const cores = [
+                    "#2563eb",
+                    "#3b82f6",
+                    "#4f8df7",
+                    "#60a5fa",
+                    "#7db5fb",
+                  ];
+
+                  return (
+                    <Cell
+                      key={item.nome}
+                      fill={maior ? "#d97706" : cores[index % cores.length]}
+                    />
+                  );
+                })}
+
+                <LabelList
+                  dataKey="valor"
+                  position="top"
+                  formatter={(valor: unknown) =>
+                    formatarCompacto(Number(valor))
+                  }
+                  style={{
+                    fill: "#334155",
+                    fontSize: 11,
+                    fontWeight: 700,
+                  }}
+                />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         ) : (
           <div className="cost-center-empty">
-            <strong>
-              Nenhum centro de custo encontrado
-            </strong>
+            <strong>Nenhum centro de custo encontrado</strong>
 
-            <span>
-              Os dados aparecerão aqui quando
-              estiverem disponíveis.
-            </span>
+            <span>Os dados aparecerão aqui quando estiverem disponíveis.</span>
           </div>
         )}
       </div>
     </section>
-  )
+  );
 }
 
-export default CostCenterChart
+export default CostCenterChart;

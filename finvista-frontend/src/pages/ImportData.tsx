@@ -1,9 +1,4 @@
-import {
-  useRef,
-  useState,
-  type ChangeEvent,
-  type DragEvent,
-} from 'react'
+import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
 
 import {
   importarCsv,
@@ -12,227 +7,184 @@ import {
   previewExcel,
   type FinancialTransaction,
   type ImportResult,
-} from '../services/importService'
+} from "../services/importService";
 
-import '../styles/import-data.css'
+import "../styles/import-data.css";
 
 type EstadoImportacao =
-  | 'inicial'
-  | 'arquivo-selecionado'
-  | 'analisando'
-  | 'preview'
-  | 'importando'
-  | 'concluido'
+  | "inicial"
+  | "arquivo-selecionado"
+  | "analisando"
+  | "preview"
+  | "importando"
+  | "concluido";
 
 function ImportData() {
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const [arquivo, setArquivo] =
-    useState<File | null>(null)
+  const [arquivo, setArquivo] = useState<File | null>(null);
 
-  const [estado, setEstado] =
-    useState<EstadoImportacao>('inicial')
+  const [estado, setEstado] = useState<EstadoImportacao>("inicial");
 
-  const [lancamentos, setLancamentos] =
-    useState<FinancialTransaction[]>([])
+  const [lancamentos, setLancamentos] = useState<FinancialTransaction[]>([]);
 
-  const [resultado, setResultado] =
-    useState<ImportResult | null>(null)
+  const [resultado, setResultado] = useState<ImportResult | null>(null);
 
-  const [erro, setErro] =
-    useState<string | null>(null)
+  const [erro, setErro] = useState<string | null>(null);
 
-  const [arrastando, setArrastando] =
-    useState(false)
+  const [arrastando, setArrastando] = useState(false);
 
   function extensaoArquivo(file: File) {
-    return file.name
-      .split('.')
-      .pop()
-      ?.toLowerCase()
+    return file.name.split(".").pop()?.toLowerCase();
   }
 
   function arquivoPermitido(file: File) {
-    const extensao = extensaoArquivo(file)
+    const extensao = extensaoArquivo(file);
 
-    return (
-      extensao === 'csv' ||
-      extensao === 'xlsx' ||
-      extensao === 'xls'
-    )
+    return extensao === "csv" || extensao === "xlsx" || extensao === "xls";
   }
 
   function selecionarArquivo(file: File) {
-    setErro(null)
-    setResultado(null)
-    setLancamentos([])
+    setErro(null);
+    setResultado(null);
+    setLancamentos([]);
 
     if (!arquivoPermitido(file)) {
-      setArquivo(null)
-      setEstado('inicial')
-      setErro(
-        'Formato não suportado. Selecione um arquivo CSV ou Excel.',
-      )
-      return
+      setArquivo(null);
+      setEstado("inicial");
+      setErro("Formato não suportado. Selecione um arquivo CSV ou Excel.");
+      return;
     }
 
-    setArquivo(file)
-    setEstado('arquivo-selecionado')
+    setArquivo(file);
+    setEstado("arquivo-selecionado");
   }
 
-  function handleInputChange(
-    event: ChangeEvent<HTMLInputElement>,
-  ) {
-    const file = event.target.files?.[0]
+  function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
 
     if (file) {
-      selecionarArquivo(file)
+      selecionarArquivo(file);
     }
   }
 
-  function handleDrop(
-    event: DragEvent<HTMLDivElement>,
-  ) {
-    event.preventDefault()
-    setArrastando(false)
+  function handleDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setArrastando(false);
 
-    const file = event.dataTransfer.files?.[0]
+    const file = event.dataTransfer.files?.[0];
 
     if (file) {
-      selecionarArquivo(file)
+      selecionarArquivo(file);
     }
   }
 
   async function analisarArquivo() {
     if (!arquivo) {
-      return
+      return;
     }
 
     try {
-      setEstado('analisando')
-      setErro(null)
+      setEstado("analisando");
+      setErro(null);
 
-      const extensao =
-        extensaoArquivo(arquivo)
+      const extensao = extensaoArquivo(arquivo);
 
       const resposta =
-        extensao === 'csv'
+        extensao === "csv"
           ? await previewCsv(arquivo)
-          : await previewExcel(arquivo)
+          : await previewExcel(arquivo);
 
-      setLancamentos(
-        resposta.lancamentos ?? [],
-      )
+      setLancamentos(resposta.lancamentos ?? []);
 
-      setEstado('preview')
+      setEstado("preview");
     } catch (error) {
-      console.error(
-        'Erro ao analisar arquivo:',
-        error,
-      )
+      console.error("Erro ao analisar arquivo:", error);
 
-      setEstado('arquivo-selecionado')
+      setEstado("arquivo-selecionado");
 
       setErro(
         error instanceof Error
           ? error.message
-          : 'Não foi possível analisar o arquivo.',
-      )
+          : "Não foi possível analisar o arquivo.",
+      );
     }
   }
 
   async function confirmarImportacao() {
     if (!arquivo) {
-      return
+      return;
     }
 
     try {
-      setEstado('importando')
-      setErro(null)
+      setEstado("importando");
+      setErro(null);
 
-      const extensao =
-        extensaoArquivo(arquivo)
+      const extensao = extensaoArquivo(arquivo);
 
       const resposta =
-        extensao === 'csv'
+        extensao === "csv"
           ? await importarCsv(arquivo)
-          : await importarExcel(arquivo)
+          : await importarExcel(arquivo);
 
-      setResultado(resposta)
-      setLancamentos(
-        resposta.lancamentos ?? [],
-      )
+      setResultado(resposta);
+      setLancamentos(resposta.lancamentos ?? []);
 
-      setEstado('concluido')
+      setEstado("concluido");
     } catch (error) {
-      console.error(
-        'Erro ao importar arquivo:',
-        error,
-      )
+      console.error("Erro ao importar arquivo:", error);
 
-      setEstado('preview')
+      setEstado("preview");
 
       setErro(
         error instanceof Error
           ? error.message
-          : 'Não foi possível importar o arquivo.',
-      )
+          : "Não foi possível importar o arquivo.",
+      );
     }
   }
 
   function limparImportacao() {
-    setArquivo(null)
-    setLancamentos([])
-    setResultado(null)
-    setErro(null)
-    setEstado('inicial')
+    setArquivo(null);
+    setLancamentos([]);
+    setResultado(null);
+    setErro(null);
+    setEstado("inicial");
 
     if (inputRef.current) {
-      inputRef.current.value = ''
+      inputRef.current.value = "";
     }
   }
 
   function formatarTamanho(bytes: number) {
     if (bytes < 1024) {
-      return `${bytes} B`
+      return `${bytes} B`;
     }
 
     if (bytes < 1024 * 1024) {
-      return `${(bytes / 1024).toFixed(1)} KB`
+      return `${(bytes / 1024).toFixed(1)} KB`;
     }
 
-    return `${(
-      bytes /
-      (1024 * 1024)
-    ).toFixed(1)} MB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   function formatarMoeda(valor: number) {
-    return Number(valor).toLocaleString(
-      'pt-BR',
-      {
-        style: 'currency',
-        currency: 'BRL',
-      },
-    )
+    return Number(valor).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
   }
 
   return (
-    <div
-      id="importacao"
-      className="import-data"
-    >
+    <div id="importacao" className="import-data">
       <header className="import-data-header">
         <div>
-          <span className="import-data-eyebrow">
-            DADOS FINANCEIROS
-          </span>
+          <span className="import-data-eyebrow">DADOS FINANCEIROS</span>
 
           <h1>Importação de dados</h1>
 
           <p>
-            Importe lançamentos financeiros
-            através de arquivos CSV ou Excel.
+            Importe lançamentos financeiros através de arquivos CSV ou Excel.
           </p>
         </div>
 
@@ -249,31 +201,20 @@ function ImportData() {
       <section className="import-card">
         <div
           className={`import-dropzone ${
-            arrastando
-              ? 'import-dropzone-active'
-              : ''
+            arrastando ? "import-dropzone-active" : ""
           }`}
           onDragOver={(event) => {
-            event.preventDefault()
-            setArrastando(true)
+            event.preventDefault();
+            setArrastando(true);
           }}
-          onDragLeave={() =>
-            setArrastando(false)
-          }
+          onDragLeave={() => setArrastando(false)}
           onDrop={handleDrop}
         >
-          <div className="import-upload-icon">
-            ↑
-          </div>
+          <div className="import-upload-icon">↑</div>
 
-          <h2>
-            Arraste seu arquivo aqui
-          </h2>
+          <h2>Arraste seu arquivo aqui</h2>
 
-          <p>
-            ou selecione um arquivo do
-            computador
-          </p>
+          <p>ou selecione um arquivo do computador</p>
 
           <input
             ref={inputRef}
@@ -286,23 +227,17 @@ function ImportData() {
           <button
             type="button"
             className="import-select-button"
-            onClick={() =>
-              inputRef.current?.click()
-            }
+            onClick={() => inputRef.current?.click()}
           >
             Selecionar arquivo
           </button>
 
-          <span className="import-formats">
-            CSV • Excel (.xlsx / .xls)
-          </span>
+          <span className="import-formats">CSV • Excel (.xlsx / .xls)</span>
         </div>
 
         {erro && (
           <div className="import-message import-message-error">
-            <strong>
-              Não foi possível continuar
-            </strong>
+            <strong>Não foi possível continuar</strong>
 
             <span>{erro}</span>
           </div>
@@ -311,91 +246,64 @@ function ImportData() {
         {arquivo && (
           <div className="import-selected-file">
             <div className="import-file-icon">
-              {extensaoArquivo(arquivo)
-                ?.toUpperCase()}
+              {extensaoArquivo(arquivo)?.toUpperCase()}
             </div>
 
             <div className="import-file-info">
-              <strong>
-                {arquivo.name}
-              </strong>
+              <strong>{arquivo.name}</strong>
 
-              <span>
-                {formatarTamanho(
-                  arquivo.size,
-                )}
-              </span>
+              <span>{formatarTamanho(arquivo.size)}</span>
             </div>
 
             <button
               type="button"
               className="import-remove-button"
               onClick={limparImportacao}
-              disabled={
-                estado === 'analisando' ||
-                estado === 'importando'
-              }
+              disabled={estado === "analisando" || estado === "importando"}
             >
               Remover
             </button>
           </div>
         )}
 
-        {arquivo &&
-          estado ===
-            'arquivo-selecionado' && (
-            <div className="import-actions">
-              <button
-                type="button"
-                className="import-primary-button"
-                onClick={analisarArquivo}
-              >
-                Analisar arquivo
-              </button>
-            </div>
-          )}
+        {arquivo && estado === "arquivo-selecionado" && (
+          <div className="import-actions">
+            <button
+              type="button"
+              className="import-primary-button"
+              onClick={analisarArquivo}
+            >
+              Analisar arquivo
+            </button>
+          </div>
+        )}
 
-        {estado === 'analisando' && (
+        {estado === "analisando" && (
           <div className="import-processing">
             <span className="import-spinner" />
 
             <div>
-              <strong>
-                Analisando arquivo
-              </strong>
+              <strong>Analisando arquivo</strong>
 
-              <p>
-                Validando os lançamentos
-                financeiros...
-              </p>
+              <p>Validando os lançamentos financeiros...</p>
             </div>
           </div>
         )}
       </section>
 
-      {(estado === 'preview' ||
-        estado === 'importando') && (
+      {(estado === "preview" || estado === "importando") && (
         <section className="import-preview-card">
           <div className="import-preview-header">
             <div>
-              <span className="import-data-eyebrow">
-                PRÉ-VISUALIZAÇÃO
-              </span>
+              <span className="import-data-eyebrow">PRÉ-VISUALIZAÇÃO</span>
 
-              <h2>
-                Lançamentos encontrados
-              </h2>
+              <h2>Lançamentos encontrados</h2>
 
-              <p>
-                Confira os dados antes de
-                confirmar a importação.
-              </p>
+              <p>Confira os dados antes de confirmar a importação.</p>
             </div>
 
             <div className="import-preview-count">
-              <strong>
-                {lancamentos.length}
-              </strong>
+              <strong>{lancamentos.length}</strong>
 
               <span>registros</span>
             </div>
@@ -415,65 +323,40 @@ function ImportData() {
               </thead>
 
               <tbody>
-                {lancamentos
-                  .slice(0, 20)
-                  .map(
-                    (
-                      lancamento,
-                      index,
-                    ) => (
-                      <tr
-                        key={`${lancamento.descricao}-${index}`}
+                {lancamentos.slice(0, 20).map((lancamento, index) => (
+                  <tr key={`${lancamento.descricao}-${index}`}>
+                    <td>{lancamento.data}</td>
+
+                    <td>{lancamento.descricao}</td>
+
+                    <td>
+                      <span
+                        className={`import-type-badge ${
+                          lancamento.tipo === "RECEITA"
+                            ? "import-type-revenue"
+                            : "import-type-expense"
+                        }`}
                       >
-                        <td>
-                          {lancamento.data}
-                        </td>
+                        {lancamento.tipo}
+                      </span>
+                    </td>
 
-                        <td>
-                          {
-                            lancamento.descricao
-                          }
-                        </td>
+                    <td>{lancamento.categoria ?? "—"}</td>
 
-                        <td>
-                          <span
-                            className={`import-type-badge ${
-                              lancamento.tipo ===
-                              'RECEITA'
-                                ? 'import-type-revenue'
-                                : 'import-type-expense'
-                            }`}
-                          >
-                            {lancamento.tipo}
-                          </span>
-                        </td>
+                    <td>{lancamento.centroCusto ?? "—"}</td>
 
-                        <td>
-                          {lancamento.categoria ??
-                            '—'}
-                        </td>
-
-                        <td>
-                          {lancamento.centroCusto ??
-                            '—'}
-                        </td>
-
-                        <td className="import-value">
-                          {formatarMoeda(
-                            lancamento.valor,
-                          )}
-                        </td>
-                      </tr>
-                    ),
-                  )}
+                    <td className="import-value">
+                      {formatarMoeda(lancamento.valor)}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
 
           {lancamentos.length > 20 && (
             <p className="import-table-note">
-              Exibindo os primeiros 20 de{' '}
-              {lancamentos.length} registros.
+              Exibindo os primeiros 20 de {lancamentos.length} registros.
             </p>
           )}
 
@@ -482,9 +365,7 @@ function ImportData() {
               type="button"
               className="import-secondary-button"
               onClick={limparImportacao}
-              disabled={
-                estado === 'importando'
-              }
+              disabled={estado === "importando"}
             >
               Cancelar
             </button>
@@ -492,84 +373,60 @@ function ImportData() {
             <button
               type="button"
               className="import-primary-button"
-              onClick={
-                confirmarImportacao
-              }
-              disabled={
-                estado === 'importando'
-              }
+              onClick={confirmarImportacao}
+              disabled={estado === "importando"}
             >
-              {estado === 'importando'
-                ? 'Importando...'
-                : 'Confirmar importação'}
+              {estado === "importando"
+                ? "Importando..."
+                : "Confirmar importação"}
             </button>
           </div>
         </section>
       )}
 
-      {estado === 'concluido' &&
-        resultado && (
-          <section className="import-result-card">
-            <div className="import-success-icon">
-              ✓
-            </div>
+      {estado === "concluido" && resultado && (
+        <section className="import-result-card">
+          <div className="import-success-icon">✓</div>
 
-            <div className="import-result-content">
-              <span className="import-data-eyebrow">
-                IMPORTAÇÃO CONCLUÍDA
-              </span>
+          <div className="import-result-content">
+            <span className="import-data-eyebrow">IMPORTAÇÃO CONCLUÍDA</span>
 
-              <h2>
-                Dados importados com sucesso
-              </h2>
+            <h2>Dados importados com sucesso</h2>
 
-              <p>
-                O arquivo{' '}
-                <strong>
-                  {resultado.arquivo}
-                </strong>{' '}
-                foi processado pelo FinVista.
-              </p>
+            <p>
+              O arquivo <strong>{resultado.arquivo}</strong> foi processado pelo
+              FinVista.
+            </p>
 
-              <div className="import-result-grid">
-                <div>
-                  <span>Processados</span>
-                  <strong>
-                    {resultado.processados}
-                  </strong>
-                </div>
-
-                <div>
-                  <span>Importados</span>
-                  <strong>
-                    {resultado.importados}
-                  </strong>
-                </div>
-
-                <div>
-                  <span>
-                    Duplicidades ignoradas
-                  </span>
-                  <strong>
-                    {
-                      resultado.ignoradosDuplicidade
-                    }
-                  </strong>
-                </div>
+            <div className="import-result-grid">
+              <div>
+                <span>Processados</span>
+                <strong>{resultado.processados}</strong>
               </div>
 
-              <button
-                type="button"
-                className="import-primary-button"
-                onClick={limparImportacao}
-              >
-                Importar outro arquivo
-              </button>
+              <div>
+                <span>Importados</span>
+                <strong>{resultado.importados}</strong>
+              </div>
+
+              <div>
+                <span>Duplicidades ignoradas</span>
+                <strong>{resultado.ignoradosDuplicidade}</strong>
+              </div>
             </div>
-          </section>
-        )}
+
+            <button
+              type="button"
+              className="import-primary-button"
+              onClick={limparImportacao}
+            >
+              Importar outro arquivo
+            </button>
+          </div>
+        </section>
+      )}
     </div>
-  )
+  );
 }
 
-export default ImportData
+export default ImportData;
