@@ -8,10 +8,10 @@ import java.time.LocalDateTime;
 @Table(
         name = "usuarios",
         uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_usuarios_email",
-                        columnNames = "email"
-                )
+            @UniqueConstraint(
+                    name = "uk_usuarios_email",
+                    columnNames = "email"
+            )
         }
 )
 public class Usuario {
@@ -31,6 +31,10 @@ public class Usuario {
 
     @Column(nullable = false, length = 30)
     private String perfil;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cliente_id")
+    private Cliente cliente;
 
     @Column(nullable = false)
     private Boolean ativo = true;
@@ -112,5 +116,13 @@ public class Usuario {
 
     public LocalDateTime getDataCriacao() {
         return dataCriacao;
+    }
+
+    public Cliente getCliente() {
+        return cliente;
+    }
+
+    public void setCliente(Cliente cliente) {
+        this.cliente = cliente;
     }
 }

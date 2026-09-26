@@ -19,94 +19,98 @@ public class Budget {
     private Long id;
 
     @Column(nullable = false, length = 150)
-    private String cliente;
+    private String nome;
 
-    @Column(nullable = false, precision = 15, scale = 2)
-    private BigDecimal valor;
+    @Column(name = "centro_custo", length = 150)
+    private String centroCusto;
 
-    @Column(nullable = false, length = 50)
-    private String status;
+    @Column(length = 150)
+    private String categoria;
 
-    @Column(nullable = false)
-    private Integer probabilidade;
+    @Column(
+            name = "valor_planejado",
+            nullable = false,
+            precision = 15,
+            scale = 2
+    )
+    private BigDecimal valorPlanejado;
 
-    @Column(name = "data_previsao_fechamento")
-    private LocalDate dataPrevisaoFechamento;
+    @Column(name = "data_inicio", nullable = false)
+    private LocalDate dataInicio;
+
+    @Column(name = "data_fim", nullable = false)
+    private LocalDate dataFim;
 
     public Budget() {
     }
 
     public Budget(
-            String cliente,
-            BigDecimal valor,
-            String status,
-            Integer probabilidade
+            String nome,
+            String centroCusto,
+            String categoria,
+            BigDecimal valorPlanejado,
+            LocalDate dataInicio,
+            LocalDate dataFim
     ) {
-        this.cliente = cliente;
-        this.valor = valor;
-        this.status = status;
-        this.probabilidade = probabilidade;
-    }
-
-    public Budget(
-            String cliente,
-            BigDecimal valor,
-            String status,
-            Integer probabilidade,
-            LocalDate dataPrevisaoFechamento
-    ) {
-        this.cliente = cliente;
-        this.valor = valor;
-        this.status = status;
-        this.probabilidade = probabilidade;
-        this.dataPrevisaoFechamento =
-                dataPrevisaoFechamento;
+        this.nome = nome;
+        this.centroCusto = centroCusto;
+        this.categoria = categoria;
+        this.valorPlanejado = valorPlanejado;
+        this.dataInicio = dataInicio;
+        this.dataFim = dataFim;
     }
 
     public Long getId() {
         return id;
     }
 
-    public String getCliente() {
-        return cliente;
+    public String getNome() {
+        return nome;
     }
 
-    public void setCliente(String cliente) {
-        this.cliente = cliente;
+    public void setNome(String nome) {
+        this.nome = nome;
     }
 
-    public BigDecimal getValor() {
-        return valor;
+    public String getCentroCusto() {
+        return centroCusto;
     }
 
-    public void setValor(BigDecimal valor) {
-        this.valor = valor;
+    public void setCentroCusto(String centroCusto) {
+        this.centroCusto = centroCusto;
     }
 
-    public String getStatus() {
-        return status;
+    public String getCategoria() {
+        return categoria;
     }
 
-    public void setStatus(String status) {
-        this.status = status;
+    public void setCategoria(String categoria) {
+        this.categoria = categoria;
     }
 
-    public Integer getProbabilidade() {
-        return probabilidade;
+    public BigDecimal getValorPlanejado() {
+        return valorPlanejado;
     }
 
-    public void setProbabilidade(Integer probabilidade) {
-        this.probabilidade = probabilidade;
-    }
-
-    public LocalDate getDataPrevisaoFechamento() {
-        return dataPrevisaoFechamento;
-    }
-
-    public void setDataPrevisaoFechamento(
-            LocalDate dataPrevisaoFechamento
+    public void setValorPlanejado(
+            BigDecimal valorPlanejado
     ) {
-        this.dataPrevisaoFechamento =
-                dataPrevisaoFechamento;
+        this.valorPlanejado = valorPlanejado;
+    }
+
+    public LocalDate getDataInicio() {
+        return dataInicio;
+    }
+
+    public void setDataInicio(LocalDate dataInicio) {
+        this.dataInicio = dataInicio;
+    }
+
+    public LocalDate getDataFim() {
+        return dataFim;
+    }
+
+    public void setDataFim(LocalDate dataFim) {
+        this.dataFim = dataFim;
     }
 }

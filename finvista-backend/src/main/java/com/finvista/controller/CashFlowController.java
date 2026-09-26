@@ -13,21 +13,17 @@ import java.util.List;
 @RequestMapping("/api/fluxo-caixa")
 public class CashFlowController {
 
-    private final CashFlowService
-            cashFlowService;
+        private final CashFlowService cashFlowService;
 
-    public CashFlowController(
-            CashFlowService cashFlowService
-    ) {
-        this.cashFlowService =
-                cashFlowService;
-    }
+        public CashFlowController(
+                        CashFlowService cashFlowService) {
+                this.cashFlowService = cashFlowService;
+        }
 
-    @GetMapping
-    public List<CashFlowResponse>
-    getFluxoCaixa() {
+        @GetMapping
+        public List<CashFlowResponse> getFluxoCaixa() {
 
-        return cashFlowService
-                .obterFluxoCaixa();
-    }
+                return cashFlowService
+                                .obterFluxoCaixa();
+        }
 }

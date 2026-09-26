@@ -40,11 +40,9 @@ public class ClienteInitializer implements CommandLineRunner {
                 nome,
                 email,
                 senha,
-                "CLIENTE"
-        );
+                "CLIENTE");
 
         System.out.println(
-                "Cliente inicial do FinVista criado com sucesso."
-        );
+                "Cliente inicial do FinVista criado com sucesso.");
     }
 }

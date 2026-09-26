@@ -1,13 +1,10 @@
 package com.finvista.service;
 
 import com.finvista.dto.CashFlowResponse;
-import com.finvista.model.CashFlow;
-import com.finvista.repository.CashFlowRepository;
-
+import com.finvista.service.FinancialTransactionAggregationService.MonthlyFinancialSummary;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,77 +13,81 @@ import java.util.Locale;
 @Service
 public class CashFlowService {
 
-    private final CashFlowRepository repository;
+    private final FinancialTransactionAggregationService transactionAggregationService;
 
     public CashFlowService(
-            CashFlowRepository repository
+            FinancialTransactionAggregationService transactionAggregationService
     ) {
-        this.repository = repository;
+        this.transactionAggregationService
+                = transactionAggregationService;
     }
 
     public List<CashFlowResponse>
-    obterFluxoCaixa() {
+            obterFluxoCaixa() {
 
-        List<CashFlow> registros =
-                repository.findAllByOrderByPeriodoAsc();
+        List<MonthlyFinancialSummary> resumos
+                = transactionAggregationService
+                        .obterResumoMensalCompleto();
 
-        List<CashFlowResponse> fluxo =
-                new ArrayList<>();
+        List<CashFlowResponse> fluxo
+                = new ArrayList<>();
 
-        BigDecimal saldoAtual =
-                BigDecimal.ZERO;
+        BigDecimal saldoAtual
+                = BigDecimal.ZERO;
 
-        for (CashFlow registro : registros) {
+        for (MonthlyFinancialSummary resumo : resumos) {
 
-            BigDecimal saldoInicial =
-                    saldoAtual;
+            BigDecimal saldoInicial
+                    = saldoAtual;
 
-            BigDecimal saldoFinal =
-                    saldoInicial
-                            .add(registro.getEntradas())
-                            .subtract(registro.getSaidas());
+            BigDecimal entradas
+                    = resumo.receita();
 
-            CashFlowResponse dados =
-                    new CashFlowResponse(
-                            formatarMes(
-                                    registro.getPeriodo()
-                            ),
+            BigDecimal saidas
+                    = resumo.despesa();
+
+            BigDecimal saldoFinal
+                    = saldoInicial
+                            .add(entradas)
+                            .subtract(saidas);
+
+            CashFlowResponse dados
+                    = new CashFlowResponse(
+                            formatarMes(resumo.periodo()),
                             saldoInicial,
-                            registro.getEntradas(),
-                            registro.getSaidas(),
+                            entradas,
+                            saidas,
                             saldoFinal
                     );
 
             fluxo.add(dados);
 
-            saldoAtual =
-                    saldoFinal;
+            saldoAtual
+                    = saldoFinal;
         }
 
         return fluxo;
     }
 
     private String formatarMes(
-            String periodo
+            java.time.YearMonth periodo
     ) {
 
-        YearMonth yearMonth =
-                YearMonth.parse(periodo);
-
-        DateTimeFormatter formatter =
-                DateTimeFormatter.ofPattern(
-                        "MMM",
+        DateTimeFormatter formatter
+                = DateTimeFormatter.ofPattern(
+                        "MMM/yyyy",
                         new Locale("pt", "BR")
                 );
-
+        
+                 
         String mes =
-                yearMonth.format(formatter);
+                periodo.format(formatter)
+                        .replace(".", "");
 
         return mes
                 .substring(0, 1)
                 .toUpperCase()
-                + mes
-                .substring(1)
-                .replace(".", "");
+ 
+               + mes.substring(1);
     }
 }

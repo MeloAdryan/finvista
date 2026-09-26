@@ -7,57 +7,63 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 
 @Configuration
 public class SecurityConfig {
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http
-    ) throws Exception {
+        @Bean
+        public SecurityContextRepository securityContextRepository() {
+                return new HttpSessionSecurityContextRepository();
+        }
 
-        http
-                .cors(cors -> {
-                })
+        @Bean
+        public SecurityFilterChain securityFilterChain(
+                        HttpSecurity http,
+                        SecurityContextRepository securityContextRepository)
+                        throws Exception {
 
-                .csrf(csrf -> csrf.disable())
+                http
+                                .cors(cors -> {
+                                })
 
-                .formLogin(form -> form.disable())
-                .httpBasic(basic -> basic.disable())
+                                .csrf(csrf -> csrf.disable())
 
-                .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(
-                                (request, response, authException) ->
-                                        response.sendError(
-                                                HttpServletResponse.SC_UNAUTHORIZED
-                                        )
-                        )
-                        .accessDeniedHandler(
-                                (request, response, accessDeniedException) ->
-                                        response.sendError(
-                                                HttpServletResponse.SC_FORBIDDEN
-                                        )
-                        )
-                )
+                                .securityContext(securityContext -> securityContext
+                                                .securityContextRepository(
+                                                                securityContextRepository))
 
-                .authorizeHttpRequests(auth -> auth
+                                .formLogin(form -> form.disable())
+                                .httpBasic(basic -> basic.disable())
 
-                        .requestMatchers(
-                                "/api/auth/login"
-                        ).permitAll()
+                                .exceptionHandling(exception -> exception
+                                                .authenticationEntryPoint(
+                                                                (request, response, authException) -> response
+                                                                                .sendError(
+                                                                                                HttpServletResponse.SC_UNAUTHORIZED))
+                                                .accessDeniedHandler(
+                                                                (request, response, accessDeniedException) -> response
+                                                                                .sendError(
+                                                                                                HttpServletResponse.SC_FORBIDDEN)))
 
-                        .requestMatchers(
-                                "/api/importacoes/**"
-                        ).hasRole("ADMIN")
+                                .authorizeHttpRequests(auth -> auth
 
-                        .anyRequest().authenticated()
-                );
+                                                .requestMatchers(
+                                                                "/api/auth/login")
+                                                .permitAll()
 
-        return http.build();
-    }
+                                                .requestMatchers(
+                                                                "/api/importacoes/**")
+                                                .hasRole("ADMIN")
+
+                                                .anyRequest().authenticated());
+
+                return http.build();
+        }
 }

@@ -8,6 +8,7 @@ import type {
   CreateSpendingGoalRequest,
   SpendingGoal,
 } from "../services/spendingGoalService";
+import { obterUsuarioAtual, type AuthUser } from "../services/authService";
 
 import "../styles/spending-goals.css";
 
@@ -29,6 +30,8 @@ const classeStatus = (status: string) => status.toLowerCase();
 
 function SpendingGoals() {
   const [metas, setMetas] = useState<SpendingGoal[]>([]);
+  const [usuario, setUsuario] = useState<AuthUser | null>(null);
+
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
@@ -63,14 +66,21 @@ function SpendingGoals() {
   useEffect(() => {
     let ativo = true;
 
-    listarMetas()
-      .then((dados) => {
+    async function carregarPagina() {
+      try {
+        setCarregando(true);
+        setErro("");
+
+        const [dadosMetas, usuarioAtual] = await Promise.all([
+          listarMetas(),
+          obterUsuarioAtual(),
+        ]);
+
         if (ativo) {
-          setMetas(dados);
-          setErro("");
+          setMetas(dadosMetas);
+          setUsuario(usuarioAtual);
         }
-      })
-      .catch((error) => {
+      } catch (error) {
         if (ativo) {
           setErro(
             error instanceof Error
@@ -78,17 +88,21 @@ function SpendingGoals() {
               : "Não foi possível carregar as metas.",
           );
         }
-      })
-      .finally(() => {
+      } finally {
         if (ativo) {
           setCarregando(false);
         }
-      });
+      }
+    }
+
+    void carregarPagina();
 
     return () => {
       ativo = false;
     };
   }, []);
+
+  const usuarioAdmin = usuario?.perfil === "ADMIN";
 
   const resumo = useMemo(() => {
     const limiteTotal = metas.reduce(
@@ -192,19 +206,21 @@ function SpendingGoals() {
           </p>
         </div>
 
-        <button
-          type="button"
-          className="metas-primary-button"
-          onClick={() => setMostrarFormulario((atual) => !atual)}
-        >
-          <span>+</span>
-          Nova meta
-        </button>
+        {usuarioAdmin && (
+          <button
+            type="button"
+            className="metas-primary-button"
+            onClick={() => setMostrarFormulario((atual) => !atual)}
+          >
+            <span>+</span>
+            Nova meta
+          </button>
+        )}
       </div>
 
       {erro && <div className="metas-alerta-erro">{erro}</div>}
 
-      {mostrarFormulario && (
+      {usuarioAdmin && mostrarFormulario && (
         <form className="metas-formulario" onSubmit={salvarMeta}>
           <div className="metas-formulario-header">
             <div>
@@ -368,13 +384,15 @@ function SpendingGoals() {
               e gastos.
             </p>
 
-            <button
-              type="button"
-              className="metas-primary-button"
-              onClick={() => setMostrarFormulario(true)}
-            >
-              + Criar primeira meta
-            </button>
+            {usuarioAdmin && (
+              <button
+                type="button"
+                className="metas-empty-button"
+                onClick={() => setMostrarFormulario(true)}
+              >
+                + Criar primeira meta
+              </button>
+            )}
           </div>
         ) : (
           <div className="metas-lista">

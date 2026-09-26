@@ -1,67 +1,111 @@
 package com.finvista.service;
 
-import com.finvista.dto.DashboardResponse;
-import com.finvista.model.FinancialHistory;
-import com.finvista.repository.FinancialHistoryRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.math.BigDecimal;
-import java.util.Optional;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import static org.mockito.Mockito.when;
+
+import com.finvista.dto.DashboardResponse;
+import com.finvista.model.FinancialTransaction;
+import com.finvista.repository.FinancialTransactionRepository;
 
 class DashboardServiceTest {
 
-    private FinancialHistoryRepository financialHistoryRepository;
-    private DashboardService dashboardService;
+    private FinancialTransactionRepository
+            financialTransactionRepository;
+
+    private DashboardService
+            dashboardService;
 
     @BeforeEach
     void setUp() {
 
-        financialHistoryRepository =
-                mock(FinancialHistoryRepository.class);
+        financialTransactionRepository =
+                Mockito.mock(
+                        FinancialTransactionRepository.class
+                );
+
+        FinancialTransactionAggregationService
+                transactionAggregationService =
+                new FinancialTransactionAggregationService(
+                        financialTransactionRepository
+                );
 
         FinancialCalculationService calculationService =
                 new FinancialCalculationService();
 
         dashboardService =
                 new DashboardService(
-                        financialHistoryRepository,
+                        transactionAggregationService,
                         calculationService
                 );
     }
 
     @Test
-    void deveMontarDashboardComUltimoRegistroFinanceiro() {
+    void deveMontarDashboardComLancamentosDoMesAtual() {
 
-        FinancialHistory historico =
-                new FinancialHistory(
-                        "2026-09",
-                        new BigDecimal("150000.00"),
-                        new BigDecimal("92000.00")
+        YearMonth mesAtual =
+                YearMonth.now();
+
+        LocalDate dataInicial =
+                mesAtual.atDay(1);
+
+        LocalDate dataFinal =
+                mesAtual.atEndOfMonth();
+
+        List<FinancialTransaction> lancamentos =
+                List.of(
+                        criarLancamento(
+                                LocalDate.of(
+                                        mesAtual.getYear(),
+                                        mesAtual.getMonth(),
+                                        5
+                                ),
+                                "RECEITA",
+                                "150000.00"
+                        ),
+                        criarLancamento(
+                                LocalDate.of(
+                                        mesAtual.getYear(),
+                                        mesAtual.getMonth(),
+                                        10
+                                ),
+                                "DESPESA",
+                                "92000.00"
+                        )
                 );
 
         when(
-                financialHistoryRepository
-                        .findFirstByOrderByPeriodoDesc()
-        ).thenReturn(
-                Optional.of(historico)
-        );
+                financialTransactionRepository
+                        .findByDataBetweenOrderByDataAsc(
+                                dataInicial,
+                                dataFinal
+                        )
+        ).thenReturn(lancamentos);
 
         DashboardResponse resposta =
                 dashboardService.obterDashboard();
 
         assertEquals(
-                new BigDecimal("150000.00"),
+                0,
                 resposta.receita()
+                        .compareTo(
+                                new BigDecimal("150000.00")
+                        )
         );
 
         assertEquals(
-                new BigDecimal("92000.00"),
+                0,
                 resposta.despesa()
+                        .compareTo(
+                                new BigDecimal("92000.00")
+                        )
         );
 
         assertEquals(
@@ -82,13 +126,25 @@ class DashboardServiceTest {
     }
 
     @Test
-    void deveRetornarDashboardZeradoQuandoNaoExistirHistorico() {
+    void deveRetornarDashboardZeradoQuandoNaoExistiremLancamentosNoMesAtual() {
+
+        YearMonth mesAtual =
+                YearMonth.now();
+
+        LocalDate dataInicial =
+                mesAtual.atDay(1);
+
+        LocalDate dataFinal =
+                mesAtual.atEndOfMonth();
 
         when(
-                financialHistoryRepository
-                        .findFirstByOrderByPeriodoDesc()
+                financialTransactionRepository
+                        .findByDataBetweenOrderByDataAsc(
+                                dataInicial,
+                                dataFinal
+                        )
         ).thenReturn(
-                Optional.empty()
+                List.of()
         );
 
         DashboardResponse resposta =
@@ -117,5 +173,23 @@ class DashboardServiceTest {
                 resposta.margem()
                         .compareTo(BigDecimal.ZERO)
         );
+    }
+
+    private FinancialTransaction criarLancamento(
+            LocalDate data,
+            String tipo,
+            String valor
+    ) {
+
+        FinancialTransaction lancamento =
+                new FinancialTransaction();
+
+        lancamento.setData(data);
+        lancamento.setTipo(tipo);
+        lancamento.setValor(
+                new BigDecimal(valor)
+        );
+
+        return lancamento;
     }
 }

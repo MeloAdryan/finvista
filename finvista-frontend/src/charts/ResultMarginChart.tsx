@@ -6,23 +6,20 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-} from 'recharts'
+} from "recharts";
 
 interface ResultMarginChartProps {
-  resultado: number
-  margem: number
+  resultado: number;
+  margem: number;
 }
 
-function ResultMarginChart({
-  resultado,
-  margem,
-}: ResultMarginChartProps) {
+function ResultMarginChart({ resultado, margem }: ResultMarginChartProps) {
   const dadosResultado = [
     {
-      nome: 'Resultado',
+      nome: "Resultado",
       valor: resultado,
     },
-  ]
+  ];
 
   return (
     <div className="chart-card">
@@ -35,7 +32,7 @@ function ResultMarginChart({
         <div className="margin-indicator">
           <span>Margem</span>
           <strong>
-            {margem.toLocaleString('pt-BR', {
+            {margem.toLocaleString("pt-BR", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
@@ -55,9 +52,9 @@ function ResultMarginChart({
 
             <Tooltip
               formatter={(value) =>
-                Number(value).toLocaleString('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL',
+                Number(value).toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
                 })
               }
             />
@@ -72,7 +69,7 @@ function ResultMarginChart({
         </ResponsiveContainer>
       </div>
     </div>
-  )
+  );
 }
 
-export default ResultMarginChart
+export default ResultMarginChart;

@@ -1,11 +1,8 @@
 package com.finvista.integration;
 
 import com.finvista.dto.ProjectionResponse;
-import com.finvista.model.Budget;
 import com.finvista.model.FinancialTransaction;
-import com.finvista.repository.BudgetRepository;
 import com.finvista.repository.FinancialTransactionRepository;
-import com.finvista.service.BudgetProjectionService;
 import com.finvista.service.FinancialCalculationService;
 import com.finvista.service.FinancialTransactionAggregationService;
 import com.finvista.service.ProjectionService;
@@ -29,8 +26,6 @@ class FinancialEngineIntegrationTest {
     private FinancialTransactionRepository
             financialTransactionRepository;
 
-    private BudgetRepository budgetRepository;
-
     private ProjectionService projectionService;
 
     @BeforeEach
@@ -39,21 +34,12 @@ class FinancialEngineIntegrationTest {
         financialTransactionRepository =
                 mock(FinancialTransactionRepository.class);
 
-        budgetRepository =
-                mock(BudgetRepository.class);
-
         FinancialCalculationService calculationService =
                 new FinancialCalculationService();
 
         FinancialTransactionAggregationService aggregationService =
                 new FinancialTransactionAggregationService(
                         financialTransactionRepository
-                );
-
-        BudgetProjectionService budgetProjectionService =
-                new BudgetProjectionService(
-                        budgetRepository,
-                        calculationService
                 );
 
         Clock clock =
@@ -67,14 +53,13 @@ class FinancialEngineIntegrationTest {
         projectionService =
                 new ProjectionService(
                         aggregationService,
-                        budgetProjectionService,
                         calculationService,
                         clock
                 );
     }
 
     @Test
-    void deveIntegrarTransacoesOrcamentosEProjecaoDeSeisMeses() {
+    void deveIntegrarTransacoesEProjecaoDeSeisMeses() {
 
         List<FinancialTransaction> transacoes =
                 List.of(
@@ -111,32 +96,6 @@ class FinancialEngineIntegrationTest {
                                 any(LocalDate.class)
                         )
         ).thenReturn(transacoes);
-
-        List<Budget> orcamentos =
-                List.of(
-                        new Budget(
-                                "Cliente Novembro",
-                                new BigDecimal("80000.00"),
-                                "ABERTO",
-                                50,
-                                LocalDate.of(2026, 11, 15)
-                        ),
-                        new Budget(
-                                "Cliente Dezembro",
-                                new BigDecimal("100000.00"),
-                                "ABERTO",
-                                70,
-                                LocalDate.of(2026, 12, 10)
-                        )
-                );
-
-        when(
-                budgetRepository
-                        .findByDataPrevisaoFechamentoBetweenOrderByDataPrevisaoFechamentoAsc(
-                                any(LocalDate.class),
-                                any(LocalDate.class)
-                        )
-        ).thenReturn(orcamentos);
 
         List<ProjectionResponse> projecao =
                 projectionService.obterProjecao();
@@ -208,6 +167,16 @@ class FinancialEngineIntegrationTest {
         );
 
         assertValor(
+                "30000.00",
+                outubro.receita()
+        );
+
+        assertValor(
+                "10000.00",
+                outubro.despesa()
+        );
+
+        assertValor(
                 "20000.00",
                 outubro.resultado()
         );
@@ -231,27 +200,22 @@ class FinancialEngineIntegrationTest {
         );
 
         assertValor(
-                "40000.00",
+                "0",
                 novembro.receitaProjetada()
         );
 
         assertValor(
-                "40000.00",
+                "0",
                 novembro.receita()
         );
 
         assertValor(
-                "40000.00",
+                "0",
                 novembro.resultado()
         );
 
         assertValor(
-                "100.00",
-                novembro.margem()
-        );
-
-        assertValor(
-                "120000.00",
+                "80000.00",
                 novembro.saldo()
         );
 
@@ -264,17 +228,17 @@ class FinancialEngineIntegrationTest {
         );
 
         assertValor(
-                "70000.00",
+                "0",
                 dezembro.receitaProjetada()
         );
 
         assertValor(
-                "70000.00",
+                "0",
                 dezembro.resultado()
         );
 
         assertValor(
-                "190000.00",
+                "80000.00",
                 dezembro.saldo()
         );
 
@@ -297,7 +261,7 @@ class FinancialEngineIntegrationTest {
         );
 
         assertValor(
-                "190000.00",
+                "80000.00",
                 janeiro.saldo()
         );
 
@@ -320,7 +284,7 @@ class FinancialEngineIntegrationTest {
         );
 
         assertValor(
-                "190000.00",
+                "80000.00",
                 fevereiro.saldo()
         );
     }

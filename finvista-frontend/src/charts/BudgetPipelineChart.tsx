@@ -6,74 +6,73 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-} from 'recharts'
+} from "recharts";
 
-import type {
-  BudgetPipelineData,
-} from '../services/budgetPipelineService'
+import type { BudgetPipelineData } from "../services/budgetPipelineService";
 
 interface BudgetPipelineChartProps {
-  dados: BudgetPipelineData[]
+  dados: BudgetPipelineData[];
 }
 
-function BudgetPipelineChart({
-  dados,
-}: BudgetPipelineChartProps) {
-
+function BudgetPipelineChart({ dados }: BudgetPipelineChartProps) {
   const formatarMoeda = (valor: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(valor)
-  }
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(valor);
+  };
 
   const formatarValorCompacto = (valor: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      notation: 'compact',
-      compactDisplay: 'short',
+    return new Intl.NumberFormat("pt-BR", {
+      notation: "compact",
+      compactDisplay: "short",
       maximumFractionDigits: 1,
-    }).format(valor)
-  }
+    }).format(valor);
+  };
 
-  const totalPipeline = dados.reduce(
-    (total, item) => total + Number(item.valor),
+  const totalPlanejado = dados.reduce(
+    (total, item) => total + Number(item.valorPlanejado),
     0,
-  )
+  );
 
-  const totalPonderado = dados.reduce(
-    (total, item) =>
-      total + Number(item.valorPonderado),
+  const totalUtilizado = dados.reduce(
+    (total, item) => total + Number(item.valorUtilizado),
     0,
-  )
+  );
 
-  const taxaPonderada =
-    totalPipeline > 0
-      ? (totalPonderado / totalPipeline) * 100
-      : 0
+  const totalDisponivel = dados.reduce(
+    (total, item) => total + Number(item.valorDisponivel),
+    0,
+  );
 
-  const maiorOportunidade =
+  const percentualUtilizado =
+    totalPlanejado > 0
+      ? (totalUtilizado / totalPlanejado) * 100
+      : 0;
+
+  const maiorConsumo =
     dados.length > 0
       ? dados.reduce((maior, atual) =>
-          Number(atual.valor) > Number(maior.valor)
+          Number(atual.percentualUtilizado) >
+          Number(maior.percentualUtilizado)
             ? atual
             : maior,
         )
-      : null
+      : null;
 
   return (
     <div className="budget-pipeline-card">
-
       <div className="budget-pipeline-header">
         <div>
           <span className="budget-pipeline-eyebrow">
-            PERFORMANCE COMERCIAL
+            CONTROLE ORÇAMENTÁRIO
           </span>
 
-          <h2>Orçamentos / Pipeline</h2>
+          <h2>Planejado × Utilizado</h2>
 
           <p>
-            Valor potencial e receita ponderada das
-            oportunidades comerciais.
+            Acompanhamento dos recursos planejados e do consumo real
+            identificado nas despesas da empresa.
           </p>
         </div>
 
@@ -86,94 +85,68 @@ function BudgetPipelineChart({
       {dados.length > 0 ? (
         <>
           <div className="budget-pipeline-metrics">
-
             <div className="budget-pipeline-metric">
-              <span>Pipeline total</span>
+              <span>Total planejado</span>
 
-              <strong>
-                {formatarMoeda(totalPipeline)}
-              </strong>
+              <strong>{formatarMoeda(totalPlanejado)}</strong>
 
-              <small>
-                {dados.length} oportunidades
-              </small>
+              <small>{dados.length} orçamentos</small>
             </div>
 
             <div className="budget-pipeline-metric">
-              <span>Receita ponderada</span>
+              <span>Total utilizado</span>
 
-              <strong>
-                {formatarMoeda(totalPonderado)}
-              </strong>
+              <strong>{formatarMoeda(totalUtilizado)}</strong>
 
-              <small>
-                Considerando probabilidades
-              </small>
+              <small>Despesas vinculadas aos orçamentos</small>
             </div>
 
             <div className="budget-pipeline-metric">
-              <span>Taxa ponderada</span>
+              <span>Total disponível</span>
 
-              <strong>
-                {taxaPonderada.toLocaleString(
-                  'pt-BR',
-                  {
-                    minimumFractionDigits: 1,
-                    maximumFractionDigits: 1,
-                  },
-                )}
-                %
-              </strong>
+              <strong>{formatarMoeda(totalDisponivel)}</strong>
 
               <small>
-                Conversão potencial do pipeline
+                {percentualUtilizado.toLocaleString("pt-BR", {
+                  minimumFractionDigits: 1,
+                  maximumFractionDigits: 1,
+                })}
+                % do orçamento utilizado
               </small>
             </div>
-
           </div>
 
           <div className="budget-pipeline-chart-box">
-
             <div className="budget-pipeline-chart-header">
               <div>
                 <span>COMPARATIVO</span>
 
-                <strong>
-                  Valor potencial × ponderado
-                </strong>
+                <strong>Planejado × utilizado</strong>
               </div>
 
-              {maiorOportunidade && (
+              {maiorConsumo && (
                 <div className="budget-pipeline-highlight">
-                  <span>Maior oportunidade</span>
+                  <span>Maior utilização</span>
 
-                  <strong>
-                    {maiorOportunidade.cliente}
-                  </strong>
+                  <strong>{maiorConsumo.nome}</strong>
                 </div>
               )}
             </div>
 
             <div className="budget-pipeline-legend">
-
               <div>
                 <span className="budget-legend-dot budget-legend-total" />
-                Valor do orçamento
+                Valor planejado
               </div>
 
               <div>
                 <span className="budget-legend-dot budget-legend-weighted" />
-                Receita ponderada
+                Valor utilizado
               </div>
-
             </div>
 
             <div className="budget-pipeline-chart-container">
-
-              <ResponsiveContainer
-                width="100%"
-                height="100%"
-              >
+              <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={dados}
                   margin={{
@@ -191,11 +164,11 @@ function BudgetPipelineChart({
                   />
 
                   <XAxis
-                    dataKey="cliente"
+                    dataKey="nome"
                     axisLine={false}
                     tickLine={false}
                     tick={{
-                      fill: '#64748b',
+                      fill: "#64748b",
                       fontSize: 12,
                     }}
                     interval={0}
@@ -206,7 +179,7 @@ function BudgetPipelineChart({
                     axisLine={false}
                     tickLine={false}
                     tick={{
-                      fill: '#64748b',
+                      fill: "#64748b",
                       fontSize: 12,
                     }}
                     tickFormatter={formatarValorCompacto}
@@ -215,13 +188,13 @@ function BudgetPipelineChart({
 
                   <Tooltip
                     cursor={{
-                      fill: 'rgba(15, 42, 68, 0.04)',
+                      fill: "rgba(15, 42, 68, 0.04)",
                     }}
                     contentStyle={{
-                      border: '1px solid #dfe6ee',
-                      borderRadius: '12px',
+                      border: "1px solid #dfe6ee",
+                      borderRadius: "12px",
                       boxShadow:
-                        '0 10px 30px rgba(15, 42, 68, 0.12)',
+                        "0 10px 30px rgba(15, 42, 68, 0.12)",
                     }}
                     formatter={(value) =>
                       formatarMoeda(Number(value))
@@ -229,35 +202,32 @@ function BudgetPipelineChart({
                   />
 
                   <Bar
-                    dataKey="valor"
-                    name="Valor do orçamento"
+                    dataKey="valorPlanejado"
+                    name="Valor planejado"
                     fill="#1e4068"
                     radius={[7, 7, 0, 0]}
                     maxBarSize={48}
                   />
 
                   <Bar
-                    dataKey="valorPonderado"
-                    name="Receita ponderada"
+                    dataKey="valorUtilizado"
+                    name="Valor utilizado"
                     fill="#b8763d"
                     radius={[7, 7, 0, 0]}
                     maxBarSize={48}
                   />
-
                 </BarChart>
               </ResponsiveContainer>
-
             </div>
           </div>
         </>
       ) : (
         <div className="budget-pipeline-empty">
-          Nenhuma oportunidade comercial disponível.
+          Nenhum orçamento financeiro disponível.
         </div>
       )}
-
     </div>
-  )
+  );
 }
 
-export default BudgetPipelineChart
+export default BudgetPipelineChart;

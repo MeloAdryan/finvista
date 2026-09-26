@@ -1,13 +1,15 @@
 package com.finvista.service;
 
 import com.finvista.dto.HistoryResponse;
-import com.finvista.model.FinancialHistory;
-import com.finvista.repository.FinancialHistoryRepository;
+import com.finvista.model.FinancialTransaction;
+import com.finvista.repository.FinancialTransactionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -15,21 +17,29 @@ import static org.mockito.Mockito.when;
 
 class HistoryServiceTest {
 
-    private FinancialHistoryRepository financialHistoryRepository;
+    private FinancialTransactionRepository
+            financialTransactionRepository;
+
     private HistoryService historyService;
 
     @BeforeEach
     void setUp() {
 
-        financialHistoryRepository =
-                mock(FinancialHistoryRepository.class);
+        financialTransactionRepository =
+                mock(FinancialTransactionRepository.class);
+
+        FinancialTransactionAggregationService
+                transactionAggregationService =
+                new FinancialTransactionAggregationService(
+                        financialTransactionRepository
+                );
 
         FinancialCalculationService calculationService =
                 new FinancialCalculationService();
 
         historyService =
                 new HistoryService(
-                        financialHistoryRepository,
+                        transactionAggregationService,
                         calculationService
                 );
     }
@@ -37,18 +47,27 @@ class HistoryServiceTest {
     @Test
     void deveCalcularResultadoMargemEFormatarPeriodo() {
 
-        FinancialHistory registro =
-                new FinancialHistory(
-                        "2026-09",
-                        new BigDecimal("100000.00"),
-                        new BigDecimal("40000.00")
+        FinancialTransaction receita =
+                criarLancamento(
+                        LocalDate.of(2026, 9, 10),
+                        "RECEITA",
+                        "100000.00"
                 );
 
-        when(
-                financialHistoryRepository
-                        .findAllByOrderByPeriodoAsc()
-        ).thenReturn(
-                List.of(registro)
+        FinancialTransaction despesa =
+                criarLancamento(
+                        LocalDate.of(2026, 9, 15),
+                        "DESPESA",
+                        "40000.00"
+                );
+
+        configurarPeriodoCompleto(
+                LocalDate.of(2026, 9, 10),
+                LocalDate.of(2026, 9, 15),
+                List.of(
+                        receita,
+                        despesa
+                )
         );
 
         List<HistoryResponse> resultado =
@@ -71,13 +90,19 @@ class HistoryServiceTest {
         );
 
         assertEquals(
-                new BigDecimal("100000.00"),
+                0,
                 resposta.receita()
+                        .compareTo(
+                                new BigDecimal("100000.00")
+                        )
         );
 
         assertEquals(
-                new BigDecimal("40000.00"),
+                0,
                 resposta.despesa()
+                        .compareTo(
+                                new BigDecimal("40000.00")
+                        )
         );
 
         assertEquals(
@@ -100,31 +125,30 @@ class HistoryServiceTest {
     @Test
     void deveFiltrarHistoricoPorPeriodoInicialEFinal() {
 
-        FinancialHistory agosto =
-                new FinancialHistory(
-                        "2026-08",
-                        new BigDecimal("80000.00"),
-                        new BigDecimal("30000.00")
+        FinancialTransaction agosto =
+                criarLancamento(
+                        LocalDate.of(2026, 8, 10),
+                        "RECEITA",
+                        "80000.00"
                 );
 
-        FinancialHistory setembro =
-                new FinancialHistory(
-                        "2026-09",
-                        new BigDecimal("100000.00"),
-                        new BigDecimal("40000.00")
+        FinancialTransaction setembro =
+                criarLancamento(
+                        LocalDate.of(2026, 9, 10),
+                        "RECEITA",
+                        "100000.00"
                 );
 
-        FinancialHistory outubro =
-                new FinancialHistory(
-                        "2026-10",
-                        new BigDecimal("120000.00"),
-                        new BigDecimal("50000.00")
+        FinancialTransaction outubro =
+                criarLancamento(
+                        LocalDate.of(2026, 10, 10),
+                        "RECEITA",
+                        "120000.00"
                 );
 
-        when(
-                financialHistoryRepository
-                        .findAllByOrderByPeriodoAsc()
-        ).thenReturn(
+        configurarPeriodoCompleto(
+                LocalDate.of(2026, 8, 10),
+                LocalDate.of(2026, 10, 10),
                 List.of(
                         agosto,
                         setembro,
@@ -147,23 +171,31 @@ class HistoryServiceTest {
                 "Set/2026",
                 resultado.get(0).periodo()
         );
+
+        assertEquals(
+                0,
+                resultado.get(0)
+                        .receita()
+                        .compareTo(
+                                new BigDecimal("100000.00")
+                        )
+        );
     }
 
     @Test
     void deveCalcularMargemZeroQuandoReceitaForZero() {
 
-        FinancialHistory registro =
-                new FinancialHistory(
-                        "2026-09",
-                        BigDecimal.ZERO,
-                        new BigDecimal("10000.00")
+        FinancialTransaction despesa =
+                criarLancamento(
+                        LocalDate.of(2026, 9, 10),
+                        "DESPESA",
+                        "10000.00"
                 );
 
-        when(
-                financialHistoryRepository
-                        .findAllByOrderByPeriodoAsc()
-        ).thenReturn(
-                List.of(registro)
+        configurarPeriodoCompleto(
+                LocalDate.of(2026, 9, 10),
+                LocalDate.of(2026, 9, 10),
+                List.of(despesa)
         );
 
         List<HistoryResponse> resultado =
@@ -192,5 +224,55 @@ class HistoryServiceTest {
                         .margem()
                         .compareTo(BigDecimal.ZERO)
         );
+    }
+
+    private void configurarPeriodoCompleto(
+            LocalDate menorData,
+            LocalDate maiorData,
+            List<FinancialTransaction> lancamentos
+    ) {
+
+        when(
+                financialTransactionRepository
+                        .findMenorData()
+        ).thenReturn(
+                Optional.of(menorData)
+        );
+
+        when(
+                financialTransactionRepository
+                        .findMaiorData()
+        ).thenReturn(
+                Optional.of(maiorData)
+        );
+
+        when(
+                financialTransactionRepository
+                        .findByDataBetweenOrderByDataAsc(
+                                menorData,
+                                maiorData
+                        )
+        ).thenReturn(lancamentos);
+    }
+
+    private FinancialTransaction criarLancamento(
+            LocalDate data,
+            String tipo,
+            String valor
+    ) {
+
+        FinancialTransaction lancamento =
+                new FinancialTransaction();
+
+        lancamento.setData(data);
+        lancamento.setDescricao(
+                "Lançamento de teste"
+        );
+        lancamento.setTipo(tipo);
+        lancamento.setValor(
+                new BigDecimal(valor)
+        );
+
+        return lancamento;
     }
 }

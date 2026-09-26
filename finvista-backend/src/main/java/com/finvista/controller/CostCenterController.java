@@ -15,10 +15,8 @@ public class CostCenterController {
     private final CostCenterService costCenterService;
 
     public CostCenterController(
-            CostCenterService costCenterService
-    ) {
-        this.costCenterService =
-                costCenterService;
+            CostCenterService costCenterService) {
+        this.costCenterService = costCenterService;
     }
 
     @GetMapping

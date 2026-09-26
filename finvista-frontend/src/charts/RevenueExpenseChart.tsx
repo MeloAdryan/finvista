@@ -7,31 +7,28 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-} from 'recharts'
+} from "recharts";
 
 interface RevenueExpenseChartProps {
-  receita: number
-  despesa: number
+  receita: number;
+  despesa: number;
 }
 
-function RevenueExpenseChart({
-  receita,
-  despesa,
-}: RevenueExpenseChartProps) {
+function RevenueExpenseChart({ receita, despesa }: RevenueExpenseChartProps) {
   const dados = [
     {
-      periodo: 'Atual',
+      periodo: "Atual",
       receita,
       despesa,
     },
-  ]
+  ];
 
   const formatarValor = (valor: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      notation: 'compact',
-      compactDisplay: 'short',
-    }).format(valor)
-  }
+    return new Intl.NumberFormat("pt-BR", {
+      notation: "compact",
+      compactDisplay: "short",
+    }).format(valor);
+  };
 
   return (
     <div className="chart-card">
@@ -53,9 +50,9 @@ function RevenueExpenseChart({
 
             <Tooltip
               formatter={(value) =>
-                Number(value).toLocaleString('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL',
+                Number(value).toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
                 })
               }
             />
@@ -79,7 +76,7 @@ function RevenueExpenseChart({
         </ResponsiveContainer>
       </div>
     </div>
-  )
+  );
 }
 
-export default RevenueExpenseChart
+export default RevenueExpenseChart;

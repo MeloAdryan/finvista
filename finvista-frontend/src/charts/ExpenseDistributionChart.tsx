@@ -1,62 +1,53 @@
-import {
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-} from 'recharts'
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
-import type {
-  ExpenseDistributionData,
-} from '../services/expenseDistributionService'
+import type { ExpenseDistributionData } from "../services/expenseDistributionService";
 
 interface ExpenseDistributionChartProps {
-  dados: ExpenseDistributionData[]
+  dados: ExpenseDistributionData[];
 }
 
-function ExpenseDistributionChart({
-  dados,
-}: ExpenseDistributionChartProps) {
+function ExpenseDistributionChart({ dados }: ExpenseDistributionChartProps) {
   const cores = [
-    '#0f2a44',
-    '#1e4068',
-    '#2f7ed8',
-    '#7cb5ef',
-    '#b8763d',
-    '#94a3b8',
-  ]
+    "#0f2a44",
+    "#1e4068",
+    "#2f7ed8",
+    "#7cb5ef",
+    "#b8763d",
+    "#94a3b8",
+  ];
 
   const formatarMoeda = (valor: number) =>
-    valor.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    })
+    valor.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
 
   const totalDespesas = dados.reduce(
     (total, item) => total + Number(item.valor),
     0,
-  )
+  );
 
-  const maiorCategoria = dados.reduce<
-    ExpenseDistributionData | undefined
-  >((maior, item) => {
-    if (!maior || Number(item.valor) > Number(maior.valor)) {
-      return item
-    }
+  const maiorCategoria = dados.reduce<ExpenseDistributionData | undefined>(
+    (maior, item) => {
+      if (!maior || Number(item.valor) > Number(maior.valor)) {
+        return item;
+      }
 
-    return maior
-  }, undefined)
+      return maior;
+    },
+    undefined,
+  );
 
   const percentualMaior =
     maiorCategoria && totalDespesas > 0
       ? (Number(maiorCategoria.valor) / totalDespesas) * 100
-      : 0
+      : 0;
 
   const formatarPercentual = (valor: number) =>
-    valor.toLocaleString('pt-BR', {
+    valor.toLocaleString("pt-BR", {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
-    })
+    });
 
   return (
     <section className="expense-distribution-card">
@@ -68,10 +59,7 @@ function ExpenseDistributionChart({
 
           <h2>Distribuição das Despesas</h2>
 
-          <p>
-            Participação de cada categoria nas despesas totais
-            do período.
-          </p>
+          <p>Participação de cada categoria nas despesas totais do período.</p>
         </div>
 
         <span className="expense-distribution-status">
@@ -89,24 +77,18 @@ function ExpenseDistributionChart({
 
         <div className="expense-distribution-summary-item">
           <span>Maior categoria</span>
-          <strong>
-            {maiorCategoria?.categoria ?? '—'}
-          </strong>
+          <strong>{maiorCategoria?.categoria ?? "—"}</strong>
           <small>
             {maiorCategoria
               ? formatarMoeda(Number(maiorCategoria.valor))
-              : 'Sem dados disponíveis'}
+              : "Sem dados disponíveis"}
           </small>
         </div>
 
         <div className="expense-distribution-summary-item">
           <span>Maior participação</span>
-          <strong>
-            {formatarPercentual(percentualMaior)}%
-          </strong>
-          <small>
-            Participação sobre as despesas totais
-          </small>
+          <strong>{formatarPercentual(percentualMaior)}%</strong>
+          <small>Participação sobre as despesas totais</small>
         </div>
       </div>
 
@@ -147,18 +129,14 @@ function ExpenseDistributionChart({
                   </Pie>
 
                   <Tooltip
-                    formatter={(value) =>
-                      formatarMoeda(Number(value))
-                    }
+                    formatter={(value) => formatarMoeda(Number(value))}
                   />
                 </PieChart>
               </ResponsiveContainer>
 
               <div className="expense-distribution-chart-center">
                 <span>Total</span>
-                <strong>
-                  {formatarMoeda(totalDespesas)}
-                </strong>
+                <strong>{formatarMoeda(totalDespesas)}</strong>
               </div>
             </div>
 
@@ -167,7 +145,7 @@ function ExpenseDistributionChart({
                 const percentual =
                   totalDespesas > 0
                     ? (Number(item.valor) / totalDespesas) * 100
-                    : 0
+                    : 0;
 
                 return (
                   <div
@@ -178,16 +156,13 @@ function ExpenseDistributionChart({
                       <span
                         className="expense-distribution-legend-color"
                         style={{
-                          backgroundColor:
-                            cores[index % cores.length],
+                          backgroundColor: cores[index % cores.length],
                         }}
                       />
 
                       <div>
                         <strong>{item.categoria}</strong>
-                        <small>
-                          {formatarMoeda(Number(item.valor))}
-                        </small>
+                        <small>{formatarMoeda(Number(item.valor))}</small>
                       </div>
                     </div>
 
@@ -195,21 +170,19 @@ function ExpenseDistributionChart({
                       {formatarPercentual(percentual)}%
                     </span>
                   </div>
-                )
+                );
               })}
             </div>
           </div>
         ) : (
           <div className="expense-distribution-empty">
             <strong>Nenhuma despesa encontrada</strong>
-            <span>
-              Os dados aparecerão aqui quando estiverem disponíveis.
-            </span>
+            <span>Os dados aparecerão aqui quando estiverem disponíveis.</span>
           </div>
         )}
       </div>
     </section>
-  )
+  );
 }
 
-export default ExpenseDistributionChart
+export default ExpenseDistributionChart;

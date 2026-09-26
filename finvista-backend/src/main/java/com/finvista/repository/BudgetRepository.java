@@ -9,12 +9,10 @@ import java.util.List;
 public interface BudgetRepository
         extends JpaRepository<Budget, Long> {
 
-    List<Budget>
-    findAllByOrderByProbabilidadeDesc();
+    List<Budget> findAllByOrderByDataInicioDesc();
 
-    List<Budget>
-    findByDataPrevisaoFechamentoBetweenOrderByDataPrevisaoFechamentoAsc(
-            LocalDate dataInicial,
-            LocalDate dataFinal
+    List<Budget> findByDataInicioLessThanEqualAndDataFimGreaterThanEqual(
+            LocalDate dataFim,
+            LocalDate dataInicio
     );
 }

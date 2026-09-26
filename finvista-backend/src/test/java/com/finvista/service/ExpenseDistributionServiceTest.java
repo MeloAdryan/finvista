@@ -1,12 +1,13 @@
 package com.finvista.service;
 
 import com.finvista.dto.ExpenseDistributionResponse;
-import com.finvista.model.ExpenseDistribution;
-import com.finvista.repository.ExpenseDistributionRepository;
+import com.finvista.model.FinancialTransaction;
+import com.finvista.repository.FinancialTransactionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -15,42 +16,53 @@ import static org.mockito.Mockito.when;
 
 class ExpenseDistributionServiceTest {
 
-    private ExpenseDistributionRepository expenseDistributionRepository;
+    private FinancialTransactionRepository financialTransactionRepository;
     private ExpenseDistributionService expenseDistributionService;
 
     @BeforeEach
     void setUp() {
-        expenseDistributionRepository =
-                mock(ExpenseDistributionRepository.class);
+
+        financialTransactionRepository =
+                mock(FinancialTransactionRepository.class);
 
         expenseDistributionService =
                 new ExpenseDistributionService(
-                        expenseDistributionRepository
+                        financialTransactionRepository
                 );
     }
 
     @Test
-    void deveListarDespesasOrdenadasPeloRepository() {
+    void deveAgruparDespesasPorCategoriaESomarValores() {
 
-        ExpenseDistribution primeira =
-                new ExpenseDistribution(
+        FinancialTransaction materiaPrima1 =
+                criarDespesa(
+                        "Compra de material",
                         "Matéria-prima",
-                        new BigDecimal("45000.00")
+                        "30000.00"
                 );
 
-        ExpenseDistribution segunda =
-                new ExpenseDistribution(
+        FinancialTransaction materiaPrima2 =
+                criarDespesa(
+                        "Compra complementar",
+                        "Matéria-prima",
+                        "15000.00"
+                );
+
+        FinancialTransaction logistica =
+                criarDespesa(
+                        "Frete",
                         "Logística",
-                        new BigDecimal("18000.00")
+                        "18000.00"
                 );
 
         when(
-                expenseDistributionRepository
-                        .findAllByOrderByValorDesc()
+                financialTransactionRepository
+                        .findByTipoOrderByDataDesc("DESPESA")
         ).thenReturn(
                 List.of(
-                        primeira,
-                        segunda
+                        materiaPrima1,
+                        materiaPrima2,
+                        logistica
                 )
         );
 
@@ -84,11 +96,47 @@ class ExpenseDistributionServiceTest {
     }
 
     @Test
+    void deveAgruparCategoriaVaziaComoSemCategoria() {
+
+        FinancialTransaction semCategoria =
+                criarDespesa(
+                        "Despesa sem categoria",
+                        null,
+                        "500.00"
+                );
+
+        when(
+                financialTransactionRepository
+                        .findByTipoOrderByDataDesc("DESPESA")
+        ).thenReturn(
+                List.of(semCategoria)
+        );
+
+        List<ExpenseDistributionResponse> resultado =
+                expenseDistributionService.listar();
+
+        assertEquals(
+                1,
+                resultado.size()
+        );
+
+        assertEquals(
+                "Sem categoria",
+                resultado.get(0).categoria()
+        );
+
+        assertEquals(
+                new BigDecimal("500.00"),
+                resultado.get(0).valor()
+        );
+    }
+
+    @Test
     void deveRetornarListaVaziaQuandoNaoExistiremDespesas() {
 
         when(
-                expenseDistributionRepository
-                        .findAllByOrderByValorDesc()
+                financialTransactionRepository
+                        .findByTipoOrderByDataDesc("DESPESA")
         ).thenReturn(
                 List.of()
         );
@@ -99,6 +147,24 @@ class ExpenseDistributionServiceTest {
         assertEquals(
                 0,
                 resultado.size()
+        );
+    }
+
+    private FinancialTransaction criarDespesa(
+            String descricao,
+            String categoria,
+            String valor
+    ) {
+
+        return new FinancialTransaction(
+                LocalDate.of(2026, 9, 1),
+                descricao,
+                "DESPESA",
+                new BigDecimal(valor),
+                categoria,
+                null,
+                "CONTA_AZUL_EXCEL",
+                null
         );
     }
 }

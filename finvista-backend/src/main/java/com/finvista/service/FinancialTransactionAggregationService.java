@@ -135,6 +135,29 @@ public class FinancialTransactionAggregationService {
         return resultado;
     }
 
+    public List<MonthlyFinancialSummary>
+    obterResumoMensalCompleto() {
+
+        LocalDate menorData =
+                financialTransactionRepository
+                        .findMenorData()
+                        .orElse(null);
+
+        LocalDate maiorData =
+                financialTransactionRepository
+                        .findMaiorData()
+                        .orElse(null);
+
+        if (menorData == null || maiorData == null) {
+            return List.of();
+        }
+
+        return obterResumoMensal(
+                menorData,
+                maiorData
+        );
+    }
+
     private void validarPeriodo(
             LocalDate dataInicial,
             LocalDate dataFinal

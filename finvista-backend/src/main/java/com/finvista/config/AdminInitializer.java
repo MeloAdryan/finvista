@@ -40,11 +40,9 @@ public class AdminInitializer implements CommandLineRunner {
                 nome,
                 email,
                 senha,
-                "ADMIN"
-        );
+                "ADMIN");
 
         System.out.println(
-                "Administrador inicial do FinVista criado com sucesso."
-        );
+                "Administrador inicial do FinVista criado com sucesso.");
     }
 }

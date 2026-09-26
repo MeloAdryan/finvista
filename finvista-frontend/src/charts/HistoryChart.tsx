@@ -7,83 +7,47 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-} from 'recharts'
+} from "recharts";
 
-import type {
-  HistoryData,
-} from '../services/historyService'
+import type { HistoryData } from "../services/historyService";
 
 interface HistoryChartProps {
-  dados: HistoryData[]
+  dados: HistoryData[];
 }
 
-function HistoryChart({
-  dados,
-}: HistoryChartProps) {
-
-  const formatarValor = (
-    valor: number
-  ) => {
-    return new Intl.NumberFormat(
-      'pt-BR',
-      {
-        notation: 'compact',
-        compactDisplay: 'short',
-      }
-    ).format(valor)
-  }
+function HistoryChart({ dados }: HistoryChartProps) {
+  const formatarValor = (valor: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      notation: "compact",
+      compactDisplay: "short",
+    }).format(valor);
+  };
 
   return (
     <div className="history-card">
-
       <div className="history-header">
-
         <div>
-          <h2>
-            Histórico Financeiro
-          </h2>
+          <h2>Histórico Financeiro</h2>
 
-          <p>
-            Evolução das receitas,
-            despesas e resultados
-          </p>
+          <p>Evolução das receitas, despesas e resultados</p>
         </div>
-
       </div>
 
       <div className="history-chart-container">
-
-        <ResponsiveContainer
-          width="100%"
-          height="100%"
-        >
-
+        <ResponsiveContainer width="100%" height="100%">
           <LineChart data={dados}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
-            <CartesianGrid
-              strokeDasharray="3 3"
-              vertical={false}
-            />
+            <XAxis dataKey="periodo" />
 
-            <XAxis
-              dataKey="periodo"
-            />
-
-            <YAxis
-              tickFormatter={
-                formatarValor
-              }
-            />
+            <YAxis tickFormatter={formatarValor} />
 
             <Tooltip
               formatter={(value) =>
-                Number(value).toLocaleString(
-                  'pt-BR',
-                  {
-                    style: 'currency',
-                    currency: 'BRL',
-                  }
-                )
+                Number(value).toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                })
               }
             />
 
@@ -112,15 +76,11 @@ function HistoryChart({
               stroke="#2563eb"
               strokeWidth={3}
             />
-
           </LineChart>
-
         </ResponsiveContainer>
-
       </div>
-
     </div>
-  )
+  );
 }
 
-export default HistoryChart
+export default HistoryChart;

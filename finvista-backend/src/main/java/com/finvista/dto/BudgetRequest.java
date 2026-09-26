@@ -3,15 +3,11 @@ package com.finvista.dto;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public record BudgetPipelineResponse(
-        Long id,
+public record BudgetRequest(
         String nome,
         String centroCusto,
         String categoria,
         BigDecimal valorPlanejado,
-        BigDecimal valorUtilizado,
-        BigDecimal valorDisponivel,
-        BigDecimal percentualUtilizado,
         LocalDate dataInicio,
         LocalDate dataFim
 ) {

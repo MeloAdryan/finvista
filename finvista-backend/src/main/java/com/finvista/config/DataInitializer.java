@@ -1,18 +1,13 @@
 package com.finvista.config;
 
-import com.finvista.model.Budget;
 import com.finvista.model.CashFlow;
 import com.finvista.model.CostCenter;
 import com.finvista.model.ExpenseDistribution;
 import com.finvista.model.FinancialHistory;
-
-import com.finvista.repository.BudgetRepository;
 import com.finvista.repository.CashFlowRepository;
 import com.finvista.repository.CostCenterRepository;
 import com.finvista.repository.ExpenseDistributionRepository;
 import com.finvista.repository.FinancialHistoryRepository;
-import java.time.LocalDate;
-
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -32,22 +27,15 @@ public class DataInitializer {
             FinancialHistoryRepository historyRepository,
             CashFlowRepository cashFlowRepository,
             CostCenterRepository costCenterRepository,
-            ExpenseDistributionRepository expenseDistributionRepository,
-            BudgetRepository budgetRepository
+            ExpenseDistributionRepository expenseDistributionRepository
     ) {
         return args -> {
-
             carregarHistoricoFinanceiro(historyRepository);
-
             carregarFluxoCaixa(cashFlowRepository);
-
             carregarCentrosCusto(costCenterRepository);
-
             carregarDistribuicaoDespesas(
                     expenseDistributionRepository
             );
-
-            carregarOrcamentos(budgetRepository);
         };
     }
 
@@ -255,62 +243,4 @@ public class DataInitializer {
                 )
         );
     }
-
-    private void carregarOrcamentos(
-        BudgetRepository repository
-) {
-    if (repository.count() > 0) {
-        return;
-    }
-
-    repository.save(
-            new Budget(
-                    "Madeireira Norte",
-                    new BigDecimal("120000.00"),
-                    "Proposta enviada",
-                    70,
-                    LocalDate.of(2026, 11, 15)
-            )
-    );
-
-    repository.save(
-            new Budget(
-                    "Construtora Acre",
-                    new BigDecimal("85000.00"),
-                    "Negociação",
-                    80,
-                    LocalDate.of(2026, 12, 10)
-            )
-    );
-
-    repository.save(
-            new Budget(
-                    "Grupo Florestal",
-                    new BigDecimal("150000.00"),
-                    "Em análise",
-                    50,
-                    LocalDate.of(2026, 12, 20)
-            )
-    );
-
-    repository.save(
-            new Budget(
-                    "Indústria Amazônia",
-                    new BigDecimal("65000.00"),
-                    "Contato inicial",
-                    30,
-                    LocalDate.of(2027, 1, 15)
-            )
-    );
-
-    repository.save(
-            new Budget(
-                    "Madeiras Brasil",
-                    new BigDecimal("95000.00"),
-                    "Negociação",
-                    90,
-                    LocalDate.of(2027, 2, 10)
-            )
-    );
-}
 }

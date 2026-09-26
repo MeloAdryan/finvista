@@ -1,8 +1,7 @@
 package com.finvista.service;
 
 import com.finvista.dto.HistoryResponse;
-import com.finvista.model.FinancialHistory;
-import com.finvista.repository.FinancialHistoryRepository;
+import com.finvista.service.FinancialTransactionAggregationService.MonthlyFinancialSummary;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -23,15 +22,18 @@ public class HistoryService {
                     new Locale("pt", "BR")
             );
 
-    private final FinancialHistoryRepository financialHistoryRepository;
-    private final FinancialCalculationService calculationService;
+    private final FinancialTransactionAggregationService
+            transactionAggregationService;
+
+    private final FinancialCalculationService
+            calculationService;
 
     public HistoryService(
-            FinancialHistoryRepository financialHistoryRepository,
+            FinancialTransactionAggregationService transactionAggregationService,
             FinancialCalculationService calculationService
     ) {
-        this.financialHistoryRepository =
-                financialHistoryRepository;
+        this.transactionAggregationService =
+                transactionAggregationService;
 
         this.calculationService =
                 calculationService;
@@ -47,12 +49,17 @@ public class HistoryService {
         YearMonth periodoFinal =
                 converterPeriodo(fim);
 
-        return financialHistoryRepository
-                .findAllByOrderByPeriodoAsc()
+        validarPeriodo(
+                periodoInicial,
+                periodoFinal
+        );
+
+        return transactionAggregationService
+                .obterResumoMensalCompleto()
                 .stream()
-                .filter(registro ->
+                .filter(resumo ->
                         estaNoPeriodo(
-                                registro,
+                                resumo.periodo(),
                                 periodoInicial,
                                 periodoFinal
                         )
@@ -62,23 +69,17 @@ public class HistoryService {
     }
 
     private boolean estaNoPeriodo(
-            FinancialHistory registro,
+            YearMonth periodo,
             YearMonth periodoInicial,
             YearMonth periodoFinal
     ) {
-        YearMonth periodo =
-                YearMonth.parse(
-                        registro.getPeriodo(),
-                        FORMATO_ENTRADA
-                );
-
         boolean depoisDoInicio =
-                periodoInicial == null ||
-                !periodo.isBefore(periodoInicial);
+                periodoInicial == null
+                        || !periodo.isBefore(periodoInicial);
 
         boolean antesDoFim =
-                periodoFinal == null ||
-                !periodo.isAfter(periodoFinal);
+                periodoFinal == null
+                        || !periodo.isAfter(periodoFinal);
 
         return depoisDoInicio && antesDoFim;
     }
@@ -96,31 +97,39 @@ public class HistoryService {
         );
     }
 
-    private HistoryResponse criarResposta(
-            FinancialHistory registro
+    private void validarPeriodo(
+            YearMonth periodoInicial,
+            YearMonth periodoFinal
     ) {
-        YearMonth periodo =
-                YearMonth.parse(
-                        registro.getPeriodo(),
-                        FORMATO_ENTRADA
-                );
+        if (periodoInicial != null
+                && periodoFinal != null
+                && periodoFinal.isBefore(periodoInicial)) {
 
+            throw new IllegalArgumentException(
+                    "Período final não pode ser anterior ao período inicial."
+            );
+        }
+    }
+
+    private HistoryResponse criarResposta(
+            MonthlyFinancialSummary resumo
+    ) {
         BigDecimal resultado =
                 calculationService.calcularResultado(
-                        registro.getReceita(),
-                        registro.getDespesa()
+                        resumo.receita(),
+                        resumo.despesa()
                 );
 
         BigDecimal margem =
-        calculationService.calcularMargem(
-                registro.getReceita(),
-                resultado
-        );
+                calculationService.calcularMargem(
+                        resumo.receita(),
+                        resultado
+                );
 
         return new HistoryResponse(
-                formatarPeriodo(periodo),
-                registro.getReceita(),
-                registro.getDespesa(),
+                formatarPeriodo(resumo.periodo()),
+                resumo.receita(),
+                resumo.despesa(),
                 resultado,
                 margem
         );

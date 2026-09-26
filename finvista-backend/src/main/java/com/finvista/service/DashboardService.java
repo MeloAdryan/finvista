@@ -1,24 +1,28 @@
 package com.finvista.service;
 
 import com.finvista.dto.DashboardResponse;
-import com.finvista.model.FinancialHistory;
-import com.finvista.repository.FinancialHistoryRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.List;
 
 @Service
 public class DashboardService {
 
-    private final FinancialHistoryRepository financialHistoryRepository;
-    private final FinancialCalculationService calculationService;
+    private final FinancialTransactionAggregationService
+            transactionAggregationService;
+
+    private final FinancialCalculationService
+            calculationService;
 
     public DashboardService(
-            FinancialHistoryRepository financialHistoryRepository,
+            FinancialTransactionAggregationService transactionAggregationService,
             FinancialCalculationService calculationService
     ) {
-        this.financialHistoryRepository =
-                financialHistoryRepository;
+        this.transactionAggregationService =
+                transactionAggregationService;
 
         this.calculationService =
                 calculationService;
@@ -26,22 +30,45 @@ public class DashboardService {
 
     public DashboardResponse obterDashboard() {
 
-        FinancialHistory historico =
-                financialHistoryRepository
-                        .findFirstByOrderByPeriodoDesc()
-                        .orElse(null);
+        YearMonth mesAtual =
+                YearMonth.now();
+
+        LocalDate dataInicial =
+                mesAtual.atDay(1);
+
+        LocalDate dataFinal =
+                mesAtual.atEndOfMonth();
+
+        List<FinancialTransactionAggregationService.MonthlyFinancialSummary>
+                resumos =
+                transactionAggregationService
+                        .obterResumoMensal(
+                                dataInicial,
+                                dataFinal
+                        );
 
         BigDecimal receita =
-                historico != null &&
-                historico.getReceita() != null
-                        ? historico.getReceita()
-                        : BigDecimal.ZERO;
+                BigDecimal.ZERO;
 
         BigDecimal despesa =
-                historico != null &&
-                historico.getDespesa() != null
-                        ? historico.getDespesa()
-                        : BigDecimal.ZERO;
+                BigDecimal.ZERO;
+
+        if (!resumos.isEmpty()) {
+
+            FinancialTransactionAggregationService.MonthlyFinancialSummary
+                    resumo =
+                    resumos.get(0);
+
+            if (resumo.receita() != null) {
+                receita =
+                        resumo.receita();
+            }
+
+            if (resumo.despesa() != null) {
+                despesa =
+                        resumo.despesa();
+            }
+        }
 
         BigDecimal resultado =
                 calculationService.calcularResultado(
