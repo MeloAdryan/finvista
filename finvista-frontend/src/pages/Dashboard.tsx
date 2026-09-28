@@ -1,30 +1,98 @@
-import { useEffect, useState } from "react";
-import { getDashboard, type DashboardData } from "../services/dashboardService";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  getDashboard,
+  type DashboardData,
+} from "../services/dashboardService";
+
+import {
+  listarMetas,
+  type SpendingGoal,
+} from "../services/spendingGoalService";
+
 import RevenueExpenseChart from "../charts/RevenueExpenseChart";
-import ResultMarginChart from "../charts/ResultMarginChart";
+
+import SpendingGoalGauge from "../components/SpendingGoalGauge";
 
 import "../styles/dashboard.css";
 
 function Dashboard() {
-  const [dados, setDados] = useState<DashboardData | null>(null);
+  const [dados, setDados] =
+    useState<DashboardData | null>(null);
 
-  const [carregando, setCarregando] = useState(true);
+  const [metas, setMetas] =
+    useState<SpendingGoal[]>([]);
 
-  const [erro, setErro] = useState<string | null>(null);
+  const [
+    metaSelecionadaId,
+    setMetaSelecionadaId,
+  ] = useState<number | null>(null);
+
+  const [carregando, setCarregando] =
+    useState(true);
+
+  const [erro, setErro] =
+    useState<string | null>(null);
 
   useEffect(() => {
     async function carregarDashboard() {
       try {
-        const resultado = await getDashboard();
+        const [
+          resultadoDashboard,
+          resultadoMetas,
+        ] = await Promise.all([
+          getDashboard(),
+          listarMetas(),
+        ]);
 
-        setDados(resultado);
+        setDados(resultadoDashboard);
+
+        setMetas(resultadoMetas);
+
+        if (resultadoMetas.length > 0) {
+          const metasOrdenadas = [
+            ...resultadoMetas,
+          ].sort((a, b) => {
+            const prioridade = {
+              EXCEDIDA: 3,
+              ALERTA: 2,
+              NORMAL: 1,
+            };
+
+            const diferencaPrioridade =
+              prioridade[b.status] -
+              prioridade[a.status];
+
+            if (diferencaPrioridade !== 0) {
+              return diferencaPrioridade;
+            }
+
+            return (
+              b.percentualUtilizado -
+              a.percentualUtilizado
+            );
+          });
+
+          setMetaSelecionadaId(
+            metasOrdenadas[0].id,
+          );
+        }
       } catch (error) {
-        console.error("Erro ao carregar dashboard:", error);
+        console.error(
+          "Erro ao carregar dashboard:",
+          error,
+        );
 
         if (error instanceof Error) {
           setErro(error.message);
         } else {
-          setErro("Não foi possível carregar os dados financeiros.");
+          setErro(
+            "Não foi possível carregar os dados financeiros.",
+          );
         }
       } finally {
         setCarregando(false);
@@ -34,97 +102,186 @@ function Dashboard() {
     carregarDashboard();
   }, []);
 
-  const formatarMoeda = (valor: number) => {
-    return valor.toLocaleString("pt-BR", {
+  const metaSelecionada = useMemo(() => {
+    if (
+      metaSelecionadaId === null ||
+      metas.length === 0
+    ) {
+      return null;
+    }
+
+    return (
+      metas.find(
+        (meta) =>
+          meta.id === metaSelecionadaId,
+      ) ?? null
+    );
+  }, [metas, metaSelecionadaId]);
+
+  const formatarMoeda = (valor: number) =>
+    valor.toLocaleString("pt-BR", {
       style: "currency",
       currency: "BRL",
     });
-  };
 
-  const formatarPercentual = (valor: number) => {
-    return valor.toLocaleString("pt-BR", {
+  const formatarPercentual = (
+    valor: number,
+  ) =>
+    valor.toLocaleString("pt-BR", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
-  };
 
   if (carregando) {
-    return <p>Carregando dados...</p>;
+    return (
+      <div className="dashboard-state">
+        <div className="dashboard-loader" />
+
+        <p>Carregando painel executivo...</p>
+      </div>
+    );
   }
 
   if (erro) {
-    return <p>{erro}</p>;
+    return (
+      <div className="dashboard-state dashboard-state-error">
+        <strong>
+          Não foi possível carregar o painel.
+        </strong>
+
+        <p>{erro}</p>
+      </div>
+    );
   }
 
   if (!dados) {
-    return <p>Nenhum dado disponível.</p>;
+    return (
+      <div className="dashboard-state">
+        <p>Nenhum dado disponível.</p>
+      </div>
+    );
   }
 
   return (
-    <div id="dashboard" className="dashboard">
-      {/* CABEÇALHO */}
-
-      <header className="dashboard-header">
+    <div
+      id="dashboard"
+      className="dashboard executive-dashboard"
+    >
+      <header className="executive-header">
         <div>
-          <h1>FinVista</h1>
+          <span className="executive-page-label">
+            Painel Executivo
+          </span>
 
-          <p>Visão geral financeira</p>
+          <h1>Visão financeira</h1>
+
+          <p>
+            Acompanhe os principais indicadores e
+            limites financeiros em uma visão
+            consolidada.
+          </p>
+        </div>
+
+        <div className="executive-header-badge">
+          <span>FinVista</span>
+          <strong>Visão Executiva</strong>
         </div>
       </header>
 
-      {/* INDICADORES PRINCIPAIS */}
+      <section className="executive-kpi-grid">
+        <article className="executive-kpi">
+          <div className="executive-kpi-top">
+            <span>Receita</span>
 
-      <section className="cards-grid">
-        <article className="card">
-          <span className="card-label">Receita</span>
+            <span className="kpi-marker" />
+          </div>
 
-          <strong className="card-value receita">
+          <strong>
             {formatarMoeda(dados.receita)}
           </strong>
 
-          <span className="card-description">Receita total do período</span>
+          <p>Receita total do período</p>
         </article>
 
-        <article className="card">
-          <span className="card-label">Despesa</span>
+        <article className="executive-kpi">
+          <div className="executive-kpi-top">
+            <span>Despesa</span>
 
-          <strong className="card-value despesa">
+            <span className="kpi-marker" />
+          </div>
+
+          <strong>
             {formatarMoeda(dados.despesa)}
           </strong>
 
-          <span className="card-description">Despesas totais do período</span>
+          <p>Despesas totais do período</p>
         </article>
 
-        <article className="card">
-          <span className="card-label">Resultado</span>
+        <article className="executive-kpi">
+          <div className="executive-kpi-top">
+            <span>Resultado</span>
 
-          <strong className="card-value resultado">
+            <span className="kpi-marker" />
+          </div>
+
+          <strong>
             {formatarMoeda(dados.resultado)}
           </strong>
 
-          <span className="card-description">Receita menos despesas</span>
+          <p>Receita menos despesas</p>
         </article>
 
-        <article className="card">
-          <span className="card-label">Margem</span>
+        <article className="executive-kpi">
+          <div className="executive-kpi-top">
+            <span>Margem</span>
 
-          <strong className="card-value margem">
-            {formatarPercentual(dados.margem)}%
+            <span className="kpi-marker" />
+          </div>
+
+          <strong>
+            {formatarPercentual(
+              dados.margem,
+            )}
+            %
           </strong>
 
-          <span className="card-description">Margem operacional</span>
+          <p>Margem operacional do período</p>
         </article>
       </section>
 
-      {/* GRÁFICOS PRINCIPAIS */}
+      <section className="executive-overview-grid">
+        <RevenueExpenseChart
+          receita={dados.receita}
+          despesa={dados.despesa}
+        />
 
-      <section className="charts-grid">
-        <RevenueExpenseChart receita={dados.receita} despesa={dados.despesa} />
-
-        <ResultMarginChart resultado={dados.resultado} margem={dados.margem} />
+        <SpendingGoalGauge
+          meta={metaSelecionada}
+          metas={metas}
+          metaSelecionadaId={
+            metaSelecionadaId
+          }
+          onSelecionarMeta={
+            setMetaSelecionadaId
+          }
+        />
       </section>
 
-      {/* PROJEÇÃO DE 6 MESES */}
+      {/*
+        IMPORTANTE:
+
+        As demais seções que já existem no seu
+        Dashboard devem continuar abaixo daqui.
+
+        Não estamos removendo:
+        - projeção;
+        - fluxo de caixa;
+        - distribuição de despesas;
+        - centros de custo;
+        - orçamento;
+        - histórico;
+        - demais módulos existentes.
+      */}
     </div>
   );
 }

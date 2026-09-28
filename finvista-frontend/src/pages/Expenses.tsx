@@ -4,6 +4,8 @@ import {
   getExpenseDistribution,
   type ExpenseDistributionData,
 } from "../services/expenseDistributionService";
+import "../styles/dashboard.css";
+import "../styles/expenses.css";
 
 import ExpenseDistributionChart from "../charts/ExpenseDistributionChart";
 

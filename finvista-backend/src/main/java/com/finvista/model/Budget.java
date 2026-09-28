@@ -6,6 +6,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -27,12 +30,7 @@ public class Budget {
     @Column(length = 150)
     private String categoria;
 
-    @Column(
-            name = "valor_planejado",
-            nullable = false,
-            precision = 15,
-            scale = 2
-    )
+    @Column(name = "valor_planejado", nullable = false, precision = 15, scale = 2)
     private BigDecimal valorPlanejado;
 
     @Column(name = "data_inicio", nullable = false)
@@ -40,6 +38,11 @@ public class Budget {
 
     @Column(name = "data_fim", nullable = false)
     private LocalDate dataFim;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    
+    @JoinColumn(name = "cliente_id")
+    private Cliente cliente;
 
     public Budget() {
     }
@@ -50,8 +53,7 @@ public class Budget {
             String categoria,
             BigDecimal valorPlanejado,
             LocalDate dataInicio,
-            LocalDate dataFim
-    ) {
+            LocalDate dataFim) {
         this.nome = nome;
         this.centroCusto = centroCusto;
         this.categoria = categoria;
@@ -93,8 +95,7 @@ public class Budget {
     }
 
     public void setValorPlanejado(
-            BigDecimal valorPlanejado
-    ) {
+            BigDecimal valorPlanejado) {
         this.valorPlanejado = valorPlanejado;
     }
 
@@ -113,4 +114,13 @@ public class Budget {
     public void setDataFim(LocalDate dataFim) {
         this.dataFim = dataFim;
     }
+
+    public Cliente getCliente() {
+        return cliente;
+    }
+
+    public void setCliente(Cliente cliente) {
+        this.cliente = cliente;
+    }
+
 }

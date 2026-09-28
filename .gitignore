@@ -22,3 +22,5 @@ finvista-backend/target/
 finvista-frontend/node_modules/
 finvista-frontend/dist/
 finvista-frontend/dist-ssr/
+# Massas manuais de teste de importacao
+arquivos-teste-importacao/

@@ -3,6 +3,7 @@ package com.finvista.service;
 import com.finvista.dto.BudgetPipelineResponse;
 import com.finvista.dto.BudgetRequest;
 import com.finvista.model.Budget;
+import com.finvista.model.Cliente;
 import com.finvista.model.FinancialTransaction;
 import com.finvista.repository.BudgetRepository;
 import com.finvista.repository.FinancialTransactionRepository;
@@ -15,223 +16,240 @@ import java.util.List;
 @Service
 public class BudgetPipelineService {
 
-    private final BudgetRepository budgetRepository;
-    private final FinancialTransactionRepository
-            financialTransactionRepository;
+        private static final String TIPO_DESPESA = "DESPESA";
 
-    public BudgetPipelineService(
-            BudgetRepository budgetRepository,
-            FinancialTransactionRepository financialTransactionRepository
-    ) {
-        this.budgetRepository =
-                budgetRepository;
+        private final BudgetRepository budgetRepository;
 
-        this.financialTransactionRepository =
-                financialTransactionRepository;
-    }
+        private final FinancialTransactionRepository financialTransactionRepository;
 
-    public List<BudgetPipelineResponse> listar() {
-        return budgetRepository
-                .findAllByOrderByDataInicioDesc()
-                .stream()
-                .map(this::criarResposta)
-                .toList();
-    }
+        private final ClienteContextService clienteContextService;
 
-    public BudgetPipelineResponse cadastrar(
-            BudgetRequest request
-    ) {
-        validar(request);
+        public BudgetPipelineService(
+                        BudgetRepository budgetRepository,
+                        FinancialTransactionRepository financialTransactionRepository,
+                        ClienteContextService clienteContextService) {
+                this.budgetRepository = budgetRepository;
 
-        Budget budget =
-                new Budget(
-                        request.nome().trim(),
-                        normalizarOpcional(
-                                request.centroCusto()
-                        ),
-                        normalizarOpcional(
-                                request.categoria()
-                        ),
-                        request.valorPlanejado(),
-                        request.dataInicio(),
-                        request.dataFim()
-                );
+                this.financialTransactionRepository = financialTransactionRepository;
 
-        Budget salvo =
-                budgetRepository.save(budget);
+                this.clienteContextService = clienteContextService;
+        }
 
-        return criarResposta(salvo);
-    }
+        public List<BudgetPipelineResponse> listar() {
 
-    private BudgetPipelineResponse criarResposta(
-            Budget budget
-    ) {
-        List<FinancialTransaction> despesas =
-                financialTransactionRepository
-                        .findByTipoAndDataBetweenOrderByDataAsc(
-                                "DESPESA",
-                                budget.getDataInicio(),
-                                budget.getDataFim()
-                        );
+                List<Budget> orcamentos;
 
-        BigDecimal valorUtilizado =
-                despesas.stream()
-                        .filter(
-                                despesa ->
-                                        correspondeAoOrcamento(
-                                                budget,
-                                                despesa
-                                        )
-                        )
-                        .map(
-                                FinancialTransaction::getValor
-                        )
-                        .filter(
-                                valor -> valor != null
-                        )
-                        .reduce(
-                                BigDecimal.ZERO,
-                                BigDecimal::add
-                        );
+                if (clienteContextService.isAdmin()) {
 
-        BigDecimal valorDisponivel =
-                budget.getValorPlanejado()
-                        .subtract(valorUtilizado);
+                        orcamentos = budgetRepository
+                                        .findAllByOrderByDataInicioDesc();
 
-        BigDecimal percentualUtilizado =
-                calcularPercentualUtilizado(
-                        budget.getValorPlanejado(),
-                        valorUtilizado
-                );
+                } else {
 
-        return new BudgetPipelineResponse(
-                budget.getId(),
-                budget.getNome(),
-                budget.getCentroCusto(),
-                budget.getCategoria(),
-                budget.getValorPlanejado(),
-                valorUtilizado,
-                valorDisponivel,
-                percentualUtilizado,
-                budget.getDataInicio(),
-                budget.getDataFim()
-        );
-    }
+                        Long clienteId = clienteContextService
+                                        .getClienteDoUsuarioAutenticado()
+                                        .getId();
 
-    private boolean correspondeAoOrcamento(
-            Budget budget,
-            FinancialTransaction despesa
-    ) {
-        boolean centroCustoCorresponde =
-                budget.getCentroCusto() == null
-                        || iguaisIgnorandoMaiusculas(
+                        orcamentos = budgetRepository
+                                        .findAllByClienteIdOrderByDataInicioDesc(
+                                                        clienteId);
+                }
+
+                return orcamentos
+                                .stream()
+                                .map(this::criarResposta)
+                                .toList();
+        }
+
+        public BudgetPipelineResponse cadastrar(
+                        BudgetRequest request) {
+                validar(request);
+
+                if (clienteContextService.isAdmin()) {
+                        throw new IllegalStateException(
+                                        "O administrador deve selecionar um cliente para cadastrar um orçamento.");
+                }
+
+                Cliente cliente = clienteContextService
+                                .getClienteDoUsuarioAutenticado();
+
+                Budget budget = new Budget(
+                                request.nome().trim(),
+                                normalizarOpcional(
+                                                request.centroCusto()),
+                                normalizarOpcional(
+                                                request.categoria()),
+                                request.valorPlanejado(),
+                                request.dataInicio(),
+                                request.dataFim());
+
+                budget.setCliente(cliente);
+
+                Budget salvo = budgetRepository.save(budget);
+
+                return criarResposta(salvo);
+        }
+
+        private BudgetPipelineResponse criarResposta(
+                        Budget budget) {
+
+                List<FinancialTransaction> despesas;
+
+                /*
+                 * Orçamentos novos pertencem obrigatoriamente
+                 * a um cliente.
+                 *
+                 * O fallback global é mantido temporariamente
+                 * para registros legados sem cliente_id.
+                 */
+                if (budget.getCliente() != null) {
+
+                        despesas = financialTransactionRepository
+                                        .findByClienteIdAndTipoAndDataBetweenOrderByDataAsc(
+                                                        budget.getCliente().getId(),
+                                                        TIPO_DESPESA,
+                                                        budget.getDataInicio(),
+                                                        budget.getDataFim());
+
+                } else {
+
+                        despesas = financialTransactionRepository
+                                        .findByTipoAndDataBetweenOrderByDataAsc(
+                                                        TIPO_DESPESA,
+                                                        budget.getDataInicio(),
+                                                        budget.getDataFim());
+                }
+
+                BigDecimal valorUtilizado = despesas.stream()
+                                .filter(
+                                                despesa -> correspondeAoOrcamento(
+                                                                budget,
+                                                                despesa))
+                                .map(
+                                                FinancialTransaction::getValor)
+                                .filter(
+                                                valor -> valor != null)
+                                .reduce(
+                                                BigDecimal.ZERO,
+                                                BigDecimal::add);
+
+                BigDecimal valorDisponivel = budget.getValorPlanejado()
+                                .subtract(valorUtilizado);
+
+                BigDecimal percentualUtilizado = calcularPercentualUtilizado(
+                                budget.getValorPlanejado(),
+                                valorUtilizado);
+
+                return new BudgetPipelineResponse(
+                                budget.getId(),
+                                budget.getNome(),
                                 budget.getCentroCusto(),
-                                despesa.getCentroCusto()
-                        );
-
-        boolean categoriaCorresponde =
-                budget.getCategoria() == null
-                        || iguaisIgnorandoMaiusculas(
                                 budget.getCategoria(),
-                                despesa.getCategoria()
-                        );
-
-        return centroCustoCorresponde
-                && categoriaCorresponde;
-    }
-
-    private boolean iguaisIgnorandoMaiusculas(
-            String primeiro,
-            String segundo
-    ) {
-        if (primeiro == null || segundo == null) {
-            return false;
+                                budget.getValorPlanejado(),
+                                valorUtilizado,
+                                valorDisponivel,
+                                percentualUtilizado,
+                                budget.getDataInicio(),
+                                budget.getDataFim());
         }
 
-        return primeiro
-                .trim()
-                .equalsIgnoreCase(
-                        segundo.trim()
-                );
-    }
+        private boolean correspondeAoOrcamento(
+                        Budget budget,
+                        FinancialTransaction despesa) {
+                boolean centroCustoCorresponde = budget.getCentroCusto() == null
+                                || iguaisIgnorandoMaiusculas(
+                                                budget.getCentroCusto(),
+                                                despesa.getCentroCusto());
 
-    private BigDecimal calcularPercentualUtilizado(
-            BigDecimal valorPlanejado,
-            BigDecimal valorUtilizado
-    ) {
-        if (valorPlanejado == null
-                || valorPlanejado.compareTo(
-                        BigDecimal.ZERO
-                ) == 0) {
-            return BigDecimal.ZERO;
+                boolean categoriaCorresponde = budget.getCategoria() == null
+                                || iguaisIgnorandoMaiusculas(
+                                                budget.getCategoria(),
+                                                despesa.getCategoria());
+
+                return centroCustoCorresponde
+                                && categoriaCorresponde;
         }
 
-        return valorUtilizado
-                .multiply(
-                        new BigDecimal("100")
-                )
-                .divide(
-                        valorPlanejado,
-                        2,
-                        RoundingMode.HALF_UP
-                );
-    }
+        private boolean iguaisIgnorandoMaiusculas(
+                        String primeiro,
+                        String segundo) {
+                if (primeiro == null || segundo == null) {
+                        return false;
+                }
 
-    private String normalizarOpcional(
-            String valor
-    ) {
-        if (valor == null || valor.isBlank()) {
-            return null;
+                return primeiro
+                                .trim()
+                                .equalsIgnoreCase(
+                                                segundo.trim());
         }
 
-        return valor.trim();
-    }
+        private BigDecimal calcularPercentualUtilizado(
+                        BigDecimal valorPlanejado,
+                        BigDecimal valorUtilizado) {
+                if (valorPlanejado == null
+                                || valorPlanejado.compareTo(
+                                                BigDecimal.ZERO) == 0) {
 
-    private void validar(
-            BudgetRequest request
-    ) {
-        if (request == null) {
-            throw new IllegalArgumentException(
-                    "Os dados do orçamento são obrigatórios."
-            );
+                        return BigDecimal.ZERO;
+                }
+
+                return valorUtilizado
+                                .multiply(
+                                                new BigDecimal("100"))
+                                .divide(
+                                                valorPlanejado,
+                                                2,
+                                                RoundingMode.HALF_UP);
         }
 
-        if (request.nome() == null
-                || request.nome().isBlank()) {
-            throw new IllegalArgumentException(
-                    "O nome do orçamento é obrigatório."
-            );
+        private String normalizarOpcional(
+                        String valor) {
+                if (valor == null || valor.isBlank()) {
+                        return null;
+                }
+
+                return valor.trim();
         }
 
-        if (request.valorPlanejado() == null
-                || request.valorPlanejado()
-                        .compareTo(
-                                BigDecimal.ZERO
-                        ) <= 0) {
-            throw new IllegalArgumentException(
-                    "O valor planejado deve ser maior que zero."
-            );
-        }
+        private void validar(
+                        BudgetRequest request) {
+                if (request == null) {
+                        throw new IllegalArgumentException(
+                                        "Os dados do orçamento são obrigatórios.");
+                }
 
-        if (request.dataInicio() == null) {
-            throw new IllegalArgumentException(
-                    "A data inicial é obrigatória."
-            );
-        }
+                if (request.nome() == null
+                                || request.nome().isBlank()) {
 
-        if (request.dataFim() == null) {
-            throw new IllegalArgumentException(
-                    "A data final é obrigatória."
-            );
-        }
+                        throw new IllegalArgumentException(
+                                        "O nome do orçamento é obrigatório.");
+                }
 
-        if (request.dataFim()
-                .isBefore(
-                        request.dataInicio()
-                )) {
-            throw new IllegalArgumentException(
-                    "A data final não pode ser anterior à data inicial."
-            );
+                if (request.valorPlanejado() == null
+                                || request.valorPlanejado()
+                                                .compareTo(
+                                                                BigDecimal.ZERO) <= 0) {
+
+                        throw new IllegalArgumentException(
+                                        "O valor planejado deve ser maior que zero.");
+                }
+
+                if (request.dataInicio() == null) {
+                        throw new IllegalArgumentException(
+                                        "A data inicial é obrigatória.");
+                }
+
+                if (request.dataFim() == null) {
+                        throw new IllegalArgumentException(
+                                        "A data final é obrigatória.");
+                }
+
+                if (request.dataFim()
+                                .isBefore(
+                                                request.dataInicio())) {
+
+                        throw new IllegalArgumentException(
+                                        "A data final não pode ser anterior à data inicial.");
+                }
         }
-    }
 }

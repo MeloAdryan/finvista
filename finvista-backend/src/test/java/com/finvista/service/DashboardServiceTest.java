@@ -1,24 +1,27 @@
 package com.finvista.service;
 
+import com.finvista.dto.DashboardResponse;
+import com.finvista.model.FinancialTransaction;
+import com.finvista.repository.FinancialTransactionRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import static org.mockito.Mockito.when;
-
-import com.finvista.dto.DashboardResponse;
-import com.finvista.model.FinancialTransaction;
-import com.finvista.repository.FinancialTransactionRepository;
 
 class DashboardServiceTest {
 
     private FinancialTransactionRepository
             financialTransactionRepository;
+
+    private ClienteContextService
+            clienteContextService;
 
     private DashboardService
             dashboardService;
@@ -31,10 +34,24 @@ class DashboardServiceTest {
                         FinancialTransactionRepository.class
                 );
 
+        clienteContextService =
+                Mockito.mock(
+                        ClienteContextService.class
+                );
+
+        /*
+         * Os testes deste serviço representam
+         * a visão administrativa/global.
+         */
+        when(
+                clienteContextService.isAdmin()
+        ).thenReturn(true);
+
         FinancialTransactionAggregationService
                 transactionAggregationService =
                 new FinancialTransactionAggregationService(
-                        financialTransactionRepository
+                        financialTransactionRepository,
+                        clienteContextService
                 );
 
         FinancialCalculationService calculationService =
@@ -48,34 +65,49 @@ class DashboardServiceTest {
     }
 
     @Test
-    void deveMontarDashboardComLancamentosDoMesAtual() {
+    void deveMontarDashboardComComparacaoAoMesAnterior() {
 
         YearMonth mesAtual =
                 YearMonth.now();
 
+        YearMonth mesAnterior =
+                mesAtual.minusMonths(1);
+
         LocalDate dataInicial =
-                mesAtual.atDay(1);
+                mesAnterior.atDay(1);
 
         LocalDate dataFinal =
                 mesAtual.atEndOfMonth();
 
         List<FinancialTransaction> lancamentos =
                 List.of(
+
+                        /*
+                         * Mês anterior
+                         */
                         criarLancamento(
-                                LocalDate.of(
-                                        mesAtual.getYear(),
-                                        mesAtual.getMonth(),
-                                        5
-                                ),
+                                mesAnterior.atDay(5),
+                                "RECEITA",
+                                "100000.00"
+                        ),
+
+                        criarLancamento(
+                                mesAnterior.atDay(10),
+                                "DESPESA",
+                                "60000.00"
+                        ),
+
+                        /*
+                         * Mês atual
+                         */
+                        criarLancamento(
+                                mesAtual.atDay(5),
                                 "RECEITA",
                                 "150000.00"
                         ),
+
                         criarLancamento(
-                                LocalDate.of(
-                                        mesAtual.getYear(),
-                                        mesAtual.getMonth(),
-                                        10
-                                ),
+                                mesAtual.atDay(10),
                                 "DESPESA",
                                 "92000.00"
                         )
@@ -92,47 +124,112 @@ class DashboardServiceTest {
         DashboardResponse resposta =
                 dashboardService.obterDashboard();
 
-        assertEquals(
-                0,
+        /*
+         * =====================================================
+         * MÊS ATUAL
+         * =====================================================
+         */
+
+        assertValor(
+                "150000.00",
                 resposta.receita()
-                        .compareTo(
-                                new BigDecimal("150000.00")
-                        )
         );
 
-        assertEquals(
-                0,
+        assertValor(
+                "92000.00",
                 resposta.despesa()
-                        .compareTo(
-                                new BigDecimal("92000.00")
-                        )
         );
 
-        assertEquals(
-                0,
+        assertValor(
+                "58000.00",
                 resposta.resultado()
-                        .compareTo(
-                                new BigDecimal("58000.00")
-                        )
         );
 
-        assertEquals(
-                0,
+        assertValor(
+                "38.67",
                 resposta.margem()
-                        .compareTo(
-                                new BigDecimal("38.67")
-                        )
+        );
+
+        /*
+         * =====================================================
+         * MÊS ANTERIOR
+         * =====================================================
+         */
+
+        assertValor(
+                "100000.00",
+                resposta.receitaMesAnterior()
+        );
+
+        assertValor(
+                "60000.00",
+                resposta.despesaMesAnterior()
+        );
+
+        assertValor(
+                "40000.00",
+                resposta.resultadoMesAnterior()
+        );
+
+        assertValor(
+                "40.00",
+                resposta.margemMesAnterior()
+        );
+
+        /*
+         * =====================================================
+         * VARIAÇÕES
+         * =====================================================
+         */
+
+        /*
+         * Receita:
+         *
+         * (150000 - 100000) / 100000 * 100
+         *
+         * = 50%
+         */
+        assertValor(
+                "50.00",
+                resposta.variacaoReceita()
+        );
+
+        /*
+         * Despesa:
+         *
+         * (92000 - 60000) / 60000 * 100
+         *
+         * = 53,33%
+         */
+        assertValor(
+                "53.33",
+                resposta.variacaoDespesa()
+        );
+
+        /*
+         * Resultado:
+         *
+         * (58000 - 40000) / 40000 * 100
+         *
+         * = 45%
+         */
+        assertValor(
+                "45.00",
+                resposta.variacaoResultado()
         );
     }
 
     @Test
-    void deveRetornarDashboardZeradoQuandoNaoExistiremLancamentosNoMesAtual() {
+    void deveRetornarDashboardZeradoQuandoNaoExistiremLancamentos() {
 
         YearMonth mesAtual =
                 YearMonth.now();
 
+        YearMonth mesAnterior =
+                mesAtual.minusMonths(1);
+
         LocalDate dataInicial =
-                mesAtual.atDay(1);
+                mesAnterior.atDay(1);
 
         LocalDate dataFinal =
                 mesAtual.atEndOfMonth();
@@ -150,28 +247,156 @@ class DashboardServiceTest {
         DashboardResponse resposta =
                 dashboardService.obterDashboard();
 
-        assertEquals(
-                0,
+        assertValor(
+                "0",
                 resposta.receita()
-                        .compareTo(BigDecimal.ZERO)
         );
 
-        assertEquals(
-                0,
+        assertValor(
+                "0",
                 resposta.despesa()
-                        .compareTo(BigDecimal.ZERO)
         );
 
-        assertEquals(
-                0,
+        assertValor(
+                "0",
                 resposta.resultado()
-                        .compareTo(BigDecimal.ZERO)
         );
 
-        assertEquals(
-                0,
+        assertValor(
+                "0",
                 resposta.margem()
-                        .compareTo(BigDecimal.ZERO)
+        );
+
+        assertValor(
+                "0",
+                resposta.receitaMesAnterior()
+        );
+
+        assertValor(
+                "0",
+                resposta.despesaMesAnterior()
+        );
+
+        assertValor(
+                "0",
+                resposta.resultadoMesAnterior()
+        );
+
+        assertValor(
+                "0",
+                resposta.margemMesAnterior()
+        );
+
+        assertValor(
+                "0",
+                resposta.variacaoReceita()
+        );
+
+        assertValor(
+                "0",
+                resposta.variacaoDespesa()
+        );
+
+        assertValor(
+                "0",
+                resposta.variacaoResultado()
+        );
+    }
+
+    @Test
+    void deveCalcularVariacaoZeroQuandoMesAnteriorNaoPossuirValores() {
+
+        YearMonth mesAtual =
+                YearMonth.now();
+
+        YearMonth mesAnterior =
+                mesAtual.minusMonths(1);
+
+        LocalDate dataInicial =
+                mesAnterior.atDay(1);
+
+        LocalDate dataFinal =
+                mesAtual.atEndOfMonth();
+
+        List<FinancialTransaction> lancamentos =
+                List.of(
+                        criarLancamento(
+                                mesAtual.atDay(5),
+                                "RECEITA",
+                                "50000.00"
+                        ),
+
+                        criarLancamento(
+                                mesAtual.atDay(10),
+                                "DESPESA",
+                                "20000.00"
+                        )
+                );
+
+        when(
+                financialTransactionRepository
+                        .findByDataBetweenOrderByDataAsc(
+                                dataInicial,
+                                dataFinal
+                        )
+        ).thenReturn(lancamentos);
+
+        DashboardResponse resposta =
+                dashboardService.obterDashboard();
+
+        assertValor(
+                "50000.00",
+                resposta.receita()
+        );
+
+        assertValor(
+                "20000.00",
+                resposta.despesa()
+        );
+
+        assertValor(
+                "30000.00",
+                resposta.resultado()
+        );
+
+        assertValor(
+                "60.00",
+                resposta.margem()
+        );
+
+        assertValor(
+                "0",
+                resposta.receitaMesAnterior()
+        );
+
+        assertValor(
+                "0",
+                resposta.despesaMesAnterior()
+        );
+
+        assertValor(
+                "0",
+                resposta.resultadoMesAnterior()
+        );
+
+        /*
+         * Como não existe base de comparação,
+         * não tentamos produzir uma porcentagem
+         * infinita ou artificial.
+         */
+        assertValor(
+                "0",
+                resposta.variacaoReceita()
+        );
+
+        assertValor(
+                "0",
+                resposta.variacaoDespesa()
+        );
+
+        assertValor(
+                "0",
+                resposta.variacaoResultado()
         );
     }
 
@@ -185,11 +410,25 @@ class DashboardServiceTest {
                 new FinancialTransaction();
 
         lancamento.setData(data);
+
         lancamento.setTipo(tipo);
+
         lancamento.setValor(
                 new BigDecimal(valor)
         );
 
         return lancamento;
+    }
+
+    private void assertValor(
+            String esperado,
+            BigDecimal atual
+    ) {
+
+        assertEquals(
+                0,
+                new BigDecimal(esperado)
+                        .compareTo(atual)
+        );
     }
 }

@@ -1,15 +1,22 @@
 package com.finvista.service;
 
 import com.finvista.dto.DashboardResponse;
+import com.finvista.service
+        .FinancialTransactionAggregationService
+        .MonthlyFinancialSummary;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 
 @Service
 public class DashboardService {
+
+    private static final BigDecimal CEM =
+            new BigDecimal("100");
 
     private final FinancialTransactionAggregationService
             transactionAggregationService;
@@ -33,52 +40,97 @@ public class DashboardService {
         YearMonth mesAtual =
                 YearMonth.now();
 
+        YearMonth mesAnterior =
+                mesAtual.minusMonths(1);
+
         LocalDate dataInicial =
-                mesAtual.atDay(1);
+                mesAnterior.atDay(1);
 
         LocalDate dataFinal =
                 mesAtual.atEndOfMonth();
 
-        List<FinancialTransactionAggregationService.MonthlyFinancialSummary>
-                resumos =
+        List<MonthlyFinancialSummary> resumos =
                 transactionAggregationService
                         .obterResumoMensal(
                                 dataInicial,
                                 dataFinal
                         );
 
+        MonthlyFinancialSummary resumoMesAnterior =
+                localizarResumo(
+                        resumos,
+                        mesAnterior
+                );
+
+        MonthlyFinancialSummary resumoMesAtual =
+                localizarResumo(
+                        resumos,
+                        mesAtual
+                );
+
+        BigDecimal receitaMesAnterior =
+                obterReceita(
+                        resumoMesAnterior
+                );
+
+        BigDecimal despesaMesAnterior =
+                obterDespesa(
+                        resumoMesAnterior
+                );
+
         BigDecimal receita =
-                BigDecimal.ZERO;
+                obterReceita(
+                        resumoMesAtual
+                );
 
         BigDecimal despesa =
-                BigDecimal.ZERO;
+                obterDespesa(
+                        resumoMesAtual
+                );
 
-        if (!resumos.isEmpty()) {
+        BigDecimal resultadoMesAnterior =
+                calculationService
+                        .calcularResultado(
+                                receitaMesAnterior,
+                                despesaMesAnterior
+                        );
 
-            FinancialTransactionAggregationService.MonthlyFinancialSummary
-                    resumo =
-                    resumos.get(0);
-
-            if (resumo.receita() != null) {
-                receita =
-                        resumo.receita();
-            }
-
-            if (resumo.despesa() != null) {
-                despesa =
-                        resumo.despesa();
-            }
-        }
+        BigDecimal margemMesAnterior =
+                calculationService
+                        .calcularMargem(
+                                receitaMesAnterior,
+                                resultadoMesAnterior
+                        );
 
         BigDecimal resultado =
-                calculationService.calcularResultado(
-                        receita,
+                calculationService
+                        .calcularResultado(
+                                receita,
+                                despesa
+                        );
+
+        BigDecimal margem =
+                calculationService
+                        .calcularMargem(
+                                receita,
+                                resultado
+                        );
+
+        BigDecimal variacaoReceita =
+                calcularVariacaoPercentual(
+                        receitaMesAnterior,
+                        receita
+                );
+
+        BigDecimal variacaoDespesa =
+                calcularVariacaoPercentual(
+                        despesaMesAnterior,
                         despesa
                 );
 
-        BigDecimal margem =
-                calculationService.calcularMargem(
-                        receita,
+        BigDecimal variacaoResultado =
+                calcularVariacaoPercentual(
+                        resultadoMesAnterior,
                         resultado
                 );
 
@@ -86,7 +138,100 @@ public class DashboardService {
                 receita,
                 despesa,
                 resultado,
-                margem
+                margem,
+
+                receitaMesAnterior,
+                despesaMesAnterior,
+                resultadoMesAnterior,
+                margemMesAnterior,
+
+                variacaoReceita,
+                variacaoDespesa,
+                variacaoResultado
         );
+    }
+
+    private MonthlyFinancialSummary localizarResumo(
+            List<MonthlyFinancialSummary> resumos,
+            YearMonth periodo
+    ) {
+
+        if (resumos == null || resumos.isEmpty()) {
+            return null;
+        }
+
+        return resumos
+                .stream()
+                .filter(
+                        resumo ->
+                                resumo != null
+                                        && periodo.equals(
+                                                resumo.periodo()
+                                        )
+                )
+                .findFirst()
+                .orElse(null);
+    }
+
+    private BigDecimal obterReceita(
+            MonthlyFinancialSummary resumo
+    ) {
+
+        if (resumo == null
+                || resumo.receita() == null) {
+
+            return BigDecimal.ZERO;
+        }
+
+        return resumo.receita();
+    }
+
+    private BigDecimal obterDespesa(
+            MonthlyFinancialSummary resumo
+    ) {
+
+        if (resumo == null
+                || resumo.despesa() == null) {
+
+            return BigDecimal.ZERO;
+        }
+
+        return resumo.despesa();
+    }
+
+    private BigDecimal calcularVariacaoPercentual(
+            BigDecimal valorAnterior,
+            BigDecimal valorAtual
+    ) {
+
+        BigDecimal anterior =
+                valorAnterior != null
+                        ? valorAnterior
+                        : BigDecimal.ZERO;
+
+        BigDecimal atual =
+                valorAtual != null
+                        ? valorAtual
+                        : BigDecimal.ZERO;
+
+        if (anterior.compareTo(
+                BigDecimal.ZERO
+        ) == 0) {
+
+            return BigDecimal.ZERO;
+        }
+
+        return atual
+                .subtract(anterior)
+                .divide(
+                        anterior.abs(),
+                        4,
+                        RoundingMode.HALF_UP
+                )
+                .multiply(CEM)
+                .setScale(
+                        2,
+                        RoundingMode.HALF_UP
+                );
     }
 }

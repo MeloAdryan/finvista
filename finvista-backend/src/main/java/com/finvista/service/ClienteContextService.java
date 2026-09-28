@@ -9,88 +9,78 @@ import org.springframework.stereotype.Service;
 @Service
 public class ClienteContextService {
 
-    private final UsuarioService usuarioService;
+        private final UsuarioService usuarioService;
 
-    public ClienteContextService(
-            UsuarioService usuarioService
-    ) {
-        this.usuarioService = usuarioService;
-    }
-
-    /**
-     * Retorna o usuário atualmente autenticado na sessão.
-     */
-    public Usuario getUsuarioAutenticado() {
-
-        Authentication authentication =
-                SecurityContextHolder
-                        .getContext()
-                        .getAuthentication();
-
-        if (authentication == null
-                || !authentication.isAuthenticated()
-                || authentication.getName() == null
-                || authentication.getName().isBlank()
-                || "anonymousUser".equals(authentication.getName())) {
-
-            throw new IllegalStateException(
-                    "Nenhum usuário autenticado foi encontrado."
-            );
+        public ClienteContextService(
+                        UsuarioService usuarioService) {
+                this.usuarioService = usuarioService;
         }
 
-        Usuario usuario = usuarioService
-                .buscarPorEmail(authentication.getName())
-                .orElseThrow(() ->
-                        new IllegalStateException(
-                                "O usuário autenticado não foi encontrado."
-                        )
-                );
+        /**
+         * Retorna o usuário atualmente autenticado na sessão.
+         */
+        public Usuario getUsuarioAutenticado() {
 
-        if (!Boolean.TRUE.equals(usuario.getAtivo())) {
-            throw new IllegalStateException(
-                    "O usuário autenticado está inativo."
-            );
+                Authentication authentication = SecurityContextHolder
+                                .getContext()
+                                .getAuthentication();
+
+                if (authentication == null
+                                || !authentication.isAuthenticated()
+                                || authentication.getName() == null
+                                || authentication.getName().isBlank()
+                                || "anonymousUser".equals(authentication.getName())) {
+
+                        throw new IllegalStateException(
+                                        "Nenhum usuário autenticado foi encontrado.");
+                }
+
+                Usuario usuario = usuarioService
+                                .buscarPorEmail(authentication.getName())
+                                .orElseThrow(() -> new IllegalStateException(
+                                                "O usuário autenticado não foi encontrado."));
+
+                if (!Boolean.TRUE.equals(usuario.getAtivo())) {
+                        throw new IllegalStateException(
+                                        "O usuário autenticado está inativo.");
+                }
+
+                return usuario;
         }
 
-        return usuario;
-    }
+        /**
+         * Retorna o Cliente associado ao usuário autenticado.
+         *
+         * Usuários comuns precisam obrigatoriamente possuir
+         * um Cliente associado.
+         */
+        public Cliente getClienteDoUsuarioAutenticado() {
 
-    /**
-     * Retorna o Cliente associado ao usuário autenticado.
-     *
-     * Usuários comuns precisam obrigatoriamente possuir
-     * um Cliente associado.
-     */
-    public Cliente getClienteDoUsuarioAutenticado() {
+                Usuario usuario = getUsuarioAutenticado();
 
-        Usuario usuario = getUsuarioAutenticado();
+                Cliente cliente = usuario.getCliente();
 
-        Cliente cliente = usuario.getCliente();
+                if (cliente == null) {
+                        throw new IllegalStateException(
+                                        "O usuário autenticado não possui um cliente associado.");
+                }
 
-        if (cliente == null) {
-            throw new IllegalStateException(
-                    "O usuário autenticado não possui um cliente associado."
-            );
+                if (!Boolean.TRUE.equals(cliente.getAtivo())) {
+                        throw new IllegalStateException(
+                                        "O cliente associado ao usuário está inativo.");
+                }
+
+                return cliente;
         }
 
-        if (!Boolean.TRUE.equals(cliente.getAtivo())) {
-            throw new IllegalStateException(
-                    "O cliente associado ao usuário está inativo."
-            );
+        /**
+         * Informa se o usuário autenticado possui perfil ADMIN.
+         */
+        public boolean isAdmin() {
+
+                Usuario usuario = getUsuarioAutenticado();
+
+                return "ADMIN".equalsIgnoreCase(
+                                usuario.getPerfil());
         }
-
-        return cliente;
-    }
-
-    /**
-     * Informa se o usuário autenticado possui perfil ADMIN.
-     */
-    public boolean isAdmin() {
-
-        Usuario usuario = getUsuarioAutenticado();
-
-        return "ADMIN".equalsIgnoreCase(
-                usuario.getPerfil()
-        );
-    }
 }

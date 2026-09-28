@@ -7,12 +7,19 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface BudgetRepository
-        extends JpaRepository<Budget, Long> {
+                extends JpaRepository<Budget, Long> {
 
-    List<Budget> findAllByOrderByDataInicioDesc();
+        List<Budget> findAllByOrderByDataInicioDesc();
 
-    List<Budget> findByDataInicioLessThanEqualAndDataFimGreaterThanEqual(
-            LocalDate dataFim,
-            LocalDate dataInicio
-    );
+        List<Budget> findByDataInicioLessThanEqualAndDataFimGreaterThanEqual(
+                        LocalDate dataFim,
+                        LocalDate dataInicio);
+
+        List<Budget> findAllByClienteIdOrderByDataInicioDesc(
+                        Long clienteId);
+
+        List<Budget> findByClienteIdAndDataInicioLessThanEqualAndDataFimGreaterThanEqual(
+                        Long clienteId,
+                        LocalDate dataFim,
+                        LocalDate dataInicio);
 }

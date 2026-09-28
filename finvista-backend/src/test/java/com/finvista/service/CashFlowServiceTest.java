@@ -16,228 +16,203 @@ import static org.mockito.Mockito.when;
 
 class CashFlowServiceTest {
 
-    private FinancialTransactionRepository financialTransactionRepository;
+        private FinancialTransactionRepository financialTransactionRepository;
 
-    private CashFlowService service;
+        private CashFlowService service;
 
-    @BeforeEach
-    void configurar() {
+        private ClienteContextService clienteContextService;
 
-        financialTransactionRepository
-                = mock(FinancialTransactionRepository.class);
+        @BeforeEach
+void configurar() {
 
-        FinancialTransactionAggregationService transactionAggregationService
-                = new FinancialTransactionAggregationService(
-                        financialTransactionRepository
-                );
+    financialTransactionRepository =
+            mock(
+                    FinancialTransactionRepository.class
+            );
 
-        service
-                = new CashFlowService(
-                        transactionAggregationService
-                );
-    }
+    clienteContextService =
+            mock(
+                    ClienteContextService.class
+            );
 
-    @Test
-    void deveCalcularFluxoCaixaPartindoDeZero() {
+    /*
+     * Os testes existentes representam
+     * a visão administrativa/global.
+     */
+    when(
+            clienteContextService.isAdmin()
+    ).thenReturn(true);
 
-       
-        FinancialTransaction receitaSetembro
-                = criarLancamento(
-                        LocalDate.of(2026, 9, 10),
-                        "RECEITA",
-                        "10000.00"
-                );
+    FinancialTransactionAggregationService
+            transactionAggregationService =
+            new FinancialTransactionAggregationService(
+                    financialTransactionRepository,
+                    clienteContextService
+            );
 
-        FinancialTransaction despesaSetembro
-                = criarLancamento(
-                        LocalDate.of(2026, 9, 15),
-                        "DESPESA",
-                        "4000.00"
-                );
+    service =
+            new CashFlowService(
+                    transactionAggregationService
+            );
+}
 
-        FinancialTransaction receitaOutubro
-                = criarLancamento(
-                        LocalDate.of(2026, 10, 10),
-                        "RECEITA",
-                        "5000.00"
-                );
+        @Test
+        void deveCalcularFluxoCaixaPartindoDeZero() {
 
-        FinancialTransaction despesaOutubro
-                = criarLancamento(
-                        LocalDate.of(2026, 10, 15),
-                        "DESPESA",
-                        "7000.00"
-                );
+                FinancialTransaction receitaSetembro = criarLancamento(
+                                LocalDate.of(2026, 9, 10),
+                                "RECEITA",
+                                "10000.00");
 
-        LocalDate menorData
-                = LocalDate.of(2026, 9, 10);
+                FinancialTransaction despesaSetembro = criarLancamento(
+                                LocalDate.of(2026, 9, 15),
+                                "DESPESA",
+                                "4000.00");
 
-        LocalDate maiorData
-                = LocalDate.of(2026, 10, 15);
+                FinancialTransaction receitaOutubro = criarLancamento(
+                                LocalDate.of(2026, 10, 10),
+                                "RECEITA",
+                                "5000.00");
 
-        when(
-                financialTransactionRepository
-                        .findMenorData()
-        ).thenReturn(
-                Optional.of(menorData)
-        );
+                FinancialTransaction despesaOutubro = criarLancamento(
+                                LocalDate.of(2026, 10, 15),
+                                "DESPESA",
+                                "7000.00");
 
-        when(
-                financialTransactionRepository
-                        .findMaiorData()
-        ).thenReturn(
-                Optional.of(maiorData)
-        );
+                LocalDate menorData = LocalDate.of(2026, 9, 10);
 
-        when(
-                financialTransactionRepository
-                        .findByDataBetweenOrderByDataAsc(
-                                menorData,
-                                maiorData
-                        )
-        ).thenReturn(
-                List.of(
-                        receitaSetembro,
-                        despesaSetembro,
-                        receitaOutubro,
-                        despesaOutubro
-                )
-        );
+                LocalDate maiorData = LocalDate.of(2026, 10, 15);
 
-        var resultado
-                = service.obterFluxoCaixa();
+                when(
+                                financialTransactionRepository
+                                                .findMenorData())
+                                .thenReturn(
+                                                Optional.of(menorData));
 
-        assertEquals(
-                2,
-                resultado.size()
-        );
-        
-         assertEquals(
-                "Set/2026",
-                resultado.get(0).mes()
-        );
+                when(
+                                financialTransactionRepository
+                                                .findMaiorData())
+                                .thenReturn(
+                                                Optional.of(maiorData));
 
-        assertEquals(
-                "Out/2026",
-                resultado.get(1).mes()
-        );
+                when(
+                                financialTransactionRepository
+                                                .findByDataBetweenOrderByDataAsc(
+                                                                menorData,
+                                                                maiorData))
+                                .thenReturn(
+                                                List.of(
+                                                                receitaSetembro,
+                                                                despesaSetembro,
+                                                                receitaOutubro,
+                                                                despesaOutubro));
 
+                var resultado = service.obterFluxoCaixa();
 
-        assertEquals(
-                0,
-                resultado.get(0)
-                        .saldoInicial()
-                        .compareTo(BigDecimal.ZERO)
-        );
+                assertEquals(
+                                2,
+                                resultado.size());
 
-        assertEquals(
-                0,
-                resultado.get(0)
-                        .entradas()
-                        .compareTo(
-                                new BigDecimal("10000.00")
-                        )
-        );
+                assertEquals(
+                                "Set/2026",
+                                resultado.get(0).mes());
 
-        assertEquals(
-                0,
-                resultado.get(0)
-                        .saidas()
-                        .compareTo(
-                                new BigDecimal("4000.00")
-                        )
-        );
+                assertEquals(
+                                "Out/2026",
+                                resultado.get(1).mes());
 
-        assertEquals(
-                0,
-                resultado.get(0)
-                        .saldoFinal()
-                        .compareTo(
-                                new BigDecimal("6000.00")
-                        )
-        );
+                assertEquals(
+                                0,
+                                resultado.get(0)
+                                                .saldoInicial()
+                                                .compareTo(BigDecimal.ZERO));
 
-        assertEquals(
-                0,
-                resultado.get(1)
-                        .saldoInicial()
-                        .compareTo(
-                                new BigDecimal("6000.00")
-                        )
-        );
+                assertEquals(
+                                0,
+                                resultado.get(0)
+                                                .entradas()
+                                                .compareTo(
+                                                                new BigDecimal("10000.00")));
 
-        assertEquals(
-                0,
-                resultado.get(1)
-                        .entradas()
-                        .compareTo(
-                                new BigDecimal("5000.00")
-                        )
-        );
+                assertEquals(
+                                0,
+                                resultado.get(0)
+                                                .saidas()
+                                                .compareTo(
+                                                                new BigDecimal("4000.00")));
 
-        assertEquals(
-                0,
-                resultado.get(1)
-                        .saidas()
-                        .compareTo(
-                                new BigDecimal("7000.00")
-                        )
-        );
+                assertEquals(
+                                0,
+                                resultado.get(0)
+                                                .saldoFinal()
+                                                .compareTo(
+                                                                new BigDecimal("6000.00")));
 
-        assertEquals(
-                0,
-                resultado.get(1)
-                        .saldoFinal()
-                        .compareTo(
-                                new BigDecimal("4000.00")
-                        )
-        );
-    }
+                assertEquals(
+                                0,
+                                resultado.get(1)
+                                                .saldoInicial()
+                                                .compareTo(
+                                                                new BigDecimal("6000.00")));
 
-    @Test
-    void deveRetornarListaVaziaSemRegistros() {
+                assertEquals(
+                                0,
+                                resultado.get(1)
+                                                .entradas()
+                                                .compareTo(
+                                                                new BigDecimal("5000.00")));
 
-        when(
-                financialTransactionRepository
-                        .findMenorData()
-        ).thenReturn(
-                Optional.empty()
-        );
+                assertEquals(
+                                0,
+                                resultado.get(1)
+                                                .saidas()
+                                                .compareTo(
+                                                                new BigDecimal("7000.00")));
 
-        when(
-                financialTransactionRepository
-                        .findMaiorData()
-        ).thenReturn(
-                Optional.empty()
-        );
+                assertEquals(
+                                0,
+                                resultado.get(1)
+                                                .saldoFinal()
+                                                .compareTo(
+                                                                new BigDecimal("4000.00")));
+        }
 
-        var resultado
-                = service.obterFluxoCaixa();
+        @Test
+        void deveRetornarListaVaziaSemRegistros() {
 
-        assertEquals(
-                0,
-                resultado.size()
-        );
-    }
+                when(
+                                financialTransactionRepository
+                                                .findMenorData())
+                                .thenReturn(
+                                                Optional.empty());
 
-    private FinancialTransaction criarLancamento(
-            LocalDate data,
-            String tipo,
-            String valor
-    ) {
+                when(
+                                financialTransactionRepository
+                                                .findMaiorData())
+                                .thenReturn(
+                                                Optional.empty());
 
-        FinancialTransaction lancamento
-                = new FinancialTransaction();
+                var resultado = service.obterFluxoCaixa();
 
-        lancamento.setData(data);
-        lancamento.setDescricao(
-                "Lançamento de teste"
-        );
-        lancamento.setTipo(tipo);
-        lancamento.setValor(
-                new BigDecimal(valor)
-        );
+                assertEquals(
+                                0,
+                                resultado.size());
+        }
 
-        return lancamento;
-    }
+        private FinancialTransaction criarLancamento(
+                        LocalDate data,
+                        String tipo,
+                        String valor) {
+
+                FinancialTransaction lancamento = new FinancialTransaction();
+
+                lancamento.setData(data);
+                lancamento.setDescricao(
+                                "Lançamento de teste");
+                lancamento.setTipo(tipo);
+                lancamento.setValor(
+                                new BigDecimal(valor));
+
+                return lancamento;
+        }
 }

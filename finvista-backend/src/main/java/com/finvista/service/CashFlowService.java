@@ -13,81 +13,63 @@ import java.util.Locale;
 @Service
 public class CashFlowService {
 
-    private final FinancialTransactionAggregationService transactionAggregationService;
+        private final FinancialTransactionAggregationService transactionAggregationService;
 
-    public CashFlowService(
-            FinancialTransactionAggregationService transactionAggregationService
-    ) {
-        this.transactionAggregationService
-                = transactionAggregationService;
-    }
-
-    public List<CashFlowResponse>
-            obterFluxoCaixa() {
-
-        List<MonthlyFinancialSummary> resumos
-                = transactionAggregationService
-                        .obterResumoMensalCompleto();
-
-        List<CashFlowResponse> fluxo
-                = new ArrayList<>();
-
-        BigDecimal saldoAtual
-                = BigDecimal.ZERO;
-
-        for (MonthlyFinancialSummary resumo : resumos) {
-
-            BigDecimal saldoInicial
-                    = saldoAtual;
-
-            BigDecimal entradas
-                    = resumo.receita();
-
-            BigDecimal saidas
-                    = resumo.despesa();
-
-            BigDecimal saldoFinal
-                    = saldoInicial
-                            .add(entradas)
-                            .subtract(saidas);
-
-            CashFlowResponse dados
-                    = new CashFlowResponse(
-                            formatarMes(resumo.periodo()),
-                            saldoInicial,
-                            entradas,
-                            saidas,
-                            saldoFinal
-                    );
-
-            fluxo.add(dados);
-
-            saldoAtual
-                    = saldoFinal;
+        public CashFlowService(
+                        FinancialTransactionAggregationService transactionAggregationService) {
+                this.transactionAggregationService = transactionAggregationService;
         }
 
-        return fluxo;
-    }
+        public List<CashFlowResponse> obterFluxoCaixa() {
 
-    private String formatarMes(
-            java.time.YearMonth periodo
-    ) {
+                List<MonthlyFinancialSummary> resumos = transactionAggregationService
+                                .obterResumoMensalCompleto();
 
-        DateTimeFormatter formatter
-                = DateTimeFormatter.ofPattern(
-                        "MMM/yyyy",
-                        new Locale("pt", "BR")
-                );
-        
-                 
-        String mes =
-                periodo.format(formatter)
-                        .replace(".", "");
+                List<CashFlowResponse> fluxo = new ArrayList<>();
 
-        return mes
-                .substring(0, 1)
-                .toUpperCase()
- 
-               + mes.substring(1);
-    }
+                BigDecimal saldoAtual = BigDecimal.ZERO;
+
+                for (MonthlyFinancialSummary resumo : resumos) {
+
+                        BigDecimal saldoInicial = saldoAtual;
+
+                        BigDecimal entradas = resumo.receita();
+
+                        BigDecimal saidas = resumo.despesa();
+
+                        BigDecimal saldoFinal = saldoInicial
+                                        .add(entradas)
+                                        .subtract(saidas);
+
+                        CashFlowResponse dados = new CashFlowResponse(
+                                        formatarMes(resumo.periodo()),
+                                        saldoInicial,
+                                        entradas,
+                                        saidas,
+                                        saldoFinal);
+
+                        fluxo.add(dados);
+
+                        saldoAtual = saldoFinal;
+                }
+
+                return fluxo;
+        }
+
+        private String formatarMes(
+                        java.time.YearMonth periodo) {
+
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern(
+                                "MMM/yyyy",
+                                new Locale("pt", "BR"));
+
+                String mes = periodo.format(formatter)
+                                .replace(".", "");
+
+                return mes
+                                .substring(0, 1)
+                                .toUpperCase()
+
+                                + mes.substring(1);
+        }
 }

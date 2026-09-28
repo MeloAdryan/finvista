@@ -1,15 +1,14 @@
 package com.finvista.repository;
 
-import com.finvista.model.FinancialTransaction;
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import org.springframework.data.jpa.repository.Query;
-
-import java.util.Optional;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+import com.finvista.model.FinancialTransaction;
 
 public interface FinancialTransactionRepository
         extends JpaRepository<FinancialTransaction, Long> {
@@ -83,19 +82,40 @@ public interface FinancialTransactionRepository
             String origem
     );
 
-    @Query("""
-        SELECT MIN(l.data)
-        FROM FinancialTransaction l
-        WHERE l.data IS NOT NULL
-        """)
-    Optional<LocalDate> findMenorData();
+   @Query("""
+    SELECT MIN(l.data)
+    FROM FinancialTransaction l
+    WHERE l.data IS NOT NULL
+    """)
+Optional<LocalDate> findMenorData();
 
-    @Query("""
-        SELECT MAX(l.data)
-        FROM FinancialTransaction l
-        WHERE l.data IS NOT NULL
-        """)
-    Optional<LocalDate> findMaiorData();
+@Query("""
+    SELECT MAX(l.data)
+    FROM FinancialTransaction l
+    WHERE l.data IS NOT NULL
+    """)
+Optional<LocalDate> findMaiorData();
+
+@Query("""
+    SELECT MIN(l.data)
+    FROM FinancialTransaction l
+    WHERE l.cliente.id = :clienteId
+      AND l.data IS NOT NULL
+    """)
+Optional<LocalDate> findMenorDataByClienteId(
+        Long clienteId
+);
+
+@Query("""
+    SELECT MAX(l.data)
+    FROM FinancialTransaction l
+    WHERE l.cliente.id = :clienteId
+      AND l.data IS NOT NULL
+    """)
+Optional<LocalDate> findMaiorDataByClienteId(
+        Long clienteId
+);
+
 }
             
     

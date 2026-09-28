@@ -18,256 +18,391 @@ import static org.mockito.Mockito.when;
 
 class FinancialTransactionAggregationServiceTest {
 
-    private FinancialTransactionRepository
-            financialTransactionRepository;
+        private FinancialTransactionRepository financialTransactionRepository;
 
-    private FinancialTransactionAggregationService
-            aggregationService;
+        private ClienteContextService clienteContextService;
 
-    @BeforeEach
-    void configurar() {
+        private FinancialTransactionAggregationService aggregationService;
 
-        financialTransactionRepository =
-                Mockito.mock(
-                        FinancialTransactionRepository.class
-                );
+        @BeforeEach
+        void configurar() {
 
-        aggregationService =
-                new FinancialTransactionAggregationService(
-                        financialTransactionRepository
-                );
-    }
+                financialTransactionRepository = Mockito.mock(
+                                FinancialTransactionRepository.class);
 
-    @Test
-    void deveAgruparReceitasEDespesasPorMes() {
+                clienteContextService = Mockito.mock(
+                                ClienteContextService.class);
 
-        LocalDate inicio =
-                LocalDate.of(2026, 9, 1);
+                when(
+                                clienteContextService.isAdmin()).thenReturn(true);
 
-        LocalDate fim =
-                LocalDate.of(2026, 10, 31);
+                aggregationService = new FinancialTransactionAggregationService(
+                                financialTransactionRepository,
+                                clienteContextService);
+        }
 
-        List<FinancialTransaction> lancamentos =
-                List.of(
-                        criarLancamento(
-                                LocalDate.of(2026, 9, 5),
-                                "RECEITA",
-                                "10000.00"
-                        ),
-                        criarLancamento(
-                                LocalDate.of(2026, 9, 10),
-                                "DESPESA",
-                                "3000.00"
-                        ),
-                        criarLancamento(
-                                LocalDate.of(2026, 9, 20),
-                                "DESPESA",
-                                "2000.00"
-                        ),
-                        criarLancamento(
-                                LocalDate.of(2026, 10, 3),
-                                "RECEITA",
-                                "15000.00"
-                        )
-                );
+        @Test
+        void deveAgruparReceitasEDespesasPorMes() {
 
-        when(
-                financialTransactionRepository
-                        .findByDataBetweenOrderByDataAsc(
-                                inicio,
-                                fim
-                        )
-        ).thenReturn(lancamentos);
+                LocalDate inicio = LocalDate.of(2026, 9, 1);
 
-        List<
-                FinancialTransactionAggregationService
-                        .MonthlyFinancialSummary
-        > resultado =
-                aggregationService.obterResumoMensal(
-                        inicio,
-                        fim
-                );
+                LocalDate fim = LocalDate.of(2026, 10, 31);
 
-        assertEquals(
-                2,
-                resultado.size()
-        );
+                List<FinancialTransaction> lancamentos = List.of(
+                                criarLancamento(
+                                                LocalDate.of(2026, 9, 5),
+                                                "RECEITA",
+                                                "10000.00"),
+                                criarLancamento(
+                                                LocalDate.of(2026, 9, 10),
+                                                "DESPESA",
+                                                "3000.00"),
+                                criarLancamento(
+                                                LocalDate.of(2026, 9, 20),
+                                                "DESPESA",
+                                                "2000.00"),
+                                criarLancamento(
+                                                LocalDate.of(2026, 10, 3),
+                                                "RECEITA",
+                                                "15000.00"));
 
-        assertEquals(
-                YearMonth.of(2026, 9),
-                resultado.get(0).periodo()
-        );
+                when(
+                                financialTransactionRepository
+                                                .findByDataBetweenOrderByDataAsc(
+                                                                inicio,
+                                                                fim))
+                                .thenReturn(lancamentos);
 
-        assertEquals(
-                new BigDecimal("10000.00"),
-                resultado.get(0).receita()
-        );
-
-        assertEquals(
-                new BigDecimal("5000.00"),
-                resultado.get(0).despesa()
-        );
-
-        assertEquals(
-                YearMonth.of(2026, 10),
-                resultado.get(1).periodo()
-        );
-
-        assertEquals(
-                new BigDecimal("15000.00"),
-                resultado.get(1).receita()
-        );
-
-        assertEquals(
-                BigDecimal.ZERO,
-                resultado.get(1).despesa()
-        );
-    }
-
-    @Test
-    void deveManterMesSemMovimentacaoComValoresZero() {
-
-        LocalDate inicio =
-                LocalDate.of(2026, 9, 1);
-
-        LocalDate fim =
-                LocalDate.of(2026, 11, 30);
-
-        List<FinancialTransaction> lancamentos =
-                List.of(
-                        criarLancamento(
-                                LocalDate.of(2026, 9, 10),
-                                "RECEITA",
-                                "10000.00"
-                        ),
-                        criarLancamento(
-                                LocalDate.of(2026, 11, 10),
-                                "DESPESA",
-                                "4000.00"
-                        )
-                );
-
-        when(
-                financialTransactionRepository
-                        .findByDataBetweenOrderByDataAsc(
-                                inicio,
-                                fim
-                        )
-        ).thenReturn(lancamentos);
-
-        List<
-                FinancialTransactionAggregationService
-                        .MonthlyFinancialSummary
-        > resultado =
-                aggregationService.obterResumoMensal(
-                        inicio,
-                        fim
-                );
-
-        assertEquals(
-                3,
-                resultado.size()
-        );
-
-        assertEquals(
-                YearMonth.of(2026, 10),
-                resultado.get(1).periodo()
-        );
-
-        assertEquals(
-                BigDecimal.ZERO,
-                resultado.get(1).receita()
-        );
-
-        assertEquals(
-                BigDecimal.ZERO,
-                resultado.get(1).despesa()
-        );
-    }
-
-    @Test
-    void deveIgnorarTipoDesconhecido() {
-
-        LocalDate inicio =
-                LocalDate.of(2026, 9, 1);
-
-        LocalDate fim =
-                LocalDate.of(2026, 9, 30);
-
-        List<FinancialTransaction> lancamentos =
-                List.of(
-                        criarLancamento(
-                                LocalDate.of(2026, 9, 10),
-                                "OUTRO",
-                                "9999.00"
-                        )
-                );
-
-        when(
-                financialTransactionRepository
-                        .findByDataBetweenOrderByDataAsc(
-                                inicio,
-                                fim
-                        )
-        ).thenReturn(lancamentos);
-
-        var resultado =
-                aggregationService.obterResumoMensal(
-                        inicio,
-                        fim
-                );
-
-        assertEquals(
-                BigDecimal.ZERO,
-                resultado.get(0).receita()
-        );
-
-        assertEquals(
-                BigDecimal.ZERO,
-                resultado.get(0).despesa()
-        );
-    }
-
-    @Test
-    void deveRejeitarPeriodoInvalido() {
-
-        LocalDate inicio =
-                LocalDate.of(2026, 10, 1);
-
-        LocalDate fim =
-                LocalDate.of(2026, 9, 30);
-
-        IllegalArgumentException excecao =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () -> aggregationService
+                List<FinancialTransactionAggregationService.MonthlyFinancialSummary> resultado = aggregationService
                                 .obterResumoMensal(
-                                        inicio,
-                                        fim
-                                )
-                );
+                                                inicio,
+                                                fim);
 
-        assertEquals(
-                "Data final não pode ser anterior à data inicial.",
-                excecao.getMessage()
-        );
-    }
+                assertEquals(
+                                2,
+                                resultado.size());
 
-    private FinancialTransaction criarLancamento(
-            LocalDate data,
-            String tipo,
-            String valor
-    ) {
+                assertEquals(
+                                YearMonth.of(2026, 9),
+                                resultado.get(0).periodo());
 
-        FinancialTransaction lancamento =
-                new FinancialTransaction();
+                assertEquals(
+                                new BigDecimal("10000.00"),
+                                resultado.get(0).receita());
 
-        lancamento.setData(data);
-        lancamento.setTipo(tipo);
-        lancamento.setValor(
-                new BigDecimal(valor)
-        );
+                assertEquals(
+                                new BigDecimal("5000.00"),
+                                resultado.get(0).despesa());
 
-        return lancamento;
-    }
+                assertEquals(
+                                YearMonth.of(2026, 10),
+                                resultado.get(1).periodo());
+
+                assertEquals(
+                                new BigDecimal("15000.00"),
+                                resultado.get(1).receita());
+
+                assertEquals(
+                                BigDecimal.ZERO,
+                                resultado.get(1).despesa());
+        }
+
+        @Test
+        void deveManterMesSemMovimentacaoComValoresZero() {
+
+                LocalDate inicio = LocalDate.of(2026, 9, 1);
+
+                LocalDate fim = LocalDate.of(2026, 11, 30);
+
+                List<FinancialTransaction> lancamentos = List.of(
+                                criarLancamento(
+                                                LocalDate.of(2026, 9, 10),
+                                                "RECEITA",
+                                                "10000.00"),
+                                criarLancamento(
+                                                LocalDate.of(2026, 11, 10),
+                                                "DESPESA",
+                                                "4000.00"));
+
+                when(
+                                financialTransactionRepository
+                                                .findByDataBetweenOrderByDataAsc(
+                                                                inicio,
+                                                                fim))
+                                .thenReturn(lancamentos);
+
+                List<FinancialTransactionAggregationService.MonthlyFinancialSummary> resultado = aggregationService
+                                .obterResumoMensal(
+                                                inicio,
+                                                fim);
+
+                assertEquals(
+                                3,
+                                resultado.size());
+
+                assertEquals(
+                                YearMonth.of(2026, 10),
+                                resultado.get(1).periodo());
+
+                assertEquals(
+                                BigDecimal.ZERO,
+                                resultado.get(1).receita());
+
+                assertEquals(
+                                BigDecimal.ZERO,
+                                resultado.get(1).despesa());
+        }
+
+        @Test
+        void deveIgnorarTipoDesconhecido() {
+
+                LocalDate inicio = LocalDate.of(2026, 9, 1);
+
+                LocalDate fim = LocalDate.of(2026, 9, 30);
+
+                List<FinancialTransaction> lancamentos = List.of(
+                                criarLancamento(
+                                                LocalDate.of(2026, 9, 10),
+                                                "OUTRO",
+                                                "9999.00"));
+
+                when(
+                                financialTransactionRepository
+                                                .findByDataBetweenOrderByDataAsc(
+                                                                inicio,
+                                                                fim))
+                                .thenReturn(lancamentos);
+
+                var resultado = aggregationService.obterResumoMensal(
+                                inicio,
+                                fim);
+
+                assertEquals(
+                                BigDecimal.ZERO,
+                                resultado.get(0).receita());
+
+                assertEquals(
+                                BigDecimal.ZERO,
+                                resultado.get(0).despesa());
+        }
+
+        @Test
+        void deveBuscarSomenteLancamentosDoClienteAutenticado() {
+
+                LocalDate inicio = LocalDate.of(2026, 9, 1);
+
+                LocalDate fim = LocalDate.of(2026, 9, 30);
+
+                Long clienteId = 10L;
+
+                com.finvista.model.Cliente cliente = Mockito.mock(
+                                com.finvista.model.Cliente.class);
+
+                when(
+                                clienteContextService.isAdmin()).thenReturn(false);
+
+                when(
+                                clienteContextService
+                                                .getClienteDoUsuarioAutenticado())
+                                .thenReturn(cliente);
+
+                when(
+                                cliente.getId()).thenReturn(clienteId);
+
+                List<FinancialTransaction> lancamentos = List.of(
+                                criarLancamento(
+                                                LocalDate.of(2026, 9, 5),
+                                                "RECEITA",
+                                                "8000.00"),
+                                criarLancamento(
+                                                LocalDate.of(2026, 9, 10),
+                                                "DESPESA",
+                                                "3000.00"));
+
+                when(
+                                financialTransactionRepository
+                                                .findByClienteIdAndDataBetweenOrderByDataAsc(
+                                                                clienteId,
+                                                                inicio,
+                                                                fim))
+                                .thenReturn(lancamentos);
+
+                var resultado = aggregationService.obterResumoMensal(
+                                inicio,
+                                fim);
+
+                assertEquals(
+                                new BigDecimal("8000.00"),
+                                resultado.get(0).receita());
+
+                assertEquals(
+                                new BigDecimal("3000.00"),
+                                resultado.get(0).despesa());
+        }
+
+        @Test
+        void deveBuscarPeriodoCompletoGlobalQuandoUsuarioForAdmin() {
+
+                LocalDate menorData = LocalDate.of(2026, 8, 10);
+
+                LocalDate maiorData = LocalDate.of(2026, 10, 20);
+
+                when(
+                                clienteContextService.isAdmin()).thenReturn(true);
+
+                when(
+                                financialTransactionRepository
+                                                .findMenorData())
+                                .thenReturn(
+                                                java.util.Optional.of(menorData));
+
+                when(
+                                financialTransactionRepository
+                                                .findMaiorData())
+                                .thenReturn(
+                                                java.util.Optional.of(maiorData));
+
+                when(
+                                financialTransactionRepository
+                                                .findByDataBetweenOrderByDataAsc(
+                                                                menorData,
+                                                                maiorData))
+                                .thenReturn(
+                                                List.of(
+                                                                criarLancamento(
+                                                                                LocalDate.of(2026, 8, 10),
+                                                                                "RECEITA",
+                                                                                "10000.00"),
+                                                                criarLancamento(
+                                                                                LocalDate.of(2026, 10, 20),
+                                                                                "DESPESA",
+                                                                                "4000.00")));
+
+                var resultado = aggregationService
+                                .obterResumoMensalCompleto();
+
+                assertEquals(
+                                3,
+                                resultado.size());
+
+                assertEquals(
+                                YearMonth.of(2026, 8),
+                                resultado.get(0).periodo());
+
+                assertEquals(
+                                YearMonth.of(2026, 10),
+                                resultado.get(2).periodo());
+        }
+
+        @Test
+        void deveBuscarPeriodoCompletoSomenteDoClienteAutenticado() {
+
+                Long clienteId = 10L;
+
+                LocalDate menorData = LocalDate.of(2026, 9, 5);
+
+                LocalDate maiorData = LocalDate.of(2026, 10, 15);
+
+                com.finvista.model.Cliente cliente = Mockito.mock(
+                                com.finvista.model.Cliente.class);
+
+                when(
+                                clienteContextService.isAdmin()).thenReturn(false);
+
+                when(
+                                clienteContextService
+                                                .getClienteDoUsuarioAutenticado())
+                                .thenReturn(cliente);
+
+                when(
+                                cliente.getId()).thenReturn(clienteId);
+
+                when(
+                                financialTransactionRepository
+                                                .findMenorDataByClienteId(
+                                                                clienteId))
+                                .thenReturn(
+                                                java.util.Optional.of(menorData));
+
+                when(
+                                financialTransactionRepository
+                                                .findMaiorDataByClienteId(
+                                                                clienteId))
+                                .thenReturn(
+                                                java.util.Optional.of(maiorData));
+
+                when(
+                                financialTransactionRepository
+                                                .findByClienteIdAndDataBetweenOrderByDataAsc(
+                                                                clienteId,
+                                                                menorData,
+                                                                maiorData))
+                                .thenReturn(
+                                                List.of(
+                                                                criarLancamento(
+                                                                                LocalDate.of(2026, 9, 5),
+                                                                                "RECEITA",
+                                                                                "8000.00"),
+                                                                criarLancamento(
+                                                                                LocalDate.of(2026, 10, 15),
+                                                                                "DESPESA",
+                                                                                "3000.00")));
+
+                var resultado = aggregationService
+                                .obterResumoMensalCompleto();
+
+                assertEquals(
+                                2,
+                                resultado.size());
+
+                assertEquals(
+                                YearMonth.of(2026, 9),
+                                resultado.get(0).periodo());
+
+                assertEquals(
+                                new BigDecimal("8000.00"),
+                                resultado.get(0).receita());
+
+                assertEquals(
+                                YearMonth.of(2026, 10),
+                                resultado.get(1).periodo());
+
+                assertEquals(
+                                new BigDecimal("3000.00"),
+                                resultado.get(1).despesa());
+        }
+
+        @Test
+        void deveRejeitarPeriodoInvalido() {
+
+                LocalDate inicio = LocalDate.of(2026, 10, 1);
+
+                LocalDate fim = LocalDate.of(2026, 9, 30);
+
+                IllegalArgumentException excecao = assertThrows(
+                                IllegalArgumentException.class,
+                                () -> aggregationService
+                                                .obterResumoMensal(
+                                                                inicio,
+                                                                fim));
+
+                assertEquals(
+                                "Data final não pode ser anterior à data inicial.",
+                                excecao.getMessage());
+        }
+
+        private FinancialTransaction criarLancamento(
+                        LocalDate data,
+                        String tipo,
+                        String valor) {
+
+                FinancialTransaction lancamento = new FinancialTransaction();
+
+                lancamento.setData(data);
+                lancamento.setTipo(tipo);
+                lancamento.setValor(
+                                new BigDecimal(valor));
+
+                return lancamento;
+        }
 }
