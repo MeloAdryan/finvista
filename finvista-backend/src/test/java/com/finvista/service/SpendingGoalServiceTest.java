@@ -1,7 +1,7 @@
 package com.finvista.service;
 
-
 import com.finvista.dto.SpendingGoalResponse;
+import com.finvista.model.Cliente;
 import com.finvista.model.FinancialTransaction;
 import com.finvista.model.SpendingGoal;
 import com.finvista.repository.FinancialTransactionRepository;
@@ -17,50 +17,77 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SpendingGoalServiceTest {
 
+    private static final Long CLIENTE_ID = 1L;
+
     private SpendingGoalRepository spendingGoalRepository;
 
-    private FinancialTransactionRepository
-            financialTransactionRepository;
+    private FinancialTransactionRepository financialTransactionRepository;
 
-    private FinancialCalculationService
-            calculationService;
+    private FinancialCalculationService calculationService;
+
+    private ClienteContextService clienteContextService;
+
+    private Cliente cliente;
 
     private SpendingGoalService spendingGoalService;
 
     @BeforeEach
     void configurar() {
 
-        spendingGoalRepository =
-                Mockito.mock(
+        spendingGoalRepository
+                = Mockito.mock(
                         SpendingGoalRepository.class
                 );
 
-        financialTransactionRepository =
-                Mockito.mock(
+        financialTransactionRepository
+                = Mockito.mock(
                         FinancialTransactionRepository.class
                 );
 
-        calculationService =
-                new FinancialCalculationService();
+        clienteContextService
+                = Mockito.mock(
+                        ClienteContextService.class
+                );
 
-        spendingGoalService =
-                new SpendingGoalService(
+        calculationService
+                = new FinancialCalculationService();
+
+        cliente
+                = Mockito.mock(Cliente.class);
+
+        when(cliente.getId())
+                .thenReturn(CLIENTE_ID);
+
+        when(
+                clienteContextService.getClienteAtual()
+        ).thenReturn(cliente);
+
+        when(
+                clienteContextService.getClienteAtualId()
+        ).thenReturn(CLIENTE_ID);
+
+        spendingGoalService
+                = new SpendingGoalService(
                         spendingGoalRepository,
                         financialTransactionRepository,
-                        calculationService
+                        calculationService,
+                        clienteContextService
                 );
     }
 
     @Test
     void deveRetornarStatusNormal() {
 
-        SpendingGoal meta =
-                criarMetaMensal(
+        SpendingGoal meta
+                = criarMetaMensal(
                         new BigDecimal("100000.00"),
                         80
                 );
@@ -70,8 +97,8 @@ class SpendingGoalServiceTest {
                 new BigDecimal("48101.50")
         );
 
-       SpendingGoalResponse resultado = 
-                spendingGoalService
+        SpendingGoalResponse resultado
+                = spendingGoalService
                         .buscarSituacao(1L);
 
         assertEquals(
@@ -98,8 +125,8 @@ class SpendingGoalServiceTest {
     @Test
     void deveRetornarStatusAlerta() {
 
-        SpendingGoal meta =
-                criarMetaMensal(
+        SpendingGoal meta
+                = criarMetaMensal(
                         new BigDecimal("60000.00"),
                         80
                 );
@@ -109,8 +136,8 @@ class SpendingGoalServiceTest {
                 new BigDecimal("48101.50")
         );
 
-        SpendingGoalResponse resultado =
-                spendingGoalService
+        SpendingGoalResponse resultado
+                = spendingGoalService
                         .buscarSituacao(1L);
 
         assertEquals(
@@ -132,8 +159,8 @@ class SpendingGoalServiceTest {
     @Test
     void deveRetornarStatusExcedida() {
 
-        SpendingGoal meta =
-                criarMetaMensal(
+        SpendingGoal meta
+                = criarMetaMensal(
                         new BigDecimal("40000.00"),
                         80
                 );
@@ -143,8 +170,8 @@ class SpendingGoalServiceTest {
                 new BigDecimal("48101.50")
         );
 
-        SpendingGoalResponse resultado =
-                spendingGoalService
+        SpendingGoalResponse resultado
+                = spendingGoalService
                         .buscarSituacao(1L);
 
         assertEquals(
@@ -166,8 +193,8 @@ class SpendingGoalServiceTest {
     @Test
     void deveSomarDespesasDeMetaSemestral() {
 
-        SpendingGoal meta =
-                new SpendingGoal(
+        SpendingGoal meta
+                = new SpendingGoal(
                         "SEMESTRAL",
                         LocalDate.of(2026, 7, 1),
                         LocalDate.of(2026, 12, 31),
@@ -181,8 +208,8 @@ class SpendingGoalServiceTest {
                 new BigDecimal("1570.00")
         );
 
-        SpendingGoalResponse resultado =
-                spendingGoalService
+        SpendingGoalResponse resultado
+                = spendingGoalService
                         .buscarSituacao(1L);
 
         assertEquals(
@@ -209,8 +236,8 @@ class SpendingGoalServiceTest {
     @Test
     void deveRejeitarMetaMensalComPeriodoInvalido() {
 
-        SpendingGoal meta =
-                new SpendingGoal(
+        SpendingGoal meta
+                = new SpendingGoal(
                         "MENSAL",
                         LocalDate.of(2026, 9, 2),
                         LocalDate.of(2026, 9, 30),
@@ -218,8 +245,8 @@ class SpendingGoalServiceTest {
                         80
                 );
 
-        IllegalArgumentException excecao =
-                assertThrows(
+        IllegalArgumentException excecao
+                = assertThrows(
                         IllegalArgumentException.class,
                         () -> spendingGoalService.salvar(meta)
                 );
@@ -233,8 +260,8 @@ class SpendingGoalServiceTest {
     @Test
     void deveRejeitarMetaSemestralComPeriodoInvalido() {
 
-        SpendingGoal meta =
-                new SpendingGoal(
+        SpendingGoal meta
+                = new SpendingGoal(
                         "SEMESTRAL",
                         LocalDate.of(2026, 8, 1),
                         LocalDate.of(2026, 12, 31),
@@ -242,8 +269,8 @@ class SpendingGoalServiceTest {
                         80
                 );
 
-        IllegalArgumentException excecao =
-                assertThrows(
+        IllegalArgumentException excecao
+                = assertThrows(
                         IllegalArgumentException.class,
                         () -> spendingGoalService.salvar(meta)
                 );
@@ -257,14 +284,14 @@ class SpendingGoalServiceTest {
     @Test
     void deveRejeitarPercentualAlertaInvalido() {
 
-        SpendingGoal meta =
-                criarMetaMensal(
+        SpendingGoal meta
+                = criarMetaMensal(
                         new BigDecimal("60000.00"),
                         101
                 );
 
-        IllegalArgumentException excecao =
-                assertThrows(
+        IllegalArgumentException excecao
+                = assertThrows(
                         IllegalArgumentException.class,
                         () -> spendingGoalService.salvar(meta)
                 );
@@ -278,14 +305,14 @@ class SpendingGoalServiceTest {
     @Test
     void deveRejeitarValorLimiteZero() {
 
-        SpendingGoal meta =
-                criarMetaMensal(
+        SpendingGoal meta
+                = criarMetaMensal(
                         BigDecimal.ZERO,
                         80
                 );
 
-        IllegalArgumentException excecao =
-                assertThrows(
+        IllegalArgumentException excecao
+                = assertThrows(
                         IllegalArgumentException.class,
                         () -> spendingGoalService.salvar(meta)
                 );
@@ -296,10 +323,172 @@ class SpendingGoalServiceTest {
         );
     }
 
+    @Test
+    void deveAssociarMetaAoClienteAutenticadoAoSalvar() {
+
+        SpendingGoal meta
+                = criarMetaMensal(
+                        new BigDecimal("60000.00"),
+                        80
+                );
+
+        when(
+                spendingGoalRepository.save(meta)
+        ).thenReturn(meta);
+
+        SpendingGoal resultado
+                = spendingGoalService.salvar(meta);
+
+        assertSame(
+                cliente,
+                meta.getCliente()
+        );
+
+        assertSame(
+                meta,
+                resultado
+        );
+
+        verify(
+                spendingGoalRepository
+        ).save(meta);
+    }
+
+    @Test
+    void deveBuscarMetaSomenteDoClienteAutenticado() {
+
+        SpendingGoal meta
+                = criarMetaMensal(
+                        new BigDecimal("60000.00"),
+                        80
+                );
+
+        meta.setCliente(cliente);
+
+        when(
+                spendingGoalRepository
+                        .findByIdAndClienteId(
+                                10L,
+                                CLIENTE_ID
+                        )
+        ).thenReturn(
+                Optional.of(meta)
+        );
+
+        SpendingGoal resultado
+                = spendingGoalService
+                        .buscarPorId(10L);
+
+        assertSame(
+                meta,
+                resultado
+        );
+
+        verify(
+                spendingGoalRepository
+        ).findByIdAndClienteId(
+                10L,
+                CLIENTE_ID
+        );
+    }
+
+    @Test
+    void naoDeveEncontrarMetaDeOutroCliente() {
+
+        Long metaId = 99L;
+
+        when(
+                spendingGoalRepository
+                        .findByIdAndClienteId(
+                                metaId,
+                                CLIENTE_ID
+                        )
+        ).thenReturn(
+                Optional.empty()
+        );
+
+        IllegalArgumentException excecao
+                = assertThrows(
+                        IllegalArgumentException.class,
+                        ()
+                        -> spendingGoalService
+                                .buscarSituacao(metaId)
+                );
+
+        assertEquals(
+                "Meta de gastos não encontrada: 99",
+                excecao.getMessage()
+        );
+
+        verify(
+                spendingGoalRepository
+        ).findByIdAndClienteId(
+                metaId,
+                CLIENTE_ID
+        );
+
+        verify(
+                financialTransactionRepository,
+                never()
+        ).findByClienteIdAndTipoAndDataBetweenOrderByDataAsc(
+                Mockito.anyLong(),
+                Mockito.anyString(),
+                Mockito.any(LocalDate.class),
+                Mockito.any(LocalDate.class)
+        );
+    }
+
+    @Test
+    void deveListarSomenteMetasDoClienteAutenticado() {
+
+        SpendingGoal primeira
+                = criarMetaMensal(
+                        new BigDecimal("60000.00"),
+                        80
+                );
+
+        SpendingGoal segunda
+                = criarMetaMensal(
+                        new BigDecimal("80000.00"),
+                        90
+                );
+
+        primeira.setCliente(cliente);
+        segunda.setCliente(cliente);
+
+        when(
+                spendingGoalRepository
+                        .findByClienteIdOrderByDataInicioDesc(
+                                CLIENTE_ID
+                        )
+        ).thenReturn(
+                List.of(
+                        primeira,
+                        segunda
+                )
+        );
+
+        List<SpendingGoal> resultado
+                = spendingGoalService
+                        .listarMetas();
+
+        assertEquals(
+                2,
+                resultado.size()
+        );
+
+        verify(
+                spendingGoalRepository
+        ).findByClienteIdOrderByDataInicioDesc(
+                CLIENTE_ID
+        );
+    }
+
     private SpendingGoal criarMetaMensal(
             BigDecimal valorLimite,
             Integer percentualAlerta
     ) {
+
         return new SpendingGoal(
                 "MENSAL",
                 LocalDate.of(2026, 9, 1),
@@ -313,20 +502,32 @@ class SpendingGoalServiceTest {
             SpendingGoal meta,
             BigDecimal... valoresDespesas
     ) {
+
+        /*
+         * A meta pertence ao cliente autenticado.
+         */
+        meta.setCliente(cliente);
+
         when(
-                spendingGoalRepository.findById(1L)
+                spendingGoalRepository
+                        .findByIdAndClienteId(
+                                1L,
+                                CLIENTE_ID
+                        )
         ).thenReturn(
                 Optional.of(meta)
         );
 
-        List<FinancialTransaction> despesas =
-                java.util.Arrays.stream(valoresDespesas)
+        List<FinancialTransaction> despesas
+                = java.util.Arrays
+                        .stream(valoresDespesas)
                         .map(this::criarDespesa)
                         .toList();
 
         when(
                 financialTransactionRepository
-                        .findByTipoAndDataBetweenOrderByDataAsc(
+                        .findByClienteIdAndTipoAndDataBetweenOrderByDataAsc(
+                                CLIENTE_ID,
                                 "DESPESA",
                                 meta.getDataInicio(),
                                 meta.getDataFim()
@@ -337,8 +538,9 @@ class SpendingGoalServiceTest {
     private FinancialTransaction criarDespesa(
             BigDecimal valor
     ) {
-        FinancialTransaction despesa =
-                new FinancialTransaction();
+
+        FinancialTransaction despesa
+                = new FinancialTransaction();
 
         despesa.setValor(valor);
 

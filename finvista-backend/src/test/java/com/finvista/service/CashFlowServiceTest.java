@@ -16,45 +16,33 @@ import static org.mockito.Mockito.when;
 
 class CashFlowServiceTest {
 
-        private FinancialTransactionRepository financialTransactionRepository;
+        private static final Long CLIENTE_ID = 1L;
 
-        private CashFlowService service;
+        private FinancialTransactionRepository financialTransactionRepository;
 
         private ClienteContextService clienteContextService;
 
+        private CashFlowService service;
+
         @BeforeEach
-void configurar() {
+        void configurar() {
 
-    financialTransactionRepository =
-            mock(
-                    FinancialTransactionRepository.class
-            );
+                financialTransactionRepository = mock(
+                                FinancialTransactionRepository.class);
 
-    clienteContextService =
-            mock(
-                    ClienteContextService.class
-            );
+                clienteContextService = mock(
+                                ClienteContextService.class);
 
-    /*
-     * Os testes existentes representam
-     * a visão administrativa/global.
-     */
-    when(
-            clienteContextService.isAdmin()
-    ).thenReturn(true);
+                when(
+        clienteContextService.getClienteAtualId()
+).thenReturn(CLIENTE_ID);
+                FinancialTransactionAggregationService transactionAggregationService = new FinancialTransactionAggregationService(
+                                financialTransactionRepository,
+                                clienteContextService);
 
-    FinancialTransactionAggregationService
-            transactionAggregationService =
-            new FinancialTransactionAggregationService(
-                    financialTransactionRepository,
-                    clienteContextService
-            );
-
-    service =
-            new CashFlowService(
-                    transactionAggregationService
-            );
-}
+                service = new CashFlowService(
+                                transactionAggregationService);
+        }
 
         @Test
         void deveCalcularFluxoCaixaPartindoDeZero() {
@@ -85,19 +73,22 @@ void configurar() {
 
                 when(
                                 financialTransactionRepository
-                                                .findMenorData())
+                                                .findMenorDataByClienteId(
+                                                                CLIENTE_ID))
                                 .thenReturn(
                                                 Optional.of(menorData));
 
                 when(
                                 financialTransactionRepository
-                                                .findMaiorData())
+                                                .findMaiorDataByClienteId(
+                                                                CLIENTE_ID))
                                 .thenReturn(
                                                 Optional.of(maiorData));
 
                 when(
                                 financialTransactionRepository
-                                                .findByDataBetweenOrderByDataAsc(
+                                                .findByClienteIdAndDataBetweenOrderByDataAsc(
+                                                                CLIENTE_ID,
                                                                 menorData,
                                                                 maiorData))
                                 .thenReturn(
@@ -121,74 +112,53 @@ void configurar() {
                                 "Out/2026",
                                 resultado.get(1).mes());
 
-                assertEquals(
-                                0,
-                                resultado.get(0)
-                                                .saldoInicial()
-                                                .compareTo(BigDecimal.ZERO));
+                assertValor(
+                                "0",
+                                resultado.get(0).saldoInicial());
 
-                assertEquals(
-                                0,
-                                resultado.get(0)
-                                                .entradas()
-                                                .compareTo(
-                                                                new BigDecimal("10000.00")));
+                assertValor(
+                                "10000.00",
+                                resultado.get(0).entradas());
 
-                assertEquals(
-                                0,
-                                resultado.get(0)
-                                                .saidas()
-                                                .compareTo(
-                                                                new BigDecimal("4000.00")));
+                assertValor(
+                                "4000.00",
+                                resultado.get(0).saidas());
 
-                assertEquals(
-                                0,
-                                resultado.get(0)
-                                                .saldoFinal()
-                                                .compareTo(
-                                                                new BigDecimal("6000.00")));
+                assertValor(
+                                "6000.00",
+                                resultado.get(0).saldoFinal());
 
-                assertEquals(
-                                0,
-                                resultado.get(1)
-                                                .saldoInicial()
-                                                .compareTo(
-                                                                new BigDecimal("6000.00")));
+                assertValor(
+                                "6000.00",
+                                resultado.get(1).saldoInicial());
 
-                assertEquals(
-                                0,
-                                resultado.get(1)
-                                                .entradas()
-                                                .compareTo(
-                                                                new BigDecimal("5000.00")));
+                assertValor(
+                                "5000.00",
+                                resultado.get(1).entradas());
 
-                assertEquals(
-                                0,
-                                resultado.get(1)
-                                                .saidas()
-                                                .compareTo(
-                                                                new BigDecimal("7000.00")));
+                assertValor(
+                                "7000.00",
+                                resultado.get(1).saidas());
 
-                assertEquals(
-                                0,
-                                resultado.get(1)
-                                                .saldoFinal()
-                                                .compareTo(
-                                                                new BigDecimal("4000.00")));
+                assertValor(
+                                "4000.00",
+                                resultado.get(1).saldoFinal());
         }
 
         @Test
-        void deveRetornarListaVaziaSemRegistros() {
+        void deveRetornarListaVaziaSemRegistrosDoCliente() {
 
                 when(
                                 financialTransactionRepository
-                                                .findMenorData())
+                                                .findMenorDataByClienteId(
+                                                                CLIENTE_ID))
                                 .thenReturn(
                                                 Optional.empty());
 
                 when(
                                 financialTransactionRepository
-                                                .findMaiorData())
+                                                .findMaiorDataByClienteId(
+                                                                CLIENTE_ID))
                                 .thenReturn(
                                                 Optional.empty());
 
@@ -207,12 +177,25 @@ void configurar() {
                 FinancialTransaction lancamento = new FinancialTransaction();
 
                 lancamento.setData(data);
+
                 lancamento.setDescricao(
                                 "Lançamento de teste");
+
                 lancamento.setTipo(tipo);
+
                 lancamento.setValor(
                                 new BigDecimal(valor));
 
                 return lancamento;
+        }
+
+        private void assertValor(
+                        String esperado,
+                        BigDecimal atual) {
+
+                assertEquals(
+                                0,
+                                new BigDecimal(esperado)
+                                                .compareTo(atual));
         }
 }

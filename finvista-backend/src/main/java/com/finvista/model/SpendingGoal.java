@@ -2,9 +2,12 @@ package com.finvista.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
@@ -46,6 +49,16 @@ public class SpendingGoal {
             nullable = false
     )
     private Integer percentualAlerta;
+
+    @ManyToOne(
+            fetch = FetchType.LAZY,
+            optional = false
+    )
+    @JoinColumn(
+            name = "cliente_id",
+            nullable = false
+    )
+    private Cliente cliente;
 
     public SpendingGoal() {
     }
@@ -111,5 +124,15 @@ public class SpendingGoal {
     ) {
         this.percentualAlerta =
                 percentualAlerta;
+    }
+
+    public Cliente getCliente() {
+        return cliente;
+    }
+
+    public void setCliente(
+            Cliente cliente
+    ) {
+        this.cliente = cliente;
     }
 }

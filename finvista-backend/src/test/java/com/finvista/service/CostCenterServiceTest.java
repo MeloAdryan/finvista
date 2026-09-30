@@ -12,11 +12,15 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class CostCenterServiceTest {
 
+    private static final Long CLIENTE_ID = 1L;
+
     private FinancialTransactionRepository financialTransactionRepository;
+    private ClienteContextService clienteContextService;
     private CostCenterService costCenterService;
 
     @BeforeEach
@@ -25,9 +29,17 @@ class CostCenterServiceTest {
         financialTransactionRepository
                 = mock(FinancialTransactionRepository.class);
 
+        clienteContextService
+                = mock(ClienteContextService.class);
+
+        when(
+                clienteContextService.getClienteAtualId()
+        ).thenReturn(CLIENTE_ID);
+
         costCenterService
                 = new CostCenterService(
-                        financialTransactionRepository
+                        financialTransactionRepository,
+                        clienteContextService
                 );
     }
 
@@ -54,7 +66,10 @@ class CostCenterServiceTest {
 
         when(
                 financialTransactionRepository
-                        .findByTipoOrderByDataDesc("DESPESA")
+                        .findByClienteIdAndTipoOrderByDataDesc(
+                                CLIENTE_ID,
+                                "DESPESA"
+                        )
         ).thenReturn(
                 List.of(
                         primeira,
@@ -90,6 +105,13 @@ class CostCenterServiceTest {
                 new BigDecimal("30000.00"),
                 resultado.get(1).valor()
         );
+
+        verify(
+                financialTransactionRepository
+        ).findByClienteIdAndTipoOrderByDataDesc(
+                CLIENTE_ID,
+                "DESPESA"
+        );
     }
 
     @Test
@@ -109,7 +131,10 @@ class CostCenterServiceTest {
 
         when(
                 financialTransactionRepository
-                        .findByTipoOrderByDataDesc("DESPESA")
+                        .findByClienteIdAndTipoOrderByDataDesc(
+                                CLIENTE_ID,
+                                "DESPESA"
+                        )
         ).thenReturn(
                 List.of(
                         comCentro,
@@ -141,7 +166,10 @@ class CostCenterServiceTest {
 
         when(
                 financialTransactionRepository
-                        .findByTipoOrderByDataDesc("DESPESA")
+                        .findByClienteIdAndTipoOrderByDataDesc(
+                                CLIENTE_ID,
+                                "DESPESA"
+                        )
         ).thenReturn(
                 List.of()
         );

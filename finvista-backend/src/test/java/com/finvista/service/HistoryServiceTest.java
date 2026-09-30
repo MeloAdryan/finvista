@@ -17,216 +17,274 @@ import static org.mockito.Mockito.when;
 
 class HistoryServiceTest {
 
-        private FinancialTransactionRepository financialTransactionRepository;
+    private static final Long CLIENTE_ID = 1L;
 
-        private HistoryService historyService;
+    private FinancialTransactionRepository financialTransactionRepository;
 
-        private ClienteContextService clienteContextService;
+    private ClienteContextService clienteContextService;
 
-        @BeforeEach
-        void setUp() {
+    private HistoryService historyService;
 
-                financialTransactionRepository = mock(FinancialTransactionRepository.class);
+    @BeforeEach
+    void setUp() {
 
-                clienteContextService = mock(ClienteContextService.class);
+        financialTransactionRepository = mock(
+                FinancialTransactionRepository.class
+        );
 
-                /*
-                 * Os testes existentes representam
-                 * a visão administrativa/global.
-                 */
-                when(
-                                clienteContextService.isAdmin()).thenReturn(true);
+        clienteContextService = mock(
+                ClienteContextService.class
+        );
 
-                FinancialTransactionAggregationService transactionAggregationService = new FinancialTransactionAggregationService(
-                                financialTransactionRepository,
-                                clienteContextService);
+        /*
+         * O FinancialTransactionAggregationService utiliza
+         * getClienteAtualId() para determinar o cliente cujos
+         * lançamentos financeiros devem ser consultados.
+         */
+        when(
+                clienteContextService.getClienteAtualId()
+        ).thenReturn(
+                CLIENTE_ID
+        );
 
-                FinancialCalculationService calculationService = new FinancialCalculationService();
+        FinancialTransactionAggregationService transactionAggregationService =
+                new FinancialTransactionAggregationService(
+                        financialTransactionRepository,
+                        clienteContextService
+                );
 
-                historyService = new HistoryService(
-                                transactionAggregationService,
-                                calculationService);
-        }
+        FinancialCalculationService calculationService =
+                new FinancialCalculationService();
 
-        @Test
-        void deveCalcularResultadoMargemEFormatarPeriodo() {
+        historyService = new HistoryService(
+                transactionAggregationService,
+                calculationService
+        );
+    }
 
-                FinancialTransaction receita = criarLancamento(
-                                LocalDate.of(2026, 9, 10),
-                                "RECEITA",
-                                "100000.00");
+    @Test
+    void deveCalcularResultadoMargemEFormatarPeriodo() {
 
-                FinancialTransaction despesa = criarLancamento(
-                                LocalDate.of(2026, 9, 15),
-                                "DESPESA",
-                                "40000.00");
+        FinancialTransaction receita = criarLancamento(
+                LocalDate.of(2026, 9, 10),
+                "RECEITA",
+                "100000.00"
+        );
 
-                configurarPeriodoCompleto(
-                                LocalDate.of(2026, 9, 10),
-                                LocalDate.of(2026, 9, 15),
-                                List.of(
-                                                receita,
-                                                despesa));
+        FinancialTransaction despesa = criarLancamento(
+                LocalDate.of(2026, 9, 15),
+                "DESPESA",
+                "40000.00"
+        );
 
-                List<HistoryResponse> resultado = historyService.listar(
-                                null,
-                                null);
+        configurarPeriodoCompleto(
+                LocalDate.of(2026, 9, 10),
+                LocalDate.of(2026, 9, 15),
+                List.of(
+                        receita,
+                        despesa
+                )
+        );
 
-                assertEquals(
-                                1,
-                                resultado.size());
+        List<HistoryResponse> resultado =
+                historyService.listar(
+                        null,
+                        null
+                );
 
-                HistoryResponse resposta = resultado.get(0);
+        assertEquals(
+                1,
+                resultado.size()
+        );
 
-                assertEquals(
-                                "Set/2026",
-                                resposta.periodo());
+        HistoryResponse resposta =
+                resultado.get(0);
 
-                assertEquals(
-                                0,
-                                resposta.receita()
-                                                .compareTo(
-                                                                new BigDecimal("100000.00")));
+        assertEquals(
+                "Set/2026",
+                resposta.periodo()
+        );
 
-                assertEquals(
-                                0,
-                                resposta.despesa()
-                                                .compareTo(
-                                                                new BigDecimal("40000.00")));
+        assertValor(
+                "100000.00",
+                resposta.receita()
+        );
 
-                assertEquals(
-                                0,
-                                resposta.resultado()
-                                                .compareTo(
-                                                                new BigDecimal("60000.00")));
+        assertValor(
+                "40000.00",
+                resposta.despesa()
+        );
 
-                assertEquals(
-                                0,
-                                resposta.margem()
-                                                .compareTo(
-                                                                new BigDecimal("60.00")));
-        }
+        assertValor(
+                "60000.00",
+                resposta.resultado()
+        );
 
-        @Test
-        void deveFiltrarHistoricoPorPeriodoInicialEFinal() {
+        assertValor(
+                "60.00",
+                resposta.margem()
+        );
+    }
 
-                FinancialTransaction agosto = criarLancamento(
-                                LocalDate.of(2026, 8, 10),
-                                "RECEITA",
-                                "80000.00");
+    @Test
+    void deveFiltrarHistoricoPorPeriodoInicialEFinal() {
 
-                FinancialTransaction setembro = criarLancamento(
-                                LocalDate.of(2026, 9, 10),
-                                "RECEITA",
-                                "100000.00");
+        FinancialTransaction agosto = criarLancamento(
+                LocalDate.of(2026, 8, 10),
+                "RECEITA",
+                "80000.00"
+        );
 
-                FinancialTransaction outubro = criarLancamento(
-                                LocalDate.of(2026, 10, 10),
-                                "RECEITA",
-                                "120000.00");
+        FinancialTransaction setembro = criarLancamento(
+                LocalDate.of(2026, 9, 10),
+                "RECEITA",
+                "100000.00"
+        );
 
-                configurarPeriodoCompleto(
-                                LocalDate.of(2026, 8, 10),
-                                LocalDate.of(2026, 10, 10),
-                                List.of(
-                                                agosto,
-                                                setembro,
-                                                outubro));
+        FinancialTransaction outubro = criarLancamento(
+                LocalDate.of(2026, 10, 10),
+                "RECEITA",
+                "120000.00"
+        );
 
-                List<HistoryResponse> resultado = historyService.listar(
-                                "2026-09",
-                                "2026-09");
+        configurarPeriodoCompleto(
+                LocalDate.of(2026, 8, 10),
+                LocalDate.of(2026, 10, 10),
+                List.of(
+                        agosto,
+                        setembro,
+                        outubro
+                )
+        );
 
-                assertEquals(
-                                1,
-                                resultado.size());
+        List<HistoryResponse> resultado =
+                historyService.listar(
+                        "2026-09",
+                        "2026-09"
+                );
 
-                assertEquals(
-                                "Set/2026",
-                                resultado.get(0).periodo());
+        assertEquals(
+                1,
+                resultado.size()
+        );
 
-                assertEquals(
-                                0,
-                                resultado.get(0)
-                                                .receita()
-                                                .compareTo(
-                                                                new BigDecimal("100000.00")));
-        }
+        assertEquals(
+                "Set/2026",
+                resultado.get(0).periodo()
+        );
 
-        @Test
-        void deveCalcularMargemZeroQuandoReceitaForZero() {
+        assertValor(
+                "100000.00",
+                resultado.get(0).receita()
+        );
+    }
 
-                FinancialTransaction despesa = criarLancamento(
-                                LocalDate.of(2026, 9, 10),
-                                "DESPESA",
-                                "10000.00");
+    @Test
+    void deveCalcularMargemZeroQuandoReceitaForZero() {
 
-                configurarPeriodoCompleto(
-                                LocalDate.of(2026, 9, 10),
-                                LocalDate.of(2026, 9, 10),
-                                List.of(despesa));
+        FinancialTransaction despesa = criarLancamento(
+                LocalDate.of(2026, 9, 10),
+                "DESPESA",
+                "10000.00"
+        );
 
-                List<HistoryResponse> resultado = historyService.listar(
-                                null,
-                                null);
+        configurarPeriodoCompleto(
+                LocalDate.of(2026, 9, 10),
+                LocalDate.of(2026, 9, 10),
+                List.of(despesa)
+        );
 
-                assertEquals(
-                                1,
-                                resultado.size());
+        List<HistoryResponse> resultado =
+                historyService.listar(
+                        null,
+                        null
+                );
 
-                assertEquals(
-                                0,
-                                resultado.get(0)
-                                                .resultado()
-                                                .compareTo(
-                                                                new BigDecimal("-10000.00")));
+        assertEquals(
+                1,
+                resultado.size()
+        );
 
-                assertEquals(
-                                0,
-                                resultado.get(0)
-                                                .margem()
-                                                .compareTo(BigDecimal.ZERO));
-        }
+        assertValor(
+                "-10000.00",
+                resultado.get(0).resultado()
+        );
 
-        private void configurarPeriodoCompleto(
-                        LocalDate menorData,
-                        LocalDate maiorData,
-                        List<FinancialTransaction> lancamentos) {
+        assertValor(
+                "0",
+                resultado.get(0).margem()
+        );
+    }
 
-                when(
-                                financialTransactionRepository
-                                                .findMenorData())
-                                .thenReturn(
-                                                Optional.of(menorData));
+    private void configurarPeriodoCompleto(
+            LocalDate menorData,
+            LocalDate maiorData,
+            List<FinancialTransaction> lancamentos
+    ) {
 
-                when(
-                                financialTransactionRepository
-                                                .findMaiorData())
-                                .thenReturn(
-                                                Optional.of(maiorData));
+        when(
+                financialTransactionRepository
+                        .findMenorDataByClienteId(
+                                CLIENTE_ID
+                        )
+        ).thenReturn(
+                Optional.of(menorData)
+        );
 
-                when(
-                                financialTransactionRepository
-                                                .findByDataBetweenOrderByDataAsc(
-                                                                menorData,
-                                                                maiorData))
-                                .thenReturn(lancamentos);
-        }
+        when(
+                financialTransactionRepository
+                        .findMaiorDataByClienteId(
+                                CLIENTE_ID
+                        )
+        ).thenReturn(
+                Optional.of(maiorData)
+        );
 
-        private FinancialTransaction criarLancamento(
-                        LocalDate data,
-                        String tipo,
-                        String valor) {
+        when(
+                financialTransactionRepository
+                        .findByClienteIdAndDataBetweenOrderByDataAsc(
+                                CLIENTE_ID,
+                                menorData,
+                                maiorData
+                        )
+        ).thenReturn(
+                lancamentos
+        );
+    }
 
-                FinancialTransaction lancamento = new FinancialTransaction();
+    private FinancialTransaction criarLancamento(
+            LocalDate data,
+            String tipo,
+            String valor
+    ) {
 
-                lancamento.setData(data);
-                lancamento.setDescricao(
-                                "Lançamento de teste");
-                lancamento.setTipo(tipo);
-                lancamento.setValor(
-                                new BigDecimal(valor));
+        FinancialTransaction lancamento =
+                new FinancialTransaction();
 
-                return lancamento;
-        }
+        lancamento.setData(data);
+
+        lancamento.setDescricao(
+                "Lançamento de teste"
+        );
+
+        lancamento.setTipo(tipo);
+
+        lancamento.setValor(
+                new BigDecimal(valor)
+        );
+
+        return lancamento;
+    }
+
+    private void assertValor(
+            String esperado,
+            BigDecimal atual
+    ) {
+
+        assertEquals(
+                0,
+                new BigDecimal(esperado)
+                        .compareTo(atual)
+        );
+    }
 }

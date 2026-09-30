@@ -12,44 +12,65 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ExpenseDistributionServiceTest {
 
+    private static final Long CLIENTE_ID = 1L;
+
     private FinancialTransactionRepository financialTransactionRepository;
+
+    private ClienteContextService clienteContextService;
+
     private ExpenseDistributionService expenseDistributionService;
 
     @BeforeEach
     void setUp() {
 
-        financialTransactionRepository =
-                mock(FinancialTransactionRepository.class);
+        financialTransactionRepository
+                = mock(
+                        FinancialTransactionRepository.class
+                );
 
-        expenseDistributionService =
-                new ExpenseDistributionService(
-                        financialTransactionRepository
+        clienteContextService
+                = mock(
+                        ClienteContextService.class
+                );
+
+        when(
+                clienteContextService.getClienteAtualId()
+        ).thenReturn(
+                CLIENTE_ID
+        );
+
+        expenseDistributionService
+                = new ExpenseDistributionService(
+                        financialTransactionRepository,
+                        clienteContextService
                 );
     }
 
     @Test
     void deveAgruparDespesasPorCategoriaESomarValores() {
 
-        FinancialTransaction materiaPrima1 =
-                criarDespesa(
+        FinancialTransaction materiaPrima1
+                = criarDespesa(
                         "Compra de material",
                         "Matéria-prima",
                         "30000.00"
                 );
 
-        FinancialTransaction materiaPrima2 =
-                criarDespesa(
+        FinancialTransaction materiaPrima2
+                = criarDespesa(
                         "Compra complementar",
                         "Matéria-prima",
                         "15000.00"
                 );
 
-        FinancialTransaction logistica =
-                criarDespesa(
+        FinancialTransaction logistica
+                = criarDespesa(
                         "Frete",
                         "Logística",
                         "18000.00"
@@ -57,7 +78,10 @@ class ExpenseDistributionServiceTest {
 
         when(
                 financialTransactionRepository
-                        .findByTipoOrderByDataDesc("DESPESA")
+                        .findByClienteIdAndTipoOrderByDataDesc(
+                                CLIENTE_ID,
+                                "DESPESA"
+                        )
         ).thenReturn(
                 List.of(
                         materiaPrima1,
@@ -66,8 +90,8 @@ class ExpenseDistributionServiceTest {
                 )
         );
 
-        List<ExpenseDistributionResponse> resultado =
-                expenseDistributionService.listar();
+        List<ExpenseDistributionResponse> resultado
+                = expenseDistributionService.listar();
 
         assertEquals(
                 2,
@@ -93,13 +117,20 @@ class ExpenseDistributionServiceTest {
                 new BigDecimal("18000.00"),
                 resultado.get(1).valor()
         );
+
+        verify(
+                financialTransactionRepository
+        ).findByClienteIdAndTipoOrderByDataDesc(
+                CLIENTE_ID,
+                "DESPESA"
+        );
     }
 
     @Test
     void deveAgruparCategoriaVaziaComoSemCategoria() {
 
-        FinancialTransaction semCategoria =
-                criarDespesa(
+        FinancialTransaction semCategoria
+                = criarDespesa(
                         "Despesa sem categoria",
                         null,
                         "500.00"
@@ -107,13 +138,16 @@ class ExpenseDistributionServiceTest {
 
         when(
                 financialTransactionRepository
-                        .findByTipoOrderByDataDesc("DESPESA")
+                        .findByClienteIdAndTipoOrderByDataDesc(
+                                CLIENTE_ID,
+                                "DESPESA"
+                        )
         ).thenReturn(
                 List.of(semCategoria)
         );
 
-        List<ExpenseDistributionResponse> resultado =
-                expenseDistributionService.listar();
+        List<ExpenseDistributionResponse> resultado
+                = expenseDistributionService.listar();
 
         assertEquals(
                 1,
@@ -136,17 +170,122 @@ class ExpenseDistributionServiceTest {
 
         when(
                 financialTransactionRepository
-                        .findByTipoOrderByDataDesc("DESPESA")
+                        .findByClienteIdAndTipoOrderByDataDesc(
+                                CLIENTE_ID,
+                                "DESPESA"
+                        )
         ).thenReturn(
                 List.of()
         );
 
-        List<ExpenseDistributionResponse> resultado =
-                expenseDistributionService.listar();
+        List<ExpenseDistributionResponse> resultado
+                = expenseDistributionService.listar();
 
         assertEquals(
                 0,
                 resultado.size()
+        );
+    }
+
+    @Test
+    void deveListarCategoriasDoCentroDeCustoSomenteDoClienteAutenticado() {
+
+        FinancialTransaction primeira
+                = criarDespesa(
+                        "Servidor",
+                        "Infraestrutura",
+                        "5000.00"
+                );
+
+        primeira.setCentroCusto(
+                "Tecnologia"
+        );
+
+        FinancialTransaction segunda
+                = criarDespesa(
+                        "Licença",
+                        "Software",
+                        "2000.00"
+                );
+
+        segunda.setCentroCusto(
+                "Tecnologia"
+        );
+
+        FinancialTransaction outroCentro
+                = criarDespesa(
+                        "Publicidade",
+                        "Marketing",
+                        "1000.00"
+                );
+
+        outroCentro.setCentroCusto(
+                "Comercial"
+        );
+
+        when(
+                financialTransactionRepository
+                        .findByClienteIdAndTipoOrderByDataDesc(
+                                CLIENTE_ID,
+                                "DESPESA"
+                        )
+        ).thenReturn(
+                List.of(
+                        primeira,
+                        segunda,
+                        outroCentro
+                )
+        );
+
+        List<String> resultado
+                = expenseDistributionService
+                        .listarCategoriasPorCentroCusto(
+                                "Tecnologia"
+                        );
+
+        assertEquals(
+                2,
+                resultado.size()
+        );
+
+        assertEquals(
+                "Infraestrutura",
+                resultado.get(0)
+        );
+
+        assertEquals(
+                "Software",
+                resultado.get(1)
+        );
+
+        verify(
+                financialTransactionRepository
+        ).findByClienteIdAndTipoOrderByDataDesc(
+                CLIENTE_ID,
+                "DESPESA"
+        );
+    }
+
+    @Test
+    void naoDeveConsultarBancoQuandoCentroCustoForVazio() {
+
+        List<String> resultado
+                = expenseDistributionService
+                        .listarCategoriasPorCentroCusto(
+                                "   "
+                        );
+
+        assertEquals(
+                0,
+                resultado.size()
+        );
+
+        verify(
+                financialTransactionRepository,
+                never()
+        ).findByClienteIdAndTipoOrderByDataDesc(
+                CLIENTE_ID,
+                "DESPESA"
         );
     }
 

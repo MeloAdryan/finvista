@@ -22,8 +22,8 @@ public class FinancialTransaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cliente_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "cliente_id", nullable = false)
     private Cliente cliente;
 
     @Column(nullable = false)
@@ -106,8 +106,7 @@ public class FinancialTransaction {
             String categoria,
             String centroCusto,
             String origem,
-            String documentoReferencia
-    ) {
+            String documentoReferencia) {
         this.data = data;
         this.descricao = descricao;
         this.tipo = tipo;
@@ -117,6 +116,7 @@ public class FinancialTransaction {
         this.origem = origem;
         this.documentoReferencia = documentoReferencia;
     }
+
     @Column(name = "entidade_externa_id", length = 255)
     private String entidadeExternaId;
 

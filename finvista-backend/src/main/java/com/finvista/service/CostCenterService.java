@@ -16,19 +16,27 @@ public class CostCenterService {
     private static final String TIPO_DESPESA = "DESPESA";
 
     private final FinancialTransactionRepository financialTransactionRepository;
+    private final ClienteContextService clienteContextService;
 
     public CostCenterService(
-            FinancialTransactionRepository financialTransactionRepository
+            FinancialTransactionRepository financialTransactionRepository,
+            ClienteContextService clienteContextService
     ) {
         this.financialTransactionRepository =
                 financialTransactionRepository;
+
+        this.clienteContextService =
+                clienteContextService;
     }
 
     public List<CostCenterResponse> listar() {
 
+        Long clienteId = obterClienteIdAtual();
+
         List<FinancialTransaction> despesas =
                 financialTransactionRepository
-                        .findByTipoOrderByDataDesc(
+                        .findByClienteIdAndTipoOrderByDataDesc(
+                                clienteId,
                                 TIPO_DESPESA
                         );
 
@@ -38,8 +46,8 @@ public class CostCenterService {
                                 lancamento ->
                                         lancamento.getCentroCusto() != null
                                                 && !lancamento
-                                                .getCentroCusto()
-                                                .isBlank()
+                                                        .getCentroCusto()
+                                                        .isBlank()
                         )
                         .collect(
                                 Collectors.groupingBy(
@@ -71,6 +79,10 @@ public class CostCenterService {
                                 )
                 )
                 .toList();
+    }
+
+    private Long obterClienteIdAtual() {
+        return clienteContextService.getClienteAtualId();
     }
 
     private BigDecimal obterValor(

@@ -3,10 +3,10 @@ package com.finvista.integration;
 import com.finvista.dto.ProjectionResponse;
 import com.finvista.model.FinancialTransaction;
 import com.finvista.repository.FinancialTransactionRepository;
+import com.finvista.service.ClienteContextService;
 import com.finvista.service.FinancialCalculationService;
 import com.finvista.service.FinancialTransactionAggregationService;
 import com.finvista.service.ProjectionService;
-import com.finvista.service.ClienteContextService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -19,253 +19,350 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class FinancialEngineIntegrationTest {
 
-        private FinancialTransactionRepository financialTransactionRepository;
+    private static final Long CLIENTE_ID = 1L;
 
-        private ProjectionService projectionService;
+    private FinancialTransactionRepository
+            financialTransactionRepository;
 
-        private ClienteContextService clienteContextService;
+    private ProjectionService projectionService;
 
-        @BeforeEach
-        void setUp() {
+    private ClienteContextService clienteContextService;
 
-                financialTransactionRepository = mock(FinancialTransactionRepository.class);
+    @BeforeEach
+    void setUp() {
 
-                clienteContextService = mock(ClienteContextService.class);
+        financialTransactionRepository =
+                mock(
+                        FinancialTransactionRepository.class
+                );
 
-                /*
-                 * Este teste mantém a visão administrativa/global
-                 * utilizada originalmente pelo motor financeiro.
-                 */
-                when(
-                                clienteContextService.isAdmin()).thenReturn(true);
+        clienteContextService =
+                mock(
+                        ClienteContextService.class
+                );
 
-                FinancialCalculationService calculationService = new FinancialCalculationService();
+        when(
+        clienteContextService.isAdmin()
+).thenReturn(
+        false
+);
 
-                FinancialTransactionAggregationService aggregationService = new FinancialTransactionAggregationService(
-                                financialTransactionRepository,
-                                clienteContextService);
+when(
+        clienteContextService.getClienteAtualId()
+).thenReturn(
+        CLIENTE_ID
+);
 
-                Clock clock = Clock.fixed(
-                                Instant.parse(
-                                                "2026-09-20T12:00:00Z"),
-                                ZoneId.of("UTC"));
+        FinancialCalculationService calculationService =
+                new FinancialCalculationService();
 
-                projectionService = new ProjectionService(
-                                aggregationService,
-                                calculationService,
-                                clock);
-        }
+        FinancialTransactionAggregationService
+                aggregationService =
+                new FinancialTransactionAggregationService(
+                        financialTransactionRepository,
+                        clienteContextService
+                );
 
-        @Test
-        void deveIntegrarTransacoesEProjecaoDeSeisMeses() {
+        Clock clock =
+                Clock.fixed(
+                        Instant.parse(
+                                "2026-09-20T12:00:00Z"
+                        ),
+                        ZoneId.of("UTC")
+                );
 
-                List<FinancialTransaction> transacoes = List.of(
-                                novaTransacao(
-                                                LocalDate.of(2026, 9, 5),
-                                                "Venda Setembro",
-                                                "RECEITA",
-                                                "100000.00"),
-                                novaTransacao(
-                                                LocalDate.of(2026, 9, 10),
-                                                "Despesa Setembro",
-                                                "DESPESA",
-                                                "40000.00"),
-                                novaTransacao(
-                                                LocalDate.of(2026, 10, 5),
-                                                "Venda Outubro",
-                                                "RECEITA",
-                                                "30000.00"),
-                                novaTransacao(
-                                                LocalDate.of(2026, 10, 10),
-                                                "Despesa Outubro",
-                                                "DESPESA",
-                                                "10000.00"));
+        projectionService =
+                new ProjectionService(
+                        aggregationService,
+                        calculationService,
+                        clock
+                );
+    }
 
-                when(
-                                financialTransactionRepository
-                                                .findByDataBetweenOrderByDataAsc(
-                                                                any(LocalDate.class),
-                                                                any(LocalDate.class)))
-                                .thenReturn(transacoes);
+    @Test
+    void deveIntegrarTransacoesEProjecaoDeSeisMeses() {
 
-                List<ProjectionResponse> projecao = projectionService.obterProjecao();
+        List<FinancialTransaction> transacoes =
+                List.of(
+                        novaTransacao(
+                                LocalDate.of(
+                                        2026,
+                                        9,
+                                        5
+                                ),
+                                "Venda Setembro",
+                                "RECEITA",
+                                "100000.00"
+                        ),
+                        novaTransacao(
+                                LocalDate.of(
+                                        2026,
+                                        9,
+                                        10
+                                ),
+                                "Despesa Setembro",
+                                "DESPESA",
+                                "40000.00"
+                        ),
+                        novaTransacao(
+                                LocalDate.of(
+                                        2026,
+                                        10,
+                                        5
+                                ),
+                                "Venda Outubro",
+                                "RECEITA",
+                                "30000.00"
+                        ),
+                        novaTransacao(
+                                LocalDate.of(
+                                        2026,
+                                        10,
+                                        10
+                                ),
+                                "Despesa Outubro",
+                                "DESPESA",
+                                "10000.00"
+                        )
+                );
 
-                assertEquals(
-                                6,
-                                projecao.size());
+        when(
+                financialTransactionRepository
+                        .findByClienteIdAndDataBetweenOrderByDataAsc(
+                                eq(CLIENTE_ID),
+                                any(LocalDate.class),
+                                any(LocalDate.class)
+                        )
+        ).thenReturn(
+                transacoes
+        );
 
-                ProjectionResponse setembro = projecao.get(0);
+        List<ProjectionResponse> projecao =
+                projectionService.obterProjecao();
 
-                assertEquals(
-                                "2026-09",
-                                setembro.periodo());
+        assertEquals(
+                6,
+                projecao.size()
+        );
 
-                assertValor(
-                                "100000.00",
-                                setembro.receitaRealizada());
+        ProjectionResponse setembro =
+                projecao.get(0);
 
-                assertValor(
-                                "0",
-                                setembro.receitaProjetada());
+        assertEquals(
+                "2026-09",
+                setembro.periodo()
+        );
 
-                assertValor(
-                                "100000.00",
-                                setembro.receita());
+        assertValor(
+                "100000.00",
+                setembro.receitaRealizada()
+        );
 
-                assertValor(
-                                "40000.00",
-                                setembro.despesa());
+        assertValor(
+                "0",
+                setembro.receitaProjetada()
+        );
 
-                assertValor(
-                                "60000.00",
-                                setembro.resultado());
+        assertValor(
+                "100000.00",
+                setembro.receita()
+        );
 
-                assertValor(
-                                "60.00",
-                                setembro.margem());
+        assertValor(
+                "40000.00",
+                setembro.despesa()
+        );
 
-                assertValor(
-                                "60000.00",
-                                setembro.saldo());
+        assertValor(
+                "60000.00",
+                setembro.resultado()
+        );
 
-                ProjectionResponse outubro = projecao.get(1);
+        assertValor(
+                "60.00",
+                setembro.margem()
+        );
 
-                assertEquals(
-                                "2026-10",
-                                outubro.periodo());
+        assertValor(
+                "60000.00",
+                setembro.saldo()
+        );
 
-                assertValor(
-                                "30000.00",
-                                outubro.receitaRealizada());
+        ProjectionResponse outubro =
+                projecao.get(1);
 
-                assertValor(
-                                "0",
-                                outubro.receitaProjetada());
+        assertEquals(
+                "2026-10",
+                outubro.periodo()
+        );
 
-                assertValor(
-                                "30000.00",
-                                outubro.receita());
+        assertValor(
+                "30000.00",
+                outubro.receitaRealizada()
+        );
 
-                assertValor(
-                                "10000.00",
-                                outubro.despesa());
+        assertValor(
+                "0",
+                outubro.receitaProjetada()
+        );
 
-                assertValor(
-                                "20000.00",
-                                outubro.resultado());
+        assertValor(
+                "30000.00",
+                outubro.receita()
+        );
 
-                assertValor(
-                                "80000.00",
-                                outubro.saldo());
+        assertValor(
+                "10000.00",
+                outubro.despesa()
+        );
 
-                ProjectionResponse novembro = projecao.get(2);
+        assertValor(
+                "20000.00",
+                outubro.resultado()
+        );
 
-                assertEquals(
-                                "2026-11",
-                                novembro.periodo());
+        assertValor(
+                "80000.00",
+                outubro.saldo()
+        );
 
-                assertValor(
-                                "0",
-                                novembro.receitaRealizada());
+        ProjectionResponse novembro =
+                projecao.get(2);
 
-                assertValor(
-                                "0",
-                                novembro.receitaProjetada());
+        assertEquals(
+                "2026-11",
+                novembro.periodo()
+        );
 
-                assertValor(
-                                "0",
-                                novembro.receita());
+        assertValor(
+                "0",
+                novembro.receitaRealizada()
+        );
 
-                assertValor(
-                                "0",
-                                novembro.resultado());
+        assertValor(
+                "0",
+                novembro.receitaProjetada()
+        );
 
-                assertValor(
-                                "80000.00",
-                                novembro.saldo());
+        assertValor(
+                "0",
+                novembro.receita()
+        );
 
-                ProjectionResponse dezembro = projecao.get(3);
+        assertValor(
+                "0",
+                novembro.resultado()
+        );
 
-                assertEquals(
-                                "2026-12",
-                                dezembro.periodo());
+        assertValor(
+                "80000.00",
+                novembro.saldo()
+        );
 
-                assertValor(
-                                "0",
-                                dezembro.receitaProjetada());
+        ProjectionResponse dezembro =
+                projecao.get(3);
 
-                assertValor(
-                                "0",
-                                dezembro.resultado());
+        assertEquals(
+                "2026-12",
+                dezembro.periodo()
+        );
 
-                assertValor(
-                                "80000.00",
-                                dezembro.saldo());
+        assertValor(
+                "0",
+                dezembro.receitaProjetada()
+        );
 
-                ProjectionResponse janeiro = projecao.get(4);
+        assertValor(
+                "0",
+                dezembro.resultado()
+        );
 
-                assertEquals(
-                                "2027-01",
-                                janeiro.periodo());
+        assertValor(
+                "80000.00",
+                dezembro.saldo()
+        );
 
-                assertValor(
-                                "0",
-                                janeiro.receita());
+        ProjectionResponse janeiro =
+                projecao.get(4);
 
-                assertValor(
-                                "0",
-                                janeiro.resultado());
+        assertEquals(
+                "2027-01",
+                janeiro.periodo()
+        );
 
-                assertValor(
-                                "80000.00",
-                                janeiro.saldo());
+        assertValor(
+                "0",
+                janeiro.receita()
+        );
 
-                ProjectionResponse fevereiro = projecao.get(5);
+        assertValor(
+                "0",
+                janeiro.resultado()
+        );
 
-                assertEquals(
-                                "2027-02",
-                                fevereiro.periodo());
+        assertValor(
+                "80000.00",
+                janeiro.saldo()
+        );
 
-                assertValor(
-                                "0",
-                                fevereiro.receita());
+        ProjectionResponse fevereiro =
+                projecao.get(5);
 
-                assertValor(
-                                "0",
-                                fevereiro.resultado());
+        assertEquals(
+                "2027-02",
+                fevereiro.periodo()
+        );
 
-                assertValor(
-                                "80000.00",
-                                fevereiro.saldo());
-        }
+        assertValor(
+                "0",
+                fevereiro.receita()
+        );
 
-        private FinancialTransaction novaTransacao(
-                        LocalDate data,
-                        String descricao,
-                        String tipo,
-                        String valor) {
-                return new FinancialTransaction(
-                                data,
-                                descricao,
-                                tipo,
-                                new BigDecimal(valor),
-                                "TESTE",
-                                "TESTE",
-                                "TESTE_INTEGRACAO",
-                                descricao);
-        }
+        assertValor(
+                "0",
+                fevereiro.resultado()
+        );
 
-        private void assertValor(
-                        String esperado,
-                        BigDecimal atual) {
-                assertEquals(
-                                0,
-                                new BigDecimal(esperado)
-                                                .compareTo(atual));
-        }
+        assertValor(
+                "80000.00",
+                fevereiro.saldo()
+        );
+    }
+
+    private FinancialTransaction novaTransacao(
+            LocalDate data,
+            String descricao,
+            String tipo,
+            String valor
+    ) {
+
+        return new FinancialTransaction(
+                data,
+                descricao,
+                tipo,
+                new BigDecimal(valor),
+                "TESTE",
+                "TESTE",
+                "TESTE_INTEGRACAO",
+                descricao
+        );
+    }
+
+    private void assertValor(
+            String esperado,
+            BigDecimal atual
+    ) {
+
+        assertEquals(
+                0,
+                new BigDecimal(esperado)
+                        .compareTo(atual)
+        );
+    }
 }

@@ -16,257 +16,334 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 class ProjectionServiceTest {
 
-        private FinancialTransactionRepository financialTransactionRepository;
+    private static final Long CLIENTE_ID = 1L;
 
-        private ProjectionService projectionService;
+    private FinancialTransactionRepository financialTransactionRepository;
 
-        private ClienteContextService clienteContextService;
+    private ProjectionService projectionService;
 
-        @BeforeEach
-        void configurar() {
+    private ClienteContextService clienteContextService;
 
-                financialTransactionRepository = Mockito.mock(
-                                FinancialTransactionRepository.class);
+    @BeforeEach
+    void configurar() {
 
-                clienteContextService = Mockito.mock(
-                                ClienteContextService.class);
+        financialTransactionRepository = Mockito.mock(
+                FinancialTransactionRepository.class
+        );
 
-                /*
-                 * Os testes existentes representam
-                 * a visão administrativa/global.
-                 */
-                when(
-                                clienteContextService.isAdmin()).thenReturn(true);
+        clienteContextService = Mockito.mock(
+                ClienteContextService.class
+        );
 
-                FinancialTransactionAggregationService aggregationService = new FinancialTransactionAggregationService(
-                                financialTransactionRepository,
-                                clienteContextService);
+        /*
+         * O FinancialTransactionAggregationService utiliza
+         * getClienteAtualId() para determinar o cliente
+         * cujos lançamentos serão consultados.
+         */
+        when(
+                clienteContextService.getClienteAtualId()
+        ).thenReturn(
+                CLIENTE_ID
+        );
 
-                FinancialCalculationService calculationService = new FinancialCalculationService();
+        FinancialTransactionAggregationService aggregationService =
+                new FinancialTransactionAggregationService(
+                        financialTransactionRepository,
+                        clienteContextService
+                );
 
-                Clock clock = Clock.fixed(
-                                Instant.parse(
-                                                "2026-09-20T12:00:00Z"),
-                                ZoneOffset.UTC);
+        FinancialCalculationService calculationService =
+                new FinancialCalculationService();
 
-                projectionService = new ProjectionService(
-                                aggregationService,
-                                calculationService,
-                                clock);
-        }
+        Clock clock = Clock.fixed(
+                Instant.parse(
+                        "2026-09-20T12:00:00Z"
+                ),
+                ZoneOffset.UTC
+        );
 
-        @Test
-        void deveCalcularProjecaoComDadosFinanceiros() {
+        projectionService = new ProjectionService(
+                aggregationService,
+                calculationService,
+                clock
+        );
+    }
 
-                List<FinancialTransaction> lancamentos = List.of(
-                                criarLancamento(
-                                                LocalDate.of(
-                                                                2026,
-                                                                9,
-                                                                18),
-                                                "RECEITA",
-                                                "247500.75"),
-                                criarLancamento(
-                                                LocalDate.of(
-                                                                2026,
-                                                                9,
-                                                                20),
-                                                "DESPESA",
-                                                "48101.50"),
-                                criarLancamento(
-                                                LocalDate.of(
-                                                                2026,
-                                                                10,
-                                                                10),
-                                                "RECEITA",
-                                                "22560.25"),
-                                criarLancamento(
-                                                LocalDate.of(
-                                                                2026,
-                                                                10,
-                                                                27),
-                                                "DESPESA",
-                                                "1570.00"));
+    @Test
+    void deveCalcularProjecaoComDadosFinanceiros() {
 
-                when(
-                                financialTransactionRepository
-                                                .findByDataBetweenOrderByDataAsc(
-                                                                any(),
-                                                                any()))
-                                .thenReturn(lancamentos);
+        List<FinancialTransaction> lancamentos = List.of(
+                criarLancamento(
+                        LocalDate.of(
+                                2026,
+                                9,
+                                18
+                        ),
+                        "RECEITA",
+                        "247500.75"
+                ),
+                criarLancamento(
+                        LocalDate.of(
+                                2026,
+                                9,
+                                20
+                        ),
+                        "DESPESA",
+                        "48101.50"
+                ),
+                criarLancamento(
+                        LocalDate.of(
+                                2026,
+                                10,
+                                10
+                        ),
+                        "RECEITA",
+                        "22560.25"
+                ),
+                criarLancamento(
+                        LocalDate.of(
+                                2026,
+                                10,
+                                27
+                        ),
+                        "DESPESA",
+                        "1570.00"
+                )
+        );
 
-                List<ProjectionResponse> resultado = projectionService.obterProjecao();
+        when(
+                financialTransactionRepository
+                        .findByClienteIdAndDataBetweenOrderByDataAsc(
+                                eq(CLIENTE_ID),
+                                any(LocalDate.class),
+                                any(LocalDate.class)
+                        )
+        ).thenReturn(
+                lancamentos
+        );
 
-                assertEquals(
-                                6,
-                                resultado.size());
+        List<ProjectionResponse> resultado =
+                projectionService.obterProjecao();
 
-                ProjectionResponse setembro = resultado.get(0);
+        assertEquals(
+                6,
+                resultado.size()
+        );
 
-                assertEquals(
-                                new BigDecimal("247500.75"),
-                                setembro.receitaRealizada());
+        ProjectionResponse setembro =
+                resultado.get(0);
 
-                assertEquals(
-                                BigDecimal.ZERO,
-                                setembro.receitaProjetada());
+        assertEquals(
+                new BigDecimal("247500.75"),
+                setembro.receitaRealizada()
+        );
 
-                assertEquals(
-                                new BigDecimal("247500.75"),
-                                setembro.receita());
+        assertEquals(
+                BigDecimal.ZERO,
+                setembro.receitaProjetada()
+        );
 
-                assertEquals(
-                                new BigDecimal("48101.50"),
-                                setembro.despesa());
+        assertEquals(
+                new BigDecimal("247500.75"),
+                setembro.receita()
+        );
 
-                assertEquals(
-                                new BigDecimal("199399.25"),
-                                setembro.resultado());
+        assertEquals(
+                new BigDecimal("48101.50"),
+                setembro.despesa()
+        );
 
-                assertEquals(
-                                new BigDecimal("199399.25"),
-                                setembro.saldo());
+        assertEquals(
+                new BigDecimal("199399.25"),
+                setembro.resultado()
+        );
 
-                ProjectionResponse outubro = resultado.get(1);
+        assertEquals(
+                new BigDecimal("199399.25"),
+                setembro.saldo()
+        );
 
-                assertEquals(
-                                new BigDecimal("22560.25"),
-                                outubro.receitaRealizada());
+        ProjectionResponse outubro =
+                resultado.get(1);
 
-                assertEquals(
-                                BigDecimal.ZERO,
-                                outubro.receitaProjetada());
+        assertEquals(
+                new BigDecimal("22560.25"),
+                outubro.receitaRealizada()
+        );
 
-                assertEquals(
-                                new BigDecimal("1570.00"),
-                                outubro.despesa());
+        assertEquals(
+                BigDecimal.ZERO,
+                outubro.receitaProjetada()
+        );
 
-                assertEquals(
-                                new BigDecimal("20990.25"),
-                                outubro.resultado());
+        assertEquals(
+                new BigDecimal("1570.00"),
+                outubro.despesa()
+        );
 
-                assertEquals(
-                                new BigDecimal("220389.50"),
-                                outubro.saldo());
+        assertEquals(
+                new BigDecimal("20990.25"),
+                outubro.resultado()
+        );
 
-                ProjectionResponse novembro = resultado.get(2);
+        assertEquals(
+                new BigDecimal("220389.50"),
+                outubro.saldo()
+        );
 
-                assertEquals(
-                                BigDecimal.ZERO,
-                                novembro.receitaRealizada());
+        ProjectionResponse novembro =
+                resultado.get(2);
 
-                assertEquals(
-                                BigDecimal.ZERO,
-                                novembro.receitaProjetada());
+        assertEquals(
+                BigDecimal.ZERO,
+                novembro.receitaRealizada()
+        );
 
-                assertEquals(
-                                BigDecimal.ZERO,
-                                novembro.receita());
+        assertEquals(
+                BigDecimal.ZERO,
+                novembro.receitaProjetada()
+        );
 
-                assertEquals(
-                                BigDecimal.ZERO,
-                                novembro.despesa());
+        assertEquals(
+                BigDecimal.ZERO,
+                novembro.receita()
+        );
 
-                assertEquals(
-                                new BigDecimal("220389.50"),
-                                novembro.saldo());
-        }
+        assertEquals(
+                BigDecimal.ZERO,
+                novembro.despesa()
+        );
 
-        @Test
-        void deveManterSaldoAcumuladoNosMesesSemMovimento() {
+        assertEquals(
+                new BigDecimal("220389.50"),
+                novembro.saldo()
+        );
+    }
 
-                List<FinancialTransaction> lancamentos = List.of(
-                                criarLancamento(
-                                                LocalDate.of(
-                                                                2026,
-                                                                9,
-                                                                18),
-                                                "RECEITA",
-                                                "10000.00"),
-                                criarLancamento(
-                                                LocalDate.of(
-                                                                2026,
-                                                                9,
-                                                                20),
-                                                "DESPESA",
-                                                "4000.00"),
-                                criarLancamento(
-                                                LocalDate.of(
-                                                                2026,
-                                                                10,
-                                                                10),
-                                                "RECEITA",
-                                                "5000.00"),
-                                criarLancamento(
-                                                LocalDate.of(
-                                                                2026,
-                                                                10,
-                                                                27),
-                                                "DESPESA",
-                                                "7000.00"));
+    @Test
+    void deveManterSaldoAcumuladoNosMesesSemMovimento() {
 
-                when(
-                                financialTransactionRepository
-                                                .findByDataBetweenOrderByDataAsc(
-                                                                any(),
-                                                                any()))
-                                .thenReturn(lancamentos);
+        List<FinancialTransaction> lancamentos = List.of(
+                criarLancamento(
+                        LocalDate.of(
+                                2026,
+                                9,
+                                18
+                        ),
+                        "RECEITA",
+                        "10000.00"
+                ),
+                criarLancamento(
+                        LocalDate.of(
+                                2026,
+                                9,
+                                20
+                        ),
+                        "DESPESA",
+                        "4000.00"
+                ),
+                criarLancamento(
+                        LocalDate.of(
+                                2026,
+                                10,
+                                10
+                        ),
+                        "RECEITA",
+                        "5000.00"
+                ),
+                criarLancamento(
+                        LocalDate.of(
+                                2026,
+                                10,
+                                27
+                        ),
+                        "DESPESA",
+                        "7000.00"
+                )
+        );
 
-                List<ProjectionResponse> resultado = projectionService.obterProjecao();
+        when(
+                financialTransactionRepository
+                        .findByClienteIdAndDataBetweenOrderByDataAsc(
+                                eq(CLIENTE_ID),
+                                any(LocalDate.class),
+                                any(LocalDate.class)
+                        )
+        ).thenReturn(
+                lancamentos
+        );
 
-                assertEquals(
-                                6,
-                                resultado.size());
+        List<ProjectionResponse> resultado =
+                projectionService.obterProjecao();
 
-                assertEquals(
-                                new BigDecimal("6000.00"),
-                                resultado.get(0).saldo());
+        assertEquals(
+                6,
+                resultado.size()
+        );
 
-                assertEquals(
-                                new BigDecimal("-2000.00"),
-                                resultado.get(1).resultado());
+        assertEquals(
+                new BigDecimal("6000.00"),
+                resultado.get(0).saldo()
+        );
 
-                assertEquals(
-                                new BigDecimal("4000.00"),
-                                resultado.get(1).saldo());
+        assertEquals(
+                new BigDecimal("-2000.00"),
+                resultado.get(1).resultado()
+        );
 
-                assertEquals(
-                                BigDecimal.ZERO,
-                                resultado.get(2).receitaRealizada());
+        assertEquals(
+                new BigDecimal("4000.00"),
+                resultado.get(1).saldo()
+        );
 
-                assertEquals(
-                                BigDecimal.ZERO,
-                                resultado.get(2).receitaProjetada());
+        assertEquals(
+                BigDecimal.ZERO,
+                resultado.get(2).receitaRealizada()
+        );
 
-                assertEquals(
-                                BigDecimal.ZERO,
-                                resultado.get(2).receita());
+        assertEquals(
+                BigDecimal.ZERO,
+                resultado.get(2).receitaProjetada()
+        );
 
-                assertEquals(
-                                BigDecimal.ZERO,
-                                resultado.get(2).despesa());
+        assertEquals(
+                BigDecimal.ZERO,
+                resultado.get(2).receita()
+        );
 
-                assertEquals(
-                                new BigDecimal("4000.00"),
-                                resultado.get(2).saldo());
-        }
+        assertEquals(
+                BigDecimal.ZERO,
+                resultado.get(2).despesa()
+        );
 
-        private FinancialTransaction criarLancamento(
-                        LocalDate data,
-                        String tipo,
-                        String valor) {
+        assertEquals(
+                new BigDecimal("4000.00"),
+                resultado.get(2).saldo()
+        );
+    }
 
-                FinancialTransaction lancamento = new FinancialTransaction();
+    private FinancialTransaction criarLancamento(
+            LocalDate data,
+            String tipo,
+            String valor
+    ) {
 
-                lancamento.setData(data);
-                lancamento.setTipo(tipo);
-                lancamento.setValor(
-                                new BigDecimal(valor));
+        FinancialTransaction lancamento =
+                new FinancialTransaction();
 
-                return lancamento;
-        }
+        lancamento.setData(data);
+
+        lancamento.setTipo(tipo);
+
+        lancamento.setValor(
+                new BigDecimal(valor)
+        );
+
+        return lancamento;
+    }
 }

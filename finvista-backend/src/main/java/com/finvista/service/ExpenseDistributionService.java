@@ -15,25 +15,34 @@ import java.util.stream.Collectors;
 public class ExpenseDistributionService {
 
     private static final String TIPO_DESPESA = "DESPESA";
+
     private static final String SEM_CATEGORIA = "Sem categoria";
 
     private final FinancialTransactionRepository financialTransactionRepository;
 
+    private final ClienteContextService clienteContextService;
+
     public ExpenseDistributionService(
-            FinancialTransactionRepository financialTransactionRepository
+            FinancialTransactionRepository financialTransactionRepository,
+            ClienteContextService clienteContextService
     ) {
-        this.financialTransactionRepository
-                = financialTransactionRepository;
+        this.financialTransactionRepository = financialTransactionRepository;
+        this.clienteContextService = clienteContextService;
     }
 
     public List<ExpenseDistributionResponse> listar() {
 
-        List<FinancialTransaction> despesas
-                = financialTransactionRepository
-                        .findByTipoOrderByDataDesc(TIPO_DESPESA);
+        Long clienteId = obterClienteIdAtual();
 
-        Map<String, BigDecimal> totaisPorCategoria
-                = despesas.stream()
+        List<FinancialTransaction> despesas =
+                financialTransactionRepository
+                        .findByClienteIdAndTipoOrderByDataDesc(
+                                clienteId,
+                                TIPO_DESPESA
+                        );
+
+        Map<String, BigDecimal> totaisPorCategoria =
+                despesas.stream()
                         .collect(
                                 Collectors.groupingBy(
                                         this::obterCategoria,
@@ -48,11 +57,11 @@ public class ExpenseDistributionService {
         return totaisPorCategoria
                 .entrySet()
                 .stream()
-                .map(entry
-                        -> new ExpenseDistributionResponse(
-                        entry.getKey(),
-                        entry.getValue()
-                )
+                .map(
+                        entry -> new ExpenseDistributionResponse(
+                                entry.getKey(),
+                                entry.getValue()
+                        )
                 )
                 .sorted(
                         Comparator.comparing(
@@ -63,36 +72,48 @@ public class ExpenseDistributionService {
     }
 
     public List<String> listarCategoriasPorCentroCusto(
-        String centroCusto
-) {
-    if (centroCusto == null || centroCusto.isBlank()) {
-        return List.of();
+            String centroCusto
+    ) {
+
+        if (centroCusto == null
+                || centroCusto.isBlank()) {
+
+            return List.of();
+        }
+
+        Long clienteId = obterClienteIdAtual();
+
+        return financialTransactionRepository
+                .findByClienteIdAndTipoOrderByDataDesc(
+                        clienteId,
+                        TIPO_DESPESA
+                )
+                .stream()
+                .filter(
+                        lancamento ->
+                                lancamento.getCentroCusto() != null
+                                        && lancamento
+                                                .getCentroCusto()
+                                                .trim()
+                                                .equalsIgnoreCase(
+                                                        centroCusto.trim()
+                                                )
+                )
+                .map(FinancialTransaction::getCategoria)
+                .filter(
+                        categoria ->
+                                categoria != null
+                                        && !categoria.isBlank()
+                )
+                .map(String::trim)
+                .distinct()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
     }
 
-    return financialTransactionRepository
-            .findByTipoOrderByDataDesc(TIPO_DESPESA)
-            .stream()
-            .filter(
-                    lancamento ->
-                            lancamento.getCentroCusto() != null
-                                    && lancamento
-                                            .getCentroCusto()
-                                            .trim()
-                                            .equalsIgnoreCase(
-                                                    centroCusto.trim()
-                                            )
-            )
-            .map(FinancialTransaction::getCategoria)
-            .filter(
-                    categoria ->
-                            categoria != null
-                                    && !categoria.isBlank()
-            )
-            .map(String::trim)
-            .distinct()
-            .sorted(String.CASE_INSENSITIVE_ORDER)
-            .toList();
-}
+    private Long obterClienteIdAtual() {
+        return clienteContextService.getClienteAtualId();
+    }
 
     private String obterCategoria(
             FinancialTransaction lancamento
@@ -100,7 +121,9 @@ public class ExpenseDistributionService {
 
         String categoria = lancamento.getCategoria();
 
-        if (categoria == null || categoria.isBlank()) {
+        if (categoria == null
+                || categoria.isBlank()) {
+
             return SEM_CATEGORIA;
         }
 
@@ -118,4 +141,3 @@ public class ExpenseDistributionService {
                 : BigDecimal.ZERO;
     }
 }
-

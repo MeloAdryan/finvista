@@ -13,37 +13,15 @@ import com.finvista.model.FinancialTransaction;
 public interface FinancialTransactionRepository
         extends JpaRepository<FinancialTransaction, Long> {
 
-    /*
-     * ============================================================
-     * CONSULTAS LEGADAS
-     * ============================================================
-     *
-     * Mantidas temporariamente para não quebrar os serviços
-     * existentes enquanto o FinVista é migrado para o isolamento
-     * completo por Cliente.
-     */
+
     List<FinancialTransaction> findAllByOrderByDataDesc();
-
-    List<FinancialTransaction> findByDataBetweenOrderByDataAsc(
-            LocalDate dataInicial,
-            LocalDate dataFinal
-    );
-
-    List<FinancialTransaction> findByTipoOrderByDataDesc(
-            String tipo
-    );
-
-    List<FinancialTransaction> findByTipoAndDataBetweenOrderByDataAsc(
-            String tipo,
-            LocalDate dataInicial,
-            LocalDate dataFinal
-    );
 
     /*
      * ============================================================
      * CONSULTAS ISOLADAS POR CLIENTE
      * ============================================================
      */
+
     List<FinancialTransaction> findAllByClienteIdOrderByDataDesc(
             Long clienteId
     );
@@ -70,7 +48,19 @@ public interface FinancialTransactionRepository
             Long clienteId
     );
 
-    boolean existsByDataAndDescricaoAndTipoAndValorAndDocumentoReferencia(
+    /*
+     * ============================================================
+     * IMPORTAÇÃO ISOLADA POR CLIENTE
+     * ============================================================
+     */
+
+    List<FinancialTransaction> findByClienteIdAndOrigemOrderByIdAsc(
+            Long clienteId,
+            String origem
+    );
+
+    boolean existsByClienteIdAndDataAndDescricaoAndTipoAndValorAndDocumentoReferencia(
+            Long clienteId,
             LocalDate data,
             String descricao,
             String tipo,
@@ -78,45 +68,29 @@ public interface FinancialTransactionRepository
             String documentoReferencia
     );
 
-    List<FinancialTransaction> findByOrigemOrderByIdAsc(
-            String origem
+    /*
+     * ============================================================
+     * INTERVALO POR CLIENTE
+     * ============================================================
+     */
+
+    @Query("""
+            SELECT MIN(l.data)
+            FROM FinancialTransaction l
+            WHERE l.cliente.id = :clienteId
+              AND l.data IS NOT NULL
+            """)
+    Optional<LocalDate> findMenorDataByClienteId(
+            Long clienteId
     );
 
-   @Query("""
-    SELECT MIN(l.data)
-    FROM FinancialTransaction l
-    WHERE l.data IS NOT NULL
-    """)
-Optional<LocalDate> findMenorData();
-
-@Query("""
-    SELECT MAX(l.data)
-    FROM FinancialTransaction l
-    WHERE l.data IS NOT NULL
-    """)
-Optional<LocalDate> findMaiorData();
-
-@Query("""
-    SELECT MIN(l.data)
-    FROM FinancialTransaction l
-    WHERE l.cliente.id = :clienteId
-      AND l.data IS NOT NULL
-    """)
-Optional<LocalDate> findMenorDataByClienteId(
-        Long clienteId
-);
-
-@Query("""
-    SELECT MAX(l.data)
-    FROM FinancialTransaction l
-    WHERE l.cliente.id = :clienteId
-      AND l.data IS NOT NULL
-    """)
-Optional<LocalDate> findMaiorDataByClienteId(
-        Long clienteId
-);
-
+    @Query("""
+            SELECT MAX(l.data)
+            FROM FinancialTransaction l
+            WHERE l.cliente.id = :clienteId
+              AND l.data IS NOT NULL
+            """)
+    Optional<LocalDate> findMaiorDataByClienteId(
+            Long clienteId
+    );
 }
-            
-    
-            

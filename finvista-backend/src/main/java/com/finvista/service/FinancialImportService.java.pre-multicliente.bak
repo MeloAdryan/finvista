@@ -1,6 +1,5 @@
 package com.finvista.service;
 
-import com.finvista.model.Cliente;
 import com.finvista.model.FinancialTransaction;
 import com.finvista.repository.FinancialTransactionRepository;
 
@@ -18,18 +17,15 @@ import java.util.Objects;
 @Service
 public class FinancialImportService {
 
-    private static final String ORIGEM_CONTA_AZUL
-            = "CONTA_AZUL_EXCEL";
+    private static final String ORIGEM_CONTA_AZUL =
+            "CONTA_AZUL_EXCEL";
 
     private final FinancialTransactionRepository repository;
-    private final ClienteContextService clienteContextService;
 
     public FinancialImportService(
-            FinancialTransactionRepository repository,
-            ClienteContextService clienteContextService
+            FinancialTransactionRepository repository
     ) {
         this.repository = repository;
-        this.clienteContextService = clienteContextService;
     }
 
     @Transactional
@@ -43,49 +39,57 @@ public class FinancialImportService {
             );
         }
 
-        Cliente cliente
-                = clienteContextService.getClienteAtual();
-
-        prepararLancamentosParaCliente(
-                lancamentos,
-                cliente
-        );
-
+        /*
+         * Para arquivos do Conta Azul usamos uma estratégia
+         * de deduplicação mais completa.
+         *
+         * Ela preserva lançamentos legítimos semelhantes dentro
+         * do mesmo arquivo e impede que a mesma ocorrência seja
+         * gravada novamente em uma reimportação.
+         */
         if (ehImportacaoContaAzul(lancamentos)) {
-            return salvarContaAzul(
-                    lancamentos,
-                    cliente.getId()
-            );
+            return salvarContaAzul(lancamentos);
         }
 
         /*
-     * Outros formatos continuam usando a estratégia legada
-     * enquanto a nova arquitetura de importação é evoluída.
+         * Outros formatos continuam usando a estratégia legada
+         * enquanto a nova arquitetura de importação é evoluída.
          */
-        return salvarFormatoLegado(
-                lancamentos,
-                cliente.getId()
-        );
+        return salvarFormatoLegado(lancamentos);
     }
 
     private List<FinancialTransaction> salvarContaAzul(
-            List<FinancialTransaction> lancamentos,
-            Long clienteId
+            List<FinancialTransaction> lancamentos
     ) {
 
-        List<FinancialTransaction> existentes
-                = repository.findByClienteIdAndOrigemOrderByIdAsc(
-                        clienteId,
+        List<FinancialTransaction> existentes =
+                repository.findByOrigemOrderByIdAsc(
                         ORIGEM_CONTA_AZUL
                 );
 
-        Map<ChaveContaAzul, Integer> quantidadeExistente
-                = new HashMap<>();
+        /*
+         * Em vez de guardar apenas "existe ou não existe",
+         * contamos quantas ocorrências de cada identidade já
+         * existem no banco.
+         *
+         * Isso é fundamental.
+         *
+         * Exemplo:
+         *
+         * Se o arquivo possui três lançamentos legitimamente
+         * iguais segundo a identidade financeira, os três são
+         * preservados na primeira importação.
+         *
+         * Ao importar o mesmo arquivo novamente, as três
+         * ocorrências já existentes são reconhecidas.
+         */
+        Map<ChaveContaAzul, Integer> quantidadeExistente =
+                new HashMap<>();
 
         for (FinancialTransaction existente : existentes) {
 
-            ChaveContaAzul chave
-                    = criarChaveContaAzul(existente);
+            ChaveContaAzul chave =
+                    criarChaveContaAzul(existente);
 
             quantidadeExistente.merge(
                     chave,
@@ -94,26 +98,30 @@ public class FinancialImportService {
             );
         }
 
-        Map<ChaveContaAzul, Integer> quantidadeNoArquivo
-                = new HashMap<>();
+        /*
+         * Controla quantas ocorrências da mesma identidade
+         * já apareceram no arquivo atual.
+         */
+        Map<ChaveContaAzul, Integer> quantidadeNoArquivo =
+                new HashMap<>();
 
-        List<FinancialTransaction> novosLancamentos
-                = new ArrayList<>();
+        List<FinancialTransaction> novosLancamentos =
+                new ArrayList<>();
 
         for (FinancialTransaction lancamento : lancamentos) {
 
-            ChaveContaAzul chave
-                    = criarChaveContaAzul(lancamento);
+            ChaveContaAzul chave =
+                    criarChaveContaAzul(lancamento);
 
-            int ocorrenciaAtual
-                    = quantidadeNoArquivo.merge(
+            int ocorrenciaAtual =
+                    quantidadeNoArquivo.merge(
                             chave,
                             1,
                             Integer::sum
                     );
 
-            int ocorrenciasJaExistentes
-                    = quantidadeExistente.getOrDefault(
+            int ocorrenciasJaExistentes =
+                    quantidadeExistente.getOrDefault(
                             chave,
                             0
                     );
@@ -138,25 +146,24 @@ public class FinancialImportService {
     }
 
     private List<FinancialTransaction> salvarFormatoLegado(
-            List<FinancialTransaction> lancamentos,
-            Long clienteId
+            List<FinancialTransaction> lancamentos
     ) {
 
-        List<FinancialTransaction> novosLancamentos
-                = new ArrayList<>();
+        List<FinancialTransaction> novosLancamentos =
+                new ArrayList<>();
 
         for (FinancialTransaction lancamento : lancamentos) {
 
-            boolean duplicadoNoBanco
-                    = repository
-                            .existsByClienteIdAndDataAndDescricaoAndTipoAndValorAndDocumentoReferencia(
-                                    clienteId,
+            boolean duplicadoNoBanco =
+                    repository
+                            .existsByDataAndDescricaoAndTipoAndValorAndDocumentoReferencia(
                                     lancamento.getData(),
                                     lancamento.getDescricao(),
                                     lancamento.getTipo(),
                                     lancamento.getValor(),
                                     lancamento.getDocumentoReferencia()
                             );
+
             if (!duplicadoNoBanco) {
                 novosLancamentos.add(lancamento);
             }
@@ -169,40 +176,17 @@ public class FinancialImportService {
         return repository.saveAll(novosLancamentos);
     }
 
-    private void prepararLancamentosParaCliente(
-            List<FinancialTransaction> lancamentos,
-            Cliente cliente
-    ) {
-
-        if (cliente == null || cliente.getId() == null) {
-            throw new IllegalStateException(
-                    "Nenhum cliente válido foi encontrado para a importação."
-            );
-        }
-
-        for (FinancialTransaction lancamento : lancamentos) {
-
-            if (lancamento == null) {
-                throw new IllegalArgumentException(
-                        "A importação contém um lançamento financeiro inválido."
-                );
-            }
-
-            lancamento.setCliente(cliente);
-        }
-    }
-
     private boolean ehImportacaoContaAzul(
             List<FinancialTransaction> lancamentos
     ) {
 
         return lancamentos.stream()
-                .allMatch(lancamento
-                        -> ORIGEM_CONTA_AZUL.equalsIgnoreCase(
-                        normalizarTexto(
-                                lancamento.getOrigem()
+                .allMatch(lancamento ->
+                        ORIGEM_CONTA_AZUL.equalsIgnoreCase(
+                                normalizarTexto(
+                                        lancamento.getOrigem()
+                                )
                         )
-                )
                 );
     }
 
@@ -215,26 +199,34 @@ public class FinancialImportService {
                 lancamento.getDataVencimento(),
                 lancamento.getDataPrevista(),
                 lancamento.getDataRealizacao(),
+
                 normalizarTexto(lancamento.getDescricao()),
                 normalizarTexto(lancamento.getTipo()),
+
                 normalizarValor(lancamento.getValorOriginal()),
                 normalizarValor(lancamento.getValorRealizado()),
                 normalizarValor(lancamento.getValorAberto()),
+
                 normalizarValor(lancamento.getJurosRealizado()),
                 normalizarValor(lancamento.getMultaRealizada()),
                 normalizarValor(lancamento.getDescontoRealizado()),
+
                 normalizarValor(lancamento.getJurosPrevisto()),
                 normalizarValor(lancamento.getMultaPrevista()),
                 normalizarValor(lancamento.getDescontoPrevisto()),
+
                 normalizarValor(lancamento.getValorTotalRealizado()),
                 normalizarValor(lancamento.getValorTotalAberto()),
+
                 normalizarTexto(lancamento.getEntidadeExternaId()),
                 normalizarTexto(lancamento.getEntidadeNome()),
                 normalizarTexto(lancamento.getCodigoReferencia()),
                 normalizarTexto(lancamento.getSituacao()),
                 normalizarTexto(lancamento.getRecorrencia()),
                 normalizarTexto(lancamento.getQuantidadeRecorrencia()),
+
                 lancamento.getAgendado(),
+
                 normalizarTexto(lancamento.getFormaMovimentacao()),
                 normalizarTexto(lancamento.getContaBancaria()),
                 normalizarTexto(lancamento.getNotaFiscal()),

@@ -15,191 +15,201 @@ import java.util.Map;
 @Service
 public class FinancialTransactionAggregationService {
 
-        private static final String TIPO_RECEITA = "RECEITA";
+    private static final String TIPO_RECEITA = "RECEITA";
+    private static final String TIPO_DESPESA = "DESPESA";
 
-        private static final String TIPO_DESPESA = "DESPESA";
+    private final FinancialTransactionRepository
+            financialTransactionRepository;
 
-        private final FinancialTransactionRepository financialTransactionRepository;
-        private final ClienteContextService clienteContextService;
+    private final ClienteContextService
+            clienteContextService;
 
-        public FinancialTransactionAggregationService(
-                        FinancialTransactionRepository financialTransactionRepository,
-                        ClienteContextService clienteContextService) {
-                this.financialTransactionRepository = financialTransactionRepository;
+    public FinancialTransactionAggregationService(
+            FinancialTransactionRepository financialTransactionRepository,
+            ClienteContextService clienteContextService
+    ) {
+        this.financialTransactionRepository =
+                financialTransactionRepository;
 
-                this.clienteContextService = clienteContextService;
-        }
+        this.clienteContextService =
+                clienteContextService;
+    }
 
-        public List<MonthlyFinancialSummary> obterResumoMensal(
-                        LocalDate dataInicial,
-                        LocalDate dataFinal) {
-                validarPeriodo(
+    public List<MonthlyFinancialSummary> obterResumoMensal(
+            LocalDate dataInicial,
+            LocalDate dataFinal
+    ) {
+        validarPeriodo(
+                dataInicial,
+                dataFinal
+        );
+
+        Long clienteId = obterClienteId();
+
+        List<FinancialTransaction> lancamentos =
+                financialTransactionRepository
+                        .findByClienteIdAndDataBetweenOrderByDataAsc(
+                                clienteId,
                                 dataInicial,
-                                dataFinal);
+                                dataFinal
+                        );
 
-                List<FinancialTransaction> lancamentos;
+        Map<YearMonth, MonthlyAccumulator> meses =
+                new LinkedHashMap<>();
 
-                if (clienteContextService.isAdmin()) {
+        YearMonth primeiroMes =
+                YearMonth.from(dataInicial);
 
-                        lancamentos = financialTransactionRepository
-                                        .findByDataBetweenOrderByDataAsc(
-                                                        dataInicial,
-                                                        dataFinal);
+        YearMonth ultimoMes =
+                YearMonth.from(dataFinal);
 
-                } else {
+        YearMonth mesAtual =
+                primeiroMes;
 
-                        Long clienteId = clienteContextService
-                                        .getClienteDoUsuarioAutenticado()
-                                        .getId();
+        while (!mesAtual.isAfter(ultimoMes)) {
 
-                        lancamentos = financialTransactionRepository
-                                        .findByClienteIdAndDataBetweenOrderByDataAsc(
-                                                        clienteId,
-                                                        dataInicial,
-                                                        dataFinal);
-                }
+            meses.put(
+                    mesAtual,
+                    new MonthlyAccumulator()
+            );
 
-                Map<YearMonth, MonthlyAccumulator> meses = new LinkedHashMap<>();
-
-                YearMonth primeiroMes = YearMonth.from(dataInicial);
-
-                YearMonth ultimoMes = YearMonth.from(dataFinal);
-
-                YearMonth mesAtual = primeiroMes;
-
-                while (!mesAtual.isAfter(ultimoMes)) {
-
-                        meses.put(
-                                        mesAtual,
-                                        new MonthlyAccumulator());
-
-                        mesAtual = mesAtual.plusMonths(1);
-                }
-
-                for (FinancialTransaction lancamento : lancamentos) {
-
-                        if (lancamento.getData() == null
-                                        || lancamento.getValor() == null
-                                        || lancamento.getTipo() == null) {
-
-                                continue;
-                        }
-
-                        YearMonth periodo = YearMonth.from(
-                                        lancamento.getData());
-
-                        MonthlyAccumulator acumulador = meses.get(periodo);
-
-                        if (acumulador == null) {
-                                continue;
-                        }
-
-                        String tipo = lancamento.getTipo()
-                                        .trim()
-                                        .toUpperCase();
-
-                        if (TIPO_RECEITA.equals(tipo)) {
-
-                                acumulador.receita = acumulador.receita.add(
-                                                lancamento.getValor());
-
-                        } else if (TIPO_DESPESA.equals(tipo)) {
-
-                                acumulador.despesa = acumulador.despesa.add(
-                                                lancamento.getValor());
-                        }
-                }
-
-                List<MonthlyFinancialSummary> resultado = new ArrayList<>();
-
-                for (Map.Entry<YearMonth, MonthlyAccumulator> entry : meses.entrySet()) {
-
-                        resultado.add(
-                                        new MonthlyFinancialSummary(
-                                                        entry.getKey(),
-                                                        entry.getValue().receita,
-                                                        entry.getValue().despesa));
-                }
-
-                return resultado;
+            mesAtual =
+                    mesAtual.plusMonths(1);
         }
 
-        public List<MonthlyFinancialSummary> obterResumoMensalCompleto() {
+        for (FinancialTransaction lancamento : lancamentos) {
 
-                LocalDate menorData;
-                LocalDate maiorData;
+            if (lancamento.getData() == null
+                    || lancamento.getValor() == null
+                    || lancamento.getTipo() == null) {
 
-                /*
-                 * ADMIN possui, por enquanto,
-                 * uma visão financeira global.
-                 */
-                if (clienteContextService.isAdmin()) {
+                continue;
+            }
 
-                        menorData = financialTransactionRepository
-                                        .findMenorData()
-                                        .orElse(null);
+            YearMonth periodo =
+                    YearMonth.from(
+                            lancamento.getData()
+                    );
 
-                        maiorData = financialTransactionRepository
-                                        .findMaiorData()
-                                        .orElse(null);
+            MonthlyAccumulator acumulador =
+                    meses.get(periodo);
 
-                } else {
+            if (acumulador == null) {
+                continue;
+            }
 
-                        /*
-                         * Usuários comuns só podem considerar
-                         * o período pertencente ao próprio cliente.
-                         */
-                        Long clienteId = clienteContextService
-                                        .getClienteDoUsuarioAutenticado()
-                                        .getId();
+            String tipo =
+                    lancamento.getTipo()
+                            .trim()
+                            .toUpperCase();
 
-                        menorData = financialTransactionRepository
-                                        .findMenorDataByClienteId(
-                                                        clienteId)
-                                        .orElse(null);
+            if (TIPO_RECEITA.equals(tipo)) {
 
-                        maiorData = financialTransactionRepository
-                                        .findMaiorDataByClienteId(
-                                                        clienteId)
-                                        .orElse(null);
-                }
+                acumulador.receita =
+                        acumulador.receita.add(
+                                lancamento.getValor()
+                        );
 
-                if (menorData == null || maiorData == null) {
-                        return List.of();
-                }
+            } else if (TIPO_DESPESA.equals(tipo)) {
 
-                return obterResumoMensal(
-                                menorData,
-                                maiorData);
+                acumulador.despesa =
+                        acumulador.despesa.add(
+                                lancamento.getValor()
+                        );
+            }
         }
 
-        private void validarPeriodo(
-                        LocalDate dataInicial,
-                        LocalDate dataFinal) {
-                if (dataInicial == null
-                                || dataFinal == null) {
+        List<MonthlyFinancialSummary> resultado =
+                new ArrayList<>();
 
-                        throw new IllegalArgumentException(
-                                        "Data inicial e data final são obrigatórias.");
-                }
+        for (
+                Map.Entry<
+                        YearMonth,
+                        MonthlyAccumulator
+                > entry : meses.entrySet()
+        ) {
 
-                if (dataFinal.isBefore(dataInicial)) {
-
-                        throw new IllegalArgumentException(
-                                        "Data final não pode ser anterior à data inicial.");
-                }
+            resultado.add(
+                    new MonthlyFinancialSummary(
+                            entry.getKey(),
+                            entry.getValue().receita,
+                            entry.getValue().despesa
+                    )
+            );
         }
 
-        public record MonthlyFinancialSummary(
-                        YearMonth periodo,
-                        BigDecimal receita,
-                        BigDecimal despesa) {
+        return resultado;
+    }
+
+    public List<MonthlyFinancialSummary>
+    obterResumoMensalCompleto() {
+
+        Long clienteId =
+                obterClienteId();
+
+        LocalDate menorData =
+                financialTransactionRepository
+                        .findMenorDataByClienteId(
+                                clienteId
+                        )
+                        .orElse(null);
+
+        LocalDate maiorData =
+                financialTransactionRepository
+                        .findMaiorDataByClienteId(
+                                clienteId
+                        )
+                        .orElse(null);
+
+        if (menorData == null || maiorData == null) {
+            return List.of();
         }
 
-        private static class MonthlyAccumulator {
+        return obterResumoMensal(
+                menorData,
+                maiorData
+        );
+    }
 
-                private BigDecimal receita = BigDecimal.ZERO;
+   private Long obterClienteId() {
 
-                private BigDecimal despesa = BigDecimal.ZERO;
+    return clienteContextService
+            .getClienteAtualId();
+}
+
+    private void validarPeriodo(
+            LocalDate dataInicial,
+            LocalDate dataFinal
+    ) {
+        if (dataInicial == null
+                || dataFinal == null) {
+
+            throw new IllegalArgumentException(
+                    "Data inicial e data final são obrigatórias."
+            );
         }
+
+        if (dataFinal.isBefore(dataInicial)) {
+
+            throw new IllegalArgumentException(
+                    "Data final não pode ser anterior à data inicial."
+            );
+        }
+    }
+
+    public record MonthlyFinancialSummary(
+            YearMonth periodo,
+            BigDecimal receita,
+            BigDecimal despesa
+    ) {
+    }
+
+    private static class MonthlyAccumulator {
+
+        private BigDecimal receita =
+                BigDecimal.ZERO;
+
+        private BigDecimal despesa =
+                BigDecimal.ZERO;
+    }
 }

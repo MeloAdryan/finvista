@@ -11,46 +11,34 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-
-
 @Service
 public class SpendingGoalService {
 
-    private static final String TIPO_MENSAL =
-            "MENSAL";
-
-    private static final String TIPO_SEMESTRAL =
-            "SEMESTRAL";
-
-    private static final String TIPO_DESPESA =
-            "DESPESA";
+    private static final String TIPO_MENSAL = "MENSAL";
+    private static final String TIPO_SEMESTRAL = "SEMESTRAL";
+    private static final String TIPO_DESPESA = "DESPESA";
 
     private final SpendingGoalRepository spendingGoalRepository;
-
-    private final FinancialTransactionRepository
-            financialTransactionRepository;
-
-    private final FinancialCalculationService
-            calculationService;
+    private final FinancialTransactionRepository financialTransactionRepository;
+    private final FinancialCalculationService calculationService;
+    private final ClienteContextService clienteContextService;
 
     public SpendingGoalService(
             SpendingGoalRepository spendingGoalRepository,
             FinancialTransactionRepository financialTransactionRepository,
-            FinancialCalculationService calculationService
+            FinancialCalculationService calculationService,
+            ClienteContextService clienteContextService
     ) {
-        this.spendingGoalRepository =
-                spendingGoalRepository;
-
-        this.financialTransactionRepository =
-                financialTransactionRepository;
-
-        this.calculationService =
-                calculationService;
+        this.spendingGoalRepository = spendingGoalRepository;
+        this.financialTransactionRepository = financialTransactionRepository;
+        this.calculationService = calculationService;
+        this.clienteContextService = clienteContextService;
     }
 
     public SpendingGoal salvar(
             SpendingGoal meta
     ) {
+
         validarMeta(meta);
 
         meta.setTipo(
@@ -59,100 +47,152 @@ public class SpendingGoalService {
                         .toUpperCase()
         );
 
+        /*
+         * O cliente proprietário da meta nunca é aceito
+         * diretamente do frontend.
+         *
+         * Ele é determinado pelo contexto atual do FinVista:
+         *
+         * usuário comum -> cliente associado ao usuário
+         * ADMIN         -> cliente selecionado na sessão
+         */
+        meta.setCliente(
+                clienteContextService.getClienteAtual()
+        );
+
         return spendingGoalRepository.save(meta);
     }
 
-    public List<SpendingGoalResponse> listarComSituacao(){
+    public List<SpendingGoal> listarMetas() {
+
+        Long clienteId = obterClienteIdAtual();
 
         return spendingGoalRepository
-                .findAllByOrderByDataInicioDesc()
+                .findByClienteIdOrderByDataInicioDesc(
+                        clienteId
+                );
+    }
+
+    public SpendingGoal buscarPorId(
+            Long id
+    ) {
+
+        Long clienteId = obterClienteIdAtual();
+
+        return spendingGoalRepository
+                .findByIdAndClienteId(
+                        id,
+                        clienteId
+                )
+                .orElseThrow(
+                        () -> new IllegalArgumentException(
+                                "Meta de gastos não encontrada: " + id
+                        )
+                );
+    }
+
+    public List<SpendingGoalResponse> listarComSituacao() {
+
+        return listarMetas()
                 .stream()
                 .map(this::calcularSituacao)
                 .toList();
     }
 
-   public SpendingGoalResponse buscarSituacao(
-        Long id
-) {
-        SpendingGoal meta =
-                spendingGoalRepository
-                        .findById(id)
-                        .orElseThrow(
-                                () -> new IllegalArgumentException(
-                                        "Meta de gastos não encontrada: "
-                                                + id
-                                )
-                        );
+    public SpendingGoalResponse buscarSituacao(
+            Long id
+    ) {
+
+        /*
+         * buscarPorId já garante que a meta pertence
+         * ao cliente atualmente selecionado.
+         */
+        SpendingGoal meta = buscarPorId(id);
 
         return calcularSituacao(meta);
     }
 
     private SpendingGoalResponse calcularSituacao(
-        SpendingGoal meta
-){
+            SpendingGoal meta
+    ) {
+
+        Long clienteId = meta.getCliente().getId();
+
+        /*
+         * As despesas também são limitadas ao proprietário
+         * da meta.
+         *
+         * Dessa forma, uma meta da empresa A jamais soma
+         * despesas pertencentes à empresa B.
+         */
         List<FinancialTransaction> despesas =
                 financialTransactionRepository
-                        .findByTipoAndDataBetweenOrderByDataAsc(
+                        .findByClienteIdAndTipoAndDataBetweenOrderByDataAsc(
+                                clienteId,
                                 TIPO_DESPESA,
                                 meta.getDataInicio(),
                                 meta.getDataFim()
                         );
 
-        BigDecimal gastoAtual =
-                despesas.stream()
-                        .map(FinancialTransaction::getValor)
-                        .reduce(
-                                BigDecimal.ZERO,
-                                BigDecimal::add
-                        );
-
-        BigDecimal percentualUtilizado =
-                calculationService
-                        .calcularPercentualUtilizado(
-                                gastoAtual,
-                                meta.getValorLimite()
-                        );
-
-        BigDecimal saldoMeta =
-                calculationService
-                        .calcularSaldoMeta(
-                                meta.getValorLimite(),
-                                gastoAtual
-                        );
-
-        String status =
-                calcularStatus(
-                        percentualUtilizado,
-                        meta.getPercentualAlerta()
+        BigDecimal gastoAtual = despesas.stream()
+                .map(FinancialTransaction::getValor)
+                .filter(valor -> valor != null)
+                .reduce(
+                        BigDecimal.ZERO,
+                        BigDecimal::add
                 );
 
+        BigDecimal percentualUtilizado =
+                calculationService.calcularPercentualUtilizado(
+                        gastoAtual,
+                        meta.getValorLimite()
+                );
+
+        BigDecimal saldoMeta =
+                calculationService.calcularSaldoMeta(
+                        meta.getValorLimite(),
+                        gastoAtual
+                );
+
+        String status = calcularStatus(
+                percentualUtilizado,
+                meta.getPercentualAlerta()
+        );
+
         return new SpendingGoalResponse(
-        meta.getId(),
-        meta.getTipo(),
-        meta.getDataInicio(),
-        meta.getDataFim(),
-        meta.getValorLimite(),
-        gastoAtual,
-        percentualUtilizado,
-        saldoMeta,
-        meta.getPercentualAlerta(),
-        status
-);
-}
+                meta.getId(),
+                meta.getTipo(),
+                meta.getDataInicio(),
+                meta.getDataFim(),
+                meta.getValorLimite(),
+                gastoAtual,
+                percentualUtilizado,
+                saldoMeta,
+                meta.getPercentualAlerta(),
+                status
+        );
+    }
+
+    private Long obterClienteIdAtual() {
+        return clienteContextService.getClienteAtualId();
+    }
 
     private String calcularStatus(
             BigDecimal percentualUtilizado,
             Integer percentualAlerta
     ) {
+
         if (percentualUtilizado.compareTo(
                 new BigDecimal("100")
         ) > 0) {
+
             return "EXCEDIDA";
         }
 
         if (percentualUtilizado.compareTo(
                 BigDecimal.valueOf(percentualAlerta)
         ) >= 0) {
+
             return "ALERTA";
         }
 
@@ -162,6 +202,7 @@ public class SpendingGoalService {
     private void validarMeta(
             SpendingGoal meta
     ) {
+
         if (meta == null) {
             throw new IllegalArgumentException(
                     "Meta de gastos não pode ser nula."
@@ -178,7 +219,7 @@ public class SpendingGoalService {
 
         if (meta.getValorLimite() == null
                 || meta.getValorLimite()
-                .compareTo(BigDecimal.ZERO) <= 0) {
+                        .compareTo(BigDecimal.ZERO) <= 0) {
 
             throw new IllegalArgumentException(
                     "Valor limite deve ser maior que zero."
@@ -198,6 +239,7 @@ public class SpendingGoalService {
     private void validarTipo(
             String tipo
     ) {
+
         if (tipo == null || tipo.isBlank()) {
             throw new IllegalArgumentException(
                     "Tipo da meta é obrigatório."
@@ -221,6 +263,7 @@ public class SpendingGoalService {
             LocalDate dataInicio,
             LocalDate dataFim
     ) {
+
         if (dataInicio == null || dataFim == null) {
             throw new IllegalArgumentException(
                     "Data inicial e data final são obrigatórias."
@@ -260,23 +303,25 @@ public class SpendingGoalService {
             LocalDate inicioEsperado;
 
             if (dataInicio.getMonthValue() <= 6) {
-                inicioEsperado =
-                        LocalDate.of(
-                                dataInicio.getYear(),
-                                1,
-                                1
-                        );
+
+                inicioEsperado = LocalDate.of(
+                        dataInicio.getYear(),
+                        1,
+                        1
+                );
+
             } else {
-                inicioEsperado =
-                        LocalDate.of(
-                                dataInicio.getYear(),
-                                7,
-                                1
-                        );
+
+                inicioEsperado = LocalDate.of(
+                        dataInicio.getYear(),
+                        7,
+                        1
+                );
             }
 
             LocalDate fimEsperado =
-                    inicioEsperado.plusMonths(6)
+                    inicioEsperado
+                            .plusMonths(6)
                             .minusDays(1);
 
             if (!dataInicio.equals(inicioEsperado)

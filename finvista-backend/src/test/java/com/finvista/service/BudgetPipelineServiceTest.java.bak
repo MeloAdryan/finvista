@@ -1,0 +1,746 @@
+package com.finvista.service;
+
+import com.finvista.dto.BudgetPipelineResponse;
+import com.finvista.dto.BudgetRequest;
+import com.finvista.model.Budget;
+import com.finvista.model.Cliente;
+import com.finvista.model.FinancialTransaction;
+import com.finvista.repository.BudgetRepository;
+import com.finvista.repository.FinancialTransactionRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+class BudgetPipelineServiceTest {
+
+        private static final Long CLIENTE_ID = 10L;
+
+        private BudgetRepository budgetRepository;
+
+        private FinancialTransactionRepository financialTransactionRepository;
+
+        private BudgetPipelineService budgetPipelineService;
+
+        private ClienteContextService clienteContextService;
+
+        @BeforeEach
+        void setUp() {
+
+                budgetRepository = mock(BudgetRepository.class);
+
+                financialTransactionRepository = mock(FinancialTransactionRepository.class);
+
+                clienteContextService = mock(ClienteContextService.class);
+
+                /*
+                 * Os testes de listagem administrativa continuam
+                 * utilizando a visão global de orçamentos.
+                 *
+                 * Entretanto, cada orçamento deve obrigatoriamente
+                 * pertencer a um cliente e suas despesas devem ser
+                 * consultadas somente dentro desse cliente.
+                 */
+                when(
+                                clienteContextService.isAdmin()).thenReturn(true);
+
+                budgetPipelineService = new BudgetPipelineService(
+                                budgetRepository,
+                                financialTransactionRepository,
+                                clienteContextService);
+        }
+
+        @Test
+        void deveCalcularOrcamentoPorCentroDeCusto() {
+
+                LocalDate inicio = LocalDate.of(
+                                2026,
+                                1,
+                                1);
+
+                LocalDate fim = LocalDate.of(
+                                2026,
+                                12,
+                                31);
+
+                Budget budget = criarBudgetComCliente(
+                                "Orçamento Operacional 2026",
+                                "Custo Operacional",
+                                null,
+                                new BigDecimal("150000.00"),
+                                inicio,
+                                fim,
+                                CLIENTE_ID);
+
+                FinancialTransaction despesa1 = criarDespesa(
+                                new BigDecimal("30000.00"),
+                                null,
+                                "Custo Operacional");
+
+                FinancialTransaction despesa2 = criarDespesa(
+                                new BigDecimal("40000.00"),
+                                null,
+                                "Custo Operacional");
+
+                FinancialTransaction outroCentro = criarDespesa(
+                                new BigDecimal("50000.00"),
+                                null,
+                                "Despesas Administrativas");
+
+                when(
+                                budgetRepository
+                                                .findAllByOrderByDataInicioDesc())
+                                .thenReturn(
+                                                List.of(budget));
+
+                when(
+                                financialTransactionRepository
+                                                .findByClienteIdAndTipoAndDataBetweenOrderByDataAsc(
+                                                                CLIENTE_ID,
+                                                                "DESPESA",
+                                                                inicio,
+                                                                fim))
+                                .thenReturn(
+                                                List.of(
+                                                                despesa1,
+                                                                despesa2,
+                                                                outroCentro));
+
+                List<BudgetPipelineResponse> resultado = budgetPipelineService.listar();
+
+                assertEquals(
+                                1,
+                                resultado.size());
+
+                BudgetPipelineResponse response = resultado.get(0);
+
+                assertEquals(
+                                "Orçamento Operacional 2026",
+                                response.nome());
+
+                assertEquals(
+                                new BigDecimal("150000.00"),
+                                response.valorPlanejado());
+
+                assertEquals(
+                                new BigDecimal("70000.00"),
+                                response.valorUtilizado());
+
+                assertEquals(
+                                new BigDecimal("80000.00"),
+                                response.valorDisponivel());
+
+                assertEquals(
+                                new BigDecimal("46.67"),
+                                response.percentualUtilizado());
+        }
+
+        @Test
+        void deveFiltrarPorCentroDeCustoECategoria() {
+
+                LocalDate inicio = LocalDate.of(
+                                2026,
+                                1,
+                                1);
+
+                LocalDate fim = LocalDate.of(
+                                2026,
+                                12,
+                                31);
+
+                Budget budget = criarBudgetComCliente(
+                                "Marketing",
+                                "Despesas Administrativas",
+                                "Publicidade",
+                                new BigDecimal("100000.00"),
+                                inicio,
+                                fim,
+                                CLIENTE_ID);
+
+                FinancialTransaction corresponde = criarDespesa(
+                                new BigDecimal("25000.00"),
+                                "Publicidade",
+                                "Despesas Administrativas");
+
+                FinancialTransaction categoriaDiferente = criarDespesa(
+                                new BigDecimal("10000.00"),
+                                "Telefonia",
+                                "Despesas Administrativas");
+
+                FinancialTransaction centroDiferente = criarDespesa(
+                                new BigDecimal("15000.00"),
+                                "Publicidade",
+                                "Custo Operacional");
+
+                when(
+                                budgetRepository
+                                                .findAllByOrderByDataInicioDesc())
+                                .thenReturn(
+                                                List.of(budget));
+
+                when(
+                                financialTransactionRepository
+                                                .findByClienteIdAndTipoAndDataBetweenOrderByDataAsc(
+                                                                CLIENTE_ID,
+                                                                "DESPESA",
+                                                                inicio,
+                                                                fim))
+                                .thenReturn(
+                                                List.of(
+                                                                corresponde,
+                                                                categoriaDiferente,
+                                                                centroDiferente));
+
+                BudgetPipelineResponse resultado = budgetPipelineService
+                                .listar()
+                                .get(0);
+
+                assertEquals(
+                                new BigDecimal("25000.00"),
+                                resultado.valorUtilizado());
+
+                assertEquals(
+                                new BigDecimal("75000.00"),
+                                resultado.valorDisponivel());
+
+                assertEquals(
+                                new BigDecimal("25.00"),
+                                resultado.percentualUtilizado());
+        }
+
+        @Test
+        void devePermitirOrcamentoGeralSemCentroOuCategoria() {
+
+                LocalDate inicio = LocalDate.of(
+                                2026,
+                                1,
+                                1);
+
+                LocalDate fim = LocalDate.of(
+                                2026,
+                                12,
+                                31);
+
+                Budget budget = criarBudgetComCliente(
+                                "Orçamento Geral",
+                                null,
+                                null,
+                                new BigDecimal("200000.00"),
+                                inicio,
+                                fim,
+                                CLIENTE_ID);
+
+                FinancialTransaction primeira = criarDespesa(
+                                new BigDecimal("30000.00"),
+                                "Categoria A",
+                                "Centro A");
+
+                FinancialTransaction segunda = criarDespesa(
+                                new BigDecimal("20000.00"),
+                                "Categoria B",
+                                "Centro B");
+
+                when(
+                                budgetRepository
+                                                .findAllByOrderByDataInicioDesc())
+                                .thenReturn(
+                                                List.of(budget));
+
+                when(
+                                financialTransactionRepository
+                                                .findByClienteIdAndTipoAndDataBetweenOrderByDataAsc(
+                                                                CLIENTE_ID,
+                                                                "DESPESA",
+                                                                inicio,
+                                                                fim))
+                                .thenReturn(
+                                                List.of(
+                                                                primeira,
+                                                                segunda));
+
+                BudgetPipelineResponse resultado = budgetPipelineService
+                                .listar()
+                                .get(0);
+
+                assertEquals(
+                                new BigDecimal("50000.00"),
+                                resultado.valorUtilizado());
+
+                assertEquals(
+                                new BigDecimal("150000.00"),
+                                resultado.valorDisponivel());
+
+                assertEquals(
+                                new BigDecimal("25.00"),
+                                resultado.percentualUtilizado());
+        }
+
+        @Test
+        void devePermitirOrcamentoUltrapassarCemPorCento() {
+
+                LocalDate inicio = LocalDate.of(
+                                2026,
+                                1,
+                                1);
+
+                LocalDate fim = LocalDate.of(
+                                2026,
+                                12,
+                                31);
+
+                Budget budget = criarBudgetComCliente(
+                                "Orçamento TI",
+                                "Tecnologia",
+                                null,
+                                new BigDecimal("100000.00"),
+                                inicio,
+                                fim,
+                                CLIENTE_ID);
+
+                FinancialTransaction despesa = criarDespesa(
+                                new BigDecimal("115000.00"),
+                                null,
+                                "Tecnologia");
+
+                when(
+                                budgetRepository
+                                                .findAllByOrderByDataInicioDesc())
+                                .thenReturn(
+                                                List.of(budget));
+
+                when(
+                                financialTransactionRepository
+                                                .findByClienteIdAndTipoAndDataBetweenOrderByDataAsc(
+                                                                CLIENTE_ID,
+                                                                "DESPESA",
+                                                                inicio,
+                                                                fim))
+                                .thenReturn(
+                                                List.of(despesa));
+
+                BudgetPipelineResponse resultado = budgetPipelineService
+                                .listar()
+                                .get(0);
+
+                assertEquals(
+                                new BigDecimal("115000.00"),
+                                resultado.valorUtilizado());
+
+                assertEquals(
+                                new BigDecimal("-15000.00"),
+                                resultado.valorDisponivel());
+
+                assertEquals(
+                                new BigDecimal("115.00"),
+                                resultado.percentualUtilizado());
+        }
+
+        @Test
+        void deveCadastrarOrcamentoFinanceiro() {
+
+                LocalDate inicio = LocalDate.of(
+                                2026,
+                                1,
+                                1);
+
+                LocalDate fim = LocalDate.of(
+                                2026,
+                                12,
+                                31);
+
+                BudgetRequest request = new BudgetRequest(
+                                "  Orçamento Administrativo  ",
+                                "  Despesas Administrativas  ",
+                                null,
+                                new BigDecimal("50000.00"),
+                                inicio,
+                                fim);
+
+                Cliente cliente = mock(Cliente.class);
+
+                when(
+                                clienteContextService.isAdmin()).thenReturn(false);
+
+                when(
+                                clienteContextService
+                                                .getClienteDoUsuarioAutenticado())
+                                .thenReturn(cliente);
+
+                when(
+                                cliente.getId()).thenReturn(CLIENTE_ID);
+
+                when(
+                                budgetRepository.save(
+                                                any(Budget.class)))
+                                .thenAnswer(
+                                                invocation -> invocation.getArgument(0));
+
+                when(
+                                financialTransactionRepository
+                                                .findByClienteIdAndTipoAndDataBetweenOrderByDataAsc(
+                                                                CLIENTE_ID,
+                                                                "DESPESA",
+                                                                inicio,
+                                                                fim))
+                                .thenReturn(
+                                                List.of());
+
+                BudgetPipelineResponse resultado = budgetPipelineService
+                                .cadastrar(request);
+
+                assertEquals(
+                                "Orçamento Administrativo",
+                                resultado.nome());
+
+                assertEquals(
+                                "Despesas Administrativas",
+                                resultado.centroCusto());
+
+                assertEquals(
+                                new BigDecimal("50000.00"),
+                                resultado.valorPlanejado());
+
+                assertEquals(
+                                new BigDecimal("0.00"),
+                                resultado.percentualUtilizado());
+
+                assertEquals(
+                                new BigDecimal("50000.00"),
+                                resultado.valorDisponivel());
+
+                verify(
+                                budgetRepository).save(
+                                                any(Budget.class));
+        }
+
+        @Test
+        void deveRejeitarValorPlanejadoMenorOuIgualAZero() {
+
+                BudgetRequest request = new BudgetRequest(
+                                "Orçamento",
+                                null,
+                                null,
+                                BigDecimal.ZERO,
+                                LocalDate.of(
+                                                2026,
+                                                1,
+                                                1),
+                                LocalDate.of(
+                                                2026,
+                                                12,
+                                                31));
+
+                IllegalArgumentException exception = assertThrows(
+                                IllegalArgumentException.class,
+                                () -> budgetPipelineService
+                                                .cadastrar(request));
+
+                assertEquals(
+                                "O valor planejado deve ser maior que zero.",
+                                exception.getMessage());
+        }
+
+        @Test
+        void deveRejeitarNomeVazio() {
+
+                BudgetRequest request = new BudgetRequest(
+                                "   ",
+                                null,
+                                null,
+                                new BigDecimal("10000.00"),
+                                LocalDate.of(
+                                                2026,
+                                                1,
+                                                1),
+                                LocalDate.of(
+                                                2026,
+                                                12,
+                                                31));
+
+                IllegalArgumentException exception = assertThrows(
+                                IllegalArgumentException.class,
+                                () -> budgetPipelineService
+                                                .cadastrar(request));
+
+                assertEquals(
+                                "O nome do orçamento é obrigatório.",
+                                exception.getMessage());
+        }
+
+        @Test
+        void deveRejeitarPeriodoInvertido() {
+
+                BudgetRequest request = new BudgetRequest(
+                                "Orçamento",
+                                null,
+                                null,
+                                new BigDecimal("10000.00"),
+                                LocalDate.of(
+                                                2026,
+                                                12,
+                                                31),
+                                LocalDate.of(
+                                                2026,
+                                                1,
+                                                1));
+
+                IllegalArgumentException exception = assertThrows(
+                                IllegalArgumentException.class,
+                                () -> budgetPipelineService
+                                                .cadastrar(request));
+
+                assertEquals(
+                                "A data final não pode ser anterior à data inicial.",
+                                exception.getMessage());
+        }
+
+        @Test
+        void deveRetornarListaVaziaQuandoNaoExistiremOrcamentos() {
+
+                when(
+                                budgetRepository
+                                                .findAllByOrderByDataInicioDesc())
+                                .thenReturn(
+                                                List.of());
+
+                List<BudgetPipelineResponse> resultado = budgetPipelineService.listar();
+
+                assertEquals(
+                                0,
+                                resultado.size());
+        }
+
+        @Test
+        void deveListarSomenteOrcamentosDoClienteAutenticado() {
+
+                Cliente cliente = mock(Cliente.class);
+
+                when(
+                                clienteContextService.isAdmin()).thenReturn(false);
+
+                when(
+                                clienteContextService
+                                                .getClienteDoUsuarioAutenticado())
+                                .thenReturn(cliente);
+
+                when(
+                                cliente.getId()).thenReturn(CLIENTE_ID);
+
+                when(
+                                budgetRepository
+                                                .findAllByClienteIdOrderByDataInicioDesc(
+                                                                CLIENTE_ID))
+                                .thenReturn(
+                                                List.of());
+
+                List<BudgetPipelineResponse> resultado = budgetPipelineService.listar();
+
+                assertEquals(
+                                0,
+                                resultado.size());
+
+                verify(
+                                budgetRepository).findAllByClienteIdOrderByDataInicioDesc(
+                                                CLIENTE_ID);
+        }
+
+        @Test
+        void deveRejeitarCadastroDeOrcamentoPorAdminSemCliente() {
+
+                BudgetRequest request = new BudgetRequest(
+                                "Orçamento Administrativo",
+                                null,
+                                null,
+                                new BigDecimal("50000.00"),
+                                LocalDate.of(
+                                                2026,
+                                                1,
+                                                1),
+                                LocalDate.of(
+                                                2026,
+                                                12,
+                                                31));
+
+                when(
+                                clienteContextService.isAdmin()).thenReturn(true);
+
+                IllegalStateException exception = assertThrows(
+                                IllegalStateException.class,
+                                () -> budgetPipelineService
+                                                .cadastrar(request));
+
+                assertEquals(
+                                "O administrador deve selecionar um cliente para cadastrar um orçamento.",
+                                exception.getMessage());
+        }
+
+        @Test
+        void deveUsarClienteDoOrcamentoAoCalcularDespesasComoAdmin() {
+
+                Long clienteIdA = 10L;
+                Long clienteIdB = 20L;
+
+                LocalDate inicio = LocalDate.of(
+                                2026,
+                                1,
+                                1);
+
+                LocalDate fim = LocalDate.of(
+                                2026,
+                                12,
+                                31);
+
+                Budget budget = criarBudgetComCliente(
+                                "Orçamento Cliente A",
+                                null,
+                                null,
+                                new BigDecimal("100000.00"),
+                                inicio,
+                                fim,
+                                clienteIdA);
+
+                FinancialTransaction despesaClienteA = criarDespesa(
+                                new BigDecimal("25000.00"),
+                                "Categoria A",
+                                "Centro A");
+
+                when(
+                                clienteContextService.isAdmin()).thenReturn(true);
+
+                when(
+                                budgetRepository
+                                                .findAllByOrderByDataInicioDesc())
+                                .thenReturn(
+                                                List.of(budget));
+
+                when(
+                                financialTransactionRepository
+                                                .findByClienteIdAndTipoAndDataBetweenOrderByDataAsc(
+                                                                clienteIdA,
+                                                                "DESPESA",
+                                                                inicio,
+                                                                fim))
+                                .thenReturn(
+                                                List.of(despesaClienteA));
+
+                BudgetPipelineResponse resultado = budgetPipelineService
+                                .listar()
+                                .get(0);
+
+                assertEquals(
+                                new BigDecimal("25000.00"),
+                                resultado.valorUtilizado());
+
+                assertEquals(
+                                new BigDecimal("75000.00"),
+                                resultado.valorDisponivel());
+
+                verify(
+                                financialTransactionRepository).findByClienteIdAndTipoAndDataBetweenOrderByDataAsc(
+                                                clienteIdA,
+                                                "DESPESA",
+                                                inicio,
+                                                fim);
+
+                /*
+                 * O ID 20 representa outro cliente.
+                 *
+                 * O cálculo acima só pode considerar o cliente
+                 * associado ao orçamento, que neste teste é o ID 10.
+                 */
+                assertEquals(
+                                20L,
+                                clienteIdB);
+        }
+
+        @Test
+        void deveRejeitarOrcamentoSemClienteAssociado() {
+
+                LocalDate inicio = LocalDate.of(
+                                2026,
+                                1,
+                                1);
+
+                LocalDate fim = LocalDate.of(
+                                2026,
+                                12,
+                                31);
+
+                Budget budget = new Budget(
+                                "Orçamento sem cliente",
+                                null,
+                                null,
+                                new BigDecimal("100000.00"),
+                                inicio,
+                                fim);
+
+                when(
+                                budgetRepository
+                                                .findAllByOrderByDataInicioDesc())
+                                .thenReturn(
+                                                List.of(budget));
+
+                IllegalStateException exception = assertThrows(
+                                IllegalStateException.class,
+                                () -> budgetPipelineService.listar());
+
+                assertEquals(
+                                "O orçamento não possui um cliente associado.",
+                                exception.getMessage());
+        }
+
+        private Budget criarBudgetComCliente(
+                        String nome,
+                        String centroCusto,
+                        String categoria,
+                        BigDecimal valorPlanejado,
+                        LocalDate dataInicio,
+                        LocalDate dataFim,
+                        Long clienteId) {
+
+                Budget budget = new Budget(
+                                nome,
+                                centroCusto,
+                                categoria,
+                                valorPlanejado,
+                                dataInicio,
+                                dataFim);
+
+                Cliente cliente = mock(Cliente.class);
+
+                when(
+                                cliente.getId()).thenReturn(clienteId);
+
+                budget.setCliente(cliente);
+
+                return budget;
+        }
+
+        private FinancialTransaction criarDespesa(
+                        BigDecimal valor,
+                        String categoria,
+                        String centroCusto) {
+
+                return new FinancialTransaction(
+                                LocalDate.of(
+                                                2026,
+                                                6,
+                                                15),
+                                "Despesa de teste",
+                                "DESPESA",
+                                valor,
+                                categoria,
+                                centroCusto,
+                                "TESTE",
+                                null);
+        }
+}

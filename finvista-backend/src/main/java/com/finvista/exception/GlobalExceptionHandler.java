@@ -18,15 +18,38 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
 
-        HttpStatus status =
-                HttpStatus.BAD_REQUEST;
+        return criarResposta(
+                HttpStatus.BAD_REQUEST,
+                exception.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiErrorResponse> tratarEstadoInvalido(
+            IllegalStateException exception,
+            HttpServletRequest request
+    ) {
+
+        return criarResposta(
+                HttpStatus.FORBIDDEN,
+                exception.getMessage(),
+                request
+        );
+    }
+
+    private ResponseEntity<ApiErrorResponse> criarResposta(
+            HttpStatus status,
+            String mensagem,
+            HttpServletRequest request
+    ) {
 
         ApiErrorResponse resposta =
                 new ApiErrorResponse(
                         LocalDateTime.now(),
                         status.value(),
                         status.getReasonPhrase(),
-                        exception.getMessage(),
+                        mensagem,
                         request.getRequestURI()
                 );
 
