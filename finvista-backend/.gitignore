@@ -29,3 +29,8 @@ logs/
 # Sistema operacional
 .DS_Store
 Thumbs.db
+# Arquivos temporarios e backups
+*.bak
+*_HEAD.txt
+*-diff.txt
+mockito-erro.txt
