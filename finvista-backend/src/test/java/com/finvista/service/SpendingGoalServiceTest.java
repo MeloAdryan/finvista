@@ -484,6 +484,176 @@ class SpendingGoalServiceTest {
         );
     }
 
+    @Test
+    void deveCalcularVisaoGeralSemFiltros() {
+
+        SpendingGoal meta = criarMetaMensal(
+                new BigDecimal("100000.00"),
+                80
+        );
+
+        configurarBuscaDaMetaComFiltros(meta);
+
+        SpendingGoalResponse resultado
+                = spendingGoalService.buscarSituacao(
+                        1L,
+                        null,
+                        null
+                );
+
+        assertEquals(
+                new BigDecimal("17000.00"),
+                resultado.gastoAtual()
+        );
+
+        assertEquals(
+                new BigDecimal("17.00"),
+                resultado.percentualUtilizado()
+        );
+
+        assertEquals(
+                new BigDecimal("83000.00"),
+                resultado.saldoMeta()
+        );
+
+        assertEquals(
+                "NORMAL",
+                resultado.status()
+        );
+
+        assertEquals(null, resultado.categoria());
+        assertEquals(null, resultado.centroCusto());
+    }
+
+    @Test
+    void deveFiltrarGastoPorCentroCusto() {
+
+        SpendingGoal meta = criarMetaMensal(
+                new BigDecimal("100000.00"),
+                80
+        );
+
+        configurarBuscaDaMetaComFiltros(meta);
+
+        SpendingGoalResponse resultado
+                = spendingGoalService.buscarSituacao(
+                        1L,
+                        "Custo Operacional",
+                        null
+                );
+
+        assertEquals(
+                new BigDecimal("15000.00"),
+                resultado.gastoAtual()
+        );
+
+        assertEquals(
+                new BigDecimal("15.00"),
+                resultado.percentualUtilizado()
+        );
+
+        assertEquals(
+                new BigDecimal("85000.00"),
+                resultado.saldoMeta()
+        );
+
+        assertEquals(
+                "Custo Operacional",
+                resultado.centroCusto()
+        );
+
+        assertEquals(
+                null,
+                resultado.categoria()
+        );
+    }
+
+    @Test
+    void deveFiltrarGastoSomentePorCategoria() {
+
+        SpendingGoal meta = criarMetaMensal(
+                new BigDecimal("100000.00"),
+                80
+        );
+
+        configurarBuscaDaMetaComFiltros(meta);
+
+        SpendingGoalResponse resultado
+                = spendingGoalService.buscarSituacao(
+                        1L,
+                        null,
+                        "Exames Médicos"
+                );
+
+        assertEquals(
+                new BigDecimal("12000.00"),
+                resultado.gastoAtual()
+        );
+
+        assertEquals(
+                new BigDecimal("12.00"),
+                resultado.percentualUtilizado()
+        );
+
+        assertEquals(
+                new BigDecimal("88000.00"),
+                resultado.saldoMeta()
+        );
+
+        assertEquals(
+                "Exames Médicos",
+                resultado.categoria()
+        );
+
+        assertEquals(
+                null,
+                resultado.centroCusto()
+        );
+    }
+
+    @Test
+    void deveCombinarCentroCustoECategoria() {
+
+        SpendingGoal meta = criarMetaMensal(
+                new BigDecimal("100000.00"),
+                80
+        );
+
+        configurarBuscaDaMetaComFiltros(meta);
+
+        SpendingGoalResponse resultado
+                = spendingGoalService.buscarSituacao(
+                        1L,
+                        "Custo Operacional",
+                        "Exames Médicos"
+                );
+
+        assertEquals(
+                new BigDecimal("10000.00"),
+                resultado.gastoAtual()
+        );
+
+        assertEquals(
+                new BigDecimal("10.00"),
+                resultado.percentualUtilizado()
+        );
+
+        assertEquals(
+                new BigDecimal("90000.00"),
+                resultado.saldoMeta()
+        );
+
+        assertEquals(
+                "Custo Operacional",
+                resultado.centroCusto()
+        );
+
+        assertEquals(
+                "Exames Médicos",
+                resultado.categoria()
+        );
+    }
+
     private SpendingGoal criarMetaMensal(
             BigDecimal valorLimite,
             Integer percentualAlerta
@@ -546,4 +716,119 @@ class SpendingGoalServiceTest {
 
         return despesa;
     }
-}
+
+    private void configurarBuscaDaMetaComFiltros(
+            SpendingGoal meta
+    ) {
+
+        meta.setCliente(cliente);
+
+        when(
+                spendingGoalRepository
+                        .findByIdAndClienteId(
+                                1L,
+                                CLIENTE_ID
+                        )
+        ).thenReturn(
+                Optional.of(meta)
+        );
+
+        FinancialTransaction examesOperacional
+                = criarDespesaComClassificacao(
+                        new BigDecimal("10000.00"),
+                        "Exames Médicos",
+                        "Custo Operacional"
+                );
+
+        FinancialTransaction combustivelOperacional
+                = criarDespesaComClassificacao(
+                        new BigDecimal("5000.00"),
+                        "Combustível",
+                        "Custo Operacional"
+                );
+
+        FinancialTransaction examesAdministrativo
+                = criarDespesaComClassificacao(
+                        new BigDecimal("2000.00"),
+                        "Exames Médicos",
+                        "Administrativo"
+                );
+
+        when(
+                financialTransactionRepository
+                        .findByClienteIdAndTipoAndDataBetweenOrderByDataAsc(
+                                CLIENTE_ID,
+                                "DESPESA",
+                                meta.getDataInicio(),
+                                meta.getDataFim()
+                        )
+        ).thenReturn(
+                List.of(
+                        examesOperacional,
+                        combustivelOperacional,
+                        examesAdministrativo
+                )
+        );
+    }
+
+    private FinancialTransaction criarDespesaComClassificacao(
+            BigDecimal valor,
+            String categoria,
+            String centroCusto
+    ) {
+
+        FinancialTransaction despesa
+                = new FinancialTransaction();
+
+        despesa.setValor(valor);
+        despesa.setCategoria(categoria);
+        despesa.setCentroCusto(centroCusto);
+
+        return despesa;
+    }}
+
+    
+            
+                    
+                
+                        
+                                
+                                
+                        
+        
+                
+                
+                 
+                        
+                        
+                        
+                        
+                 
+                        
+                        
+                        
+                        
+                 
+                        
+                        
+                        
+                        
+                
+                        
+                                
+                                
+                                
+                                
+                        
+        
+                
+                        
+                        
+                        
+                
+                
+            
+            
+            
+            
+                                                     

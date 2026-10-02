@@ -23,6 +23,8 @@ class DashboardServiceTest {
 
     private ClienteContextService clienteContextService;
 
+    private FinancialReferenceService financialReferenceService;
+
     private DashboardService dashboardService;
 
     @BeforeEach
@@ -43,27 +45,39 @@ class DashboardServiceTest {
         when(
                 clienteContextService.getClienteAtualId()
         ).thenReturn(CLIENTE_ID);
+        
+        financialReferenceService = Mockito.mock(
+        FinancialReferenceService.class
+);
 
-        FinancialTransactionAggregationService
-                transactionAggregationService =
-                new FinancialTransactionAggregationService(
+when(
+        financialReferenceService.obterMesReferencia()
+).thenReturn(
+        YearMonth.of(2026, 9)
+);
+        
+
+        FinancialTransactionAggregationService transactionAggregationService
+                = new FinancialTransactionAggregationService(
                         financialTransactionRepository,
                         clienteContextService
                 );
 
-        FinancialCalculationService calculationService =
-                new FinancialCalculationService();
+        FinancialCalculationService calculationService
+                = new FinancialCalculationService();
 
         dashboardService = new DashboardService(
-                transactionAggregationService,
-                calculationService
-        );
+        transactionAggregationService,
+        calculationService,
+        financialReferenceService
+);
     }
 
     @Test
     void deveMontarDashboardComComparacaoAoMesAnterior() {
 
-        YearMonth mesAtual = YearMonth.now();
+        YearMonth mesAtual
+                = YearMonth.of(2026, 9);
 
         YearMonth mesAnterior = mesAtual.minusMonths(1);
 
@@ -103,8 +117,8 @@ class DashboardServiceTest {
                         )
         ).thenReturn(lancamentos);
 
-        DashboardResponse resposta =
-                dashboardService.obterDashboard();
+        DashboardResponse resposta
+                = dashboardService.obterDashboard();
 
         assertValor(
                 "150000.00",
@@ -165,7 +179,9 @@ class DashboardServiceTest {
     @Test
     void deveRetornarDashboardZeradoQuandoNaoExistiremLancamentos() {
 
-        YearMonth mesAtual = YearMonth.now();
+        YearMonth mesAtual
+                = YearMonth.of(2026, 9);
+        
 
         YearMonth mesAnterior = mesAtual.minusMonths(1);
 
@@ -182,8 +198,8 @@ class DashboardServiceTest {
                         )
         ).thenReturn(List.of());
 
-        DashboardResponse resposta =
-                dashboardService.obterDashboard();
+        DashboardResponse resposta
+                = dashboardService.obterDashboard();
 
         assertValor(
                 "0",
@@ -244,7 +260,9 @@ class DashboardServiceTest {
     @Test
     void deveCalcularVariacaoZeroQuandoMesAnteriorNaoPossuirValores() {
 
-        YearMonth mesAtual = YearMonth.now();
+        YearMonth mesAtual
+                = YearMonth.of(2026, 9);
+        
 
         YearMonth mesAnterior = mesAtual.minusMonths(1);
 
@@ -274,8 +292,8 @@ class DashboardServiceTest {
                         )
         ).thenReturn(lancamentos);
 
-        DashboardResponse resposta =
-                dashboardService.obterDashboard();
+        DashboardResponse resposta
+                = dashboardService.obterDashboard();
 
         assertValor(
                 "50000.00",
@@ -334,8 +352,8 @@ class DashboardServiceTest {
             String valor
     ) {
 
-        FinancialTransaction lancamento =
-                new FinancialTransaction();
+        FinancialTransaction lancamento
+                = new FinancialTransaction();
 
         lancamento.setData(data);
 

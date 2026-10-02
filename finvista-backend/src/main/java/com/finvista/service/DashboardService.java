@@ -23,22 +23,33 @@ public class DashboardService {
 
     private final FinancialCalculationService
             calculationService;
+    private final FinancialReferenceService
+        financialReferenceService;
 
-    public DashboardService(
-            FinancialTransactionAggregationService transactionAggregationService,
-            FinancialCalculationService calculationService
-    ) {
-        this.transactionAggregationService =
-                transactionAggregationService;
+   public DashboardService(
+        FinancialTransactionAggregationService
+                transactionAggregationService,
+        FinancialCalculationService
+                calculationService,
+        FinancialReferenceService
+                financialReferenceService
+) {
+    this.transactionAggregationService =
+            transactionAggregationService;
 
-        this.calculationService =
-                calculationService;
-    }
+    this.calculationService =
+            calculationService;
+
+    this.financialReferenceService =
+            financialReferenceService;
+}
 
     public DashboardResponse obterDashboard() {
 
         YearMonth mesAtual =
-                YearMonth.now();
+        financialReferenceService
+                .obterMesReferencia();
+                
 
         YearMonth mesAnterior =
                 mesAtual.minusMonths(1);

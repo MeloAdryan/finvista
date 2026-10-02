@@ -1,13 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
-
 import type { FormEvent } from "react";
 
-import { criarMeta, listarMetas } from "../services/spendingGoalService";
-
-import type {
-  CreateSpendingGoalRequest,
-  SpendingGoal,
+import {
+  criarMeta,
+  listarMetas,
+  type CreateSpendingGoalRequest,
+  type SpendingGoal,
 } from "../services/spendingGoalService";
+
+import {
+  getCostCenters,
+  type CostCenterData,
+} from "../services/costCenterService";
+
+import {
+  getCategoriesByCostCenter,
+  getExpenseDistribution,
+  type ExpenseDistributionData,
+} from "../services/expenseDistributionService";
+
 import { obterUsuarioAtual, type AuthUser } from "../services/authService";
 
 import "../styles/spending-goals.css";
@@ -30,11 +41,32 @@ const classeStatus = (status: string) => status.toLowerCase();
 
 function SpendingGoals() {
   const [metas, setMetas] = useState<SpendingGoal[]>([]);
+
   const [usuario, setUsuario] = useState<AuthUser | null>(null);
 
+  const [centrosCusto, setCentrosCusto] = useState<CostCenterData[]>([]);
+
+  const [distribuicaoDespesas, setDistribuicaoDespesas] = useState<
+    ExpenseDistributionData[]
+  >([]);
+
+  const [categoriasFormulario, setCategoriasFormulario] = useState<string[]>(
+    [],
+  );
+
+  const [carregandoCategoriasFormulario, setCarregandoCategoriasFormulario] =
+    useState(false);
+
+  const [filtroCentroCusto, setFiltroCentroCusto] = useState("");
+
+  const [filtroCategoria, setFiltroCategoria] = useState("");
+
   const [carregando, setCarregando] = useState(true);
+
   const [salvando, setSalvando] = useState(false);
+
   const [erro, setErro] = useState("");
+
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
   const [formulario, setFormulario] = useState<CreateSpendingGoalRequest>({
@@ -43,14 +75,23 @@ function SpendingGoals() {
     dataFim: "",
     valorLimite: 0,
     percentualAlerta: 80,
+    categoria: null,
+    centroCusto: null,
   });
 
-  const carregarMetas = async () => {
+  const carregarMetas = async (
+    centroCusto = filtroCentroCusto,
+    categoria = filtroCategoria,
+  ) => {
     try {
       setCarregando(true);
       setErro("");
 
-      const dados = await listarMetas();
+      const dados = await listarMetas({
+        centroCusto: centroCusto || null,
+        categoria: categoria || null,
+      });
+
       setMetas(dados);
     } catch (error) {
       setErro(
@@ -62,7 +103,6 @@ function SpendingGoals() {
       setCarregando(false);
     }
   };
-
   useEffect(() => {
     let ativo = true;
 
@@ -71,14 +111,56 @@ function SpendingGoals() {
         setCarregando(true);
         setErro("");
 
-        const [dadosMetas, usuarioAtual] = await Promise.all([
+        const resultados = await Promise.allSettled([
           listarMetas(),
           obterUsuarioAtual(),
+          getCostCenters(),
+          getExpenseDistribution(),
         ]);
 
-        if (ativo) {
-          setMetas(dadosMetas);
-          setUsuario(usuarioAtual);
+        if (!ativo) {
+          return;
+        }
+
+        const [
+          resultadoMetas,
+          resultadoUsuario,
+          resultadoCentros,
+          resultadoDespesas,
+        ] = resultados;
+
+        if (resultadoMetas.status === "fulfilled") {
+          setMetas(resultadoMetas.value);
+        } else {
+          throw resultadoMetas.reason;
+        }
+
+        if (resultadoUsuario.status === "fulfilled") {
+          setUsuario(resultadoUsuario.value);
+        } else {
+          throw resultadoUsuario.reason;
+        }
+
+        if (resultadoCentros.status === "fulfilled") {
+          setCentrosCusto(resultadoCentros.value);
+        } else {
+          console.error(
+            "Não foi possível carregar centros de custo:",
+            resultadoCentros.reason,
+          );
+
+          setCentrosCusto([]);
+        }
+
+        if (resultadoDespesas.status === "fulfilled") {
+          setDistribuicaoDespesas(resultadoDespesas.value);
+        } else {
+          console.error(
+            "Não foi possível carregar categorias:",
+            resultadoDespesas.reason,
+          );
+
+          setDistribuicaoDespesas([]);
         }
       } catch (error) {
         if (ativo) {
@@ -104,23 +186,96 @@ function SpendingGoals() {
 
   const usuarioAdmin = usuario?.perfil === "ADMIN";
 
+  /*
+   * =========================================================
+   * OPÇÕES DOS FILTROS
+   * =========================================================
+   */
+
+  const opcoesCentroCusto = useMemo(() => {
+    const nomes = new Set<string>();
+
+    centrosCusto.forEach((item) => {
+      const nome = item.nome?.trim();
+
+      if (nome) {
+        nomes.add(nome);
+      }
+    });
+
+    metas.forEach((meta) => {
+      const nome = meta.centroCusto?.trim();
+
+      if (nome) {
+        nomes.add(nome);
+      }
+    });
+
+    return Array.from(nomes).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [centrosCusto, metas]);
+
+  const opcoesCategoria = useMemo(() => {
+    const categorias = new Set<string>();
+
+    distribuicaoDespesas.forEach((item) => {
+      const categoria = item.categoria?.trim();
+
+      if (categoria) {
+        categorias.add(categoria);
+      }
+    });
+
+    metas.forEach((meta) => {
+      const categoria = meta.categoria?.trim();
+
+      if (categoria) {
+        categorias.add(categoria);
+      }
+    });
+
+    return Array.from(categorias).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [distribuicaoDespesas, metas]);
+
+  /*
+   * =========================================================
+   * FILTRAGEM DAS METAS
+   * =========================================================
+   */
+
+  const metasFiltradas = metas;
+
+  const filtrosAtivos = Boolean(filtroCentroCusto) || Boolean(filtroCategoria);
+
+  const limparFiltros = () => {
+    setFiltroCentroCusto("");
+    setFiltroCategoria("");
+
+    void carregarMetas("", "");
+  };
+
+  /*
+   * =========================================================
+   * RESUMO
+   * =========================================================
+   */
+
   const resumo = useMemo(() => {
-    const limiteTotal = metas.reduce(
+    const limiteTotal = metasFiltradas.reduce(
       (total, meta) => total + Number(meta.valorLimite),
       0,
     );
 
-    const gastoTotal = metas.reduce(
+    const gastoTotal = metasFiltradas.reduce(
       (total, meta) => total + Number(meta.gastoAtual),
       0,
     );
 
-    const saldoTotal = metas.reduce(
+    const saldoTotal = metasFiltradas.reduce(
       (total, meta) => total + Number(meta.saldoMeta),
       0,
     );
 
-    const metasAtencao = metas.filter(
+    const metasAtencao = metasFiltradas.filter(
       (meta) => meta.status === "ALERTA" || meta.status === "EXCEDIDA",
     ).length;
 
@@ -130,16 +285,43 @@ function SpendingGoals() {
       saldoTotal,
       metasAtencao,
     };
-  }, [metas]);
+  }, [metasFiltradas]);
 
   const atualizarFormulario = (
     campo: keyof CreateSpendingGoalRequest,
-    valor: string | number,
+    valor: string | number | null,
   ) => {
     setFormulario((atual) => ({
       ...atual,
       [campo]: valor,
     }));
+  };
+
+  const alterarCentroCustoFormulario = async (centroCusto: string) => {
+    atualizarFormulario("centroCusto", centroCusto || null);
+    atualizarFormulario("categoria", null);
+
+    if (!centroCusto) {
+      setCategoriasFormulario([]);
+      return;
+    }
+
+    try {
+      setCarregandoCategoriasFormulario(true);
+
+      const categorias = await getCategoriesByCostCenter(centroCusto);
+
+      setCategoriasFormulario(categorias);
+    } catch (error) {
+      console.error(
+        "Não foi possível carregar categorias do centro de custo:",
+        error,
+      );
+
+      setCategoriasFormulario([]);
+    } finally {
+      setCarregandoCategoriasFormulario(false);
+    }
   };
 
   const salvarMeta = async (event: FormEvent) => {
@@ -151,16 +333,19 @@ function SpendingGoals() {
       formulario.valorLimite <= 0
     ) {
       setErro("Preencha o período e informe um valor limite maior que zero.");
+
       return;
     }
 
     if (formulario.percentualAlerta <= 0 || formulario.percentualAlerta > 100) {
       setErro("O percentual de alerta deve estar entre 1% e 100%.");
+
       return;
     }
 
     if (formulario.dataFim < formulario.dataInicio) {
       setErro("A data final não pode ser anterior à data inicial.");
+
       return;
     }
 
@@ -176,6 +361,8 @@ function SpendingGoals() {
         dataFim: "",
         valorLimite: 0,
         percentualAlerta: 80,
+        categoria: null,
+        centroCusto: null,
       });
 
       setMostrarFormulario(false);
@@ -225,6 +412,7 @@ function SpendingGoals() {
           <div className="metas-formulario-header">
             <div>
               <span>CONFIGURAÇÃO</span>
+
               <h3>Nova meta de gastos</h3>
             </div>
 
@@ -248,6 +436,7 @@ function SpendingGoals() {
                 }
               >
                 <option value="MENSAL">Mensal</option>
+
                 <option value="SEMESTRAL">Semestral</option>
               </select>
             </label>
@@ -303,10 +492,59 @@ function SpendingGoals() {
                     )
                   }
                 />
+
                 <span>%</span>
               </div>
             </label>
           </div>
+          <label>
+            Centro de custo
+            <select
+              value={formulario.centroCusto ?? ""}
+              onChange={(event) => {
+                void alterarCentroCustoFormulario(event.target.value);
+              }}
+            >
+              <option value="">Todos os centros de custo</option>
+
+              {opcoesCentroCusto.map((centro) => (
+                <option key={centro} value={centro}>
+                  {centro}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Categoria
+            <select
+              value={formulario.categoria ?? ""}
+              disabled={
+                !formulario.centroCusto || carregandoCategoriasFormulario
+              }
+              onChange={(event) => {
+                const novaCategoria = event.target.value;
+
+                setFiltroCategoria(novaCategoria);
+
+                void carregarMetas(filtroCentroCusto, novaCategoria);
+              }}
+            >
+              <option value="">
+                {carregandoCategoriasFormulario
+                  ? "Carregando categorias..."
+                  : formulario.centroCusto
+                    ? "Todas as categorias"
+                    : "Selecione um centro de custo"}
+              </option>
+
+              {categoriasFormulario.map((categoria) => (
+                <option key={categoria} value={categoria}>
+                  {categoria}
+                </option>
+              ))}
+            </select>
+          </label>
 
           <div className="metas-formulario-footer">
             <span>
@@ -335,28 +573,121 @@ function SpendingGoals() {
         </form>
       )}
 
+      <div className="metas-filtros-card">
+        <div className="metas-filtros-header">
+          <div>
+            <span className="metas-filtros-eyebrow">VISUALIZAÇÃO</span>
+
+            <h3>Filtrar metas</h3>
+
+            <p>Analise as metas por centro de custo ou categoria.</p>
+          </div>
+
+          {filtrosAtivos && (
+            <button
+              type="button"
+              className="metas-limpar-filtros"
+              onClick={limparFiltros}
+            >
+              Limpar filtros
+            </button>
+          )}
+        </div>
+
+        <div className="metas-filtros-grid">
+          <label>
+            <span>Centro de custo</span>
+
+            <select
+              value={filtroCentroCusto}
+              onChange={(event) => {
+                const novoCentroCusto = event.target.value;
+
+                setFiltroCentroCusto(novoCentroCusto);
+                setFiltroCategoria("");
+
+                void carregarMetas(novoCentroCusto, "");
+              }}
+            >
+              <option value="">Todos os centros de custo</option>
+
+              {opcoesCentroCusto.map((centro) => (
+                <option key={centro} value={centro}>
+                  {centro}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span>Categoria</span>
+
+            <select
+              value={filtroCategoria}
+              onChange={(event) => {
+                const novaCategoria = event.target.value;
+
+                setFiltroCategoria(novaCategoria);
+
+                void carregarMetas(filtroCentroCusto, novaCategoria);
+              }}
+            >
+              <option value="">Todas as categorias</option>
+
+              {opcoesCategoria.map((categoria) => (
+                <option key={categoria} value={categoria}>
+                  {categoria}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="metas-filtro-resultado">
+            <span>Resultados</span>
+
+            <strong>{metasFiltradas.length}</strong>
+
+            <small>
+              de {metas.length} {metas.length === 1 ? "meta" : "metas"}
+            </small>
+          </div>
+        </div>
+      </div>
+
       <div className="metas-resumo">
         <article>
           <span>Limite planejado</span>
+
           <strong>{formatarMoeda(resumo.limiteTotal)}</strong>
-          <small>Soma das metas cadastradas</small>
+
+          <small>
+            {filtrosAtivos
+              ? "Total das metas filtradas"
+              : "Soma das metas cadastradas"}
+          </small>
         </article>
 
         <article>
           <span>Gastos acumulados</span>
+
           <strong>{formatarMoeda(resumo.gastoTotal)}</strong>
+
           <small>Valor consumido nas metas</small>
         </article>
 
         <article>
           <span>Saldo disponível</span>
+
           <strong>{formatarMoeda(resumo.saldoTotal)}</strong>
+
           <small>Margem restante planejada</small>
         </article>
 
         <article>
           <span>Requer atenção</span>
+
           <strong>{resumo.metasAtencao}</strong>
+
           <small>Metas em alerta ou excedidas</small>
         </article>
       </div>
@@ -365,10 +696,11 @@ function SpendingGoals() {
         <div className="metas-section-heading">
           <div>
             <span>ACOMPANHAMENTO</span>
+
             <h3>Metas cadastradas</h3>
           </div>
 
-          <strong>{metas.length}</strong>
+          <strong>{metasFiltradas.length}</strong>
         </div>
 
         {carregando ? (
@@ -394,9 +726,25 @@ function SpendingGoals() {
               </button>
             )}
           </div>
+        ) : metasFiltradas.length === 0 ? (
+          <div className="metas-vazio">
+            <div className="metas-vazio-icon">◌</div>
+
+            <h3>Nenhuma meta encontrada</h3>
+
+            <p>Não existem metas que correspondam aos filtros selecionados.</p>
+
+            <button
+              type="button"
+              className="metas-empty-button"
+              onClick={limparFiltros}
+            >
+              Limpar filtros
+            </button>
+          </div>
         ) : (
           <div className="metas-lista">
-            {metas.map((meta) => {
+            {metasFiltradas.map((meta) => {
               const percentual = Number(meta.percentualUtilizado) || 0;
 
               const larguraBarra = Math.min(Math.max(percentual, 0), 100);
@@ -425,19 +773,42 @@ function SpendingGoals() {
                     </span>
                   </div>
 
+                  {(meta.categoria || meta.centroCusto) && (
+                    <div className="meta-contexto">
+                      {meta.centroCusto && (
+                        <span>
+                          <small>Centro de custo</small>
+
+                          <strong>{meta.centroCusto}</strong>
+                        </span>
+                      )}
+
+                      {meta.categoria && (
+                        <span>
+                          <small>Categoria</small>
+
+                          <strong>{meta.categoria}</strong>
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   <div className="meta-valores">
                     <div>
                       <span>Limite</span>
+
                       <strong>{formatarMoeda(Number(meta.valorLimite))}</strong>
                     </div>
 
                     <div>
                       <span>Utilizado</span>
+
                       <strong>{formatarMoeda(Number(meta.gastoAtual))}</strong>
                     </div>
 
                     <div>
                       <span>Saldo</span>
+
                       <strong>{formatarMoeda(Number(meta.saldoMeta))}</strong>
                     </div>
                   </div>

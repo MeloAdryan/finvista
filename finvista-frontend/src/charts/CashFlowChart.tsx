@@ -1,31 +1,38 @@
-import { useState } from "react";
-
 import {
   CartesianGrid,
   Legend,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 
-import type { CashFlowData } from "../services/cashFlowService";
+import type {
+  CashFlowData,
+  PeriodoFluxoCaixa,
+} from "../services/cashFlowService";
 
 interface CashFlowChartProps {
   dados: CashFlowData[];
+  periodo: PeriodoFluxoCaixa;
+  carregando: boolean;
+  onPeriodoChange: (periodo: PeriodoFluxoCaixa) => void;
 }
 
-type PeriodoFiltro = 6 | 12 | "todos";
-
-function CashFlowChart({ dados }: CashFlowChartProps) {
-  const [periodo, setPeriodo] = useState<PeriodoFiltro>(6);
-
+function CashFlowChart({
+  dados,
+  periodo,
+  carregando,
+  onPeriodoChange,
+}: CashFlowChartProps) {
   const formatarCompacto = (valor: number) => {
     return new Intl.NumberFormat("pt-BR", {
       notation: "compact",
       compactDisplay: "short",
+      maximumFractionDigits: 1,
     }).format(valor);
   };
 
@@ -36,41 +43,53 @@ function CashFlowChart({ dados }: CashFlowChartProps) {
     });
   };
 
-  const dadosGrafico =
-    periodo === "todos"
-      ? dados
-      : dados.slice(-periodo);
+  const primeiroMes = dados[0];
+  const ultimoMes = dados[dados.length - 1];
 
-  const primeiroMes = dadosGrafico[0];
-  const ultimoMes = dadosGrafico[dadosGrafico.length - 1];
-
-  const totalEntradas = dadosGrafico.reduce(
+  const totalEntradas = dados.reduce(
     (total, item) => total + Number(item.entradas),
     0,
   );
 
-  const totalSaidas = dadosGrafico.reduce(
+  const totalSaidas = dados.reduce(
     (total, item) => total + Number(item.saidas),
     0,
   );
 
-  /*
-   * O saldoFinal vindo da API é acumulado desde o início
-   * de todo o histórico.
-   *
-   * Para o card do período, calculamos a variação financeira
-   * apenas dentro do intervalo atualmente selecionado.
-   */
   const saldoPeriodo = totalEntradas - totalSaidas;
 
-  const saldoAcumuladoFinal = ultimoMes
-    ? Number(ultimoMes.saldoFinal)
-    : 0;
+  const saldoAcumuladoFinal = ultimoMes ? Number(ultimoMes.saldoFinal) : 0;
 
   const descricaoPeriodo =
-    periodo === "todos"
-      ? "Todo o período"
-      : `${periodo} meses`;
+    periodo === "todos" ? "Todo o período" : `${periodo} meses`;
+
+  const valoresGrafico = dados.flatMap((item) => [
+    Number(item.entradas),
+    Number(item.saidas),
+    Number(item.saldoFinal),
+  ]);
+
+  const menorValor =
+    valoresGrafico.length > 0 ? Math.min(...valoresGrafico, 0) : 0;
+
+  const maiorValor =
+    valoresGrafico.length > 0 ? Math.max(...valoresGrafico, 0) : 0;
+
+  const amplitude = Math.max(Math.abs(menorValor), Math.abs(maiorValor), 1);
+
+  const margemDominio = amplitude * 0.1;
+
+  const dominioMinimo = menorValor < 0 ? menorValor - margemDominio : 0;
+
+  const dominioMaximo =
+    maiorValor > 0 ? maiorValor + margemDominio : margemDominio;
+
+  const classeSaldoFinal =
+    saldoAcumuladoFinal > 0
+      ? "cashflow-footer-value-positive"
+      : saldoAcumuladoFinal < 0
+        ? "cashflow-footer-value-negative"
+        : "cashflow-footer-value-neutral";
 
   return (
     <section className="cashflow-card">
@@ -80,14 +99,17 @@ function CashFlowChart({ dados }: CashFlowChartProps) {
 
           <h2>Fluxo de Caixa</h2>
 
-          <p>
-            Acompanhe entradas, saídas e a evolução acumulada do saldo.
-          </p>
+          <p>Acompanhe entradas, saídas e a evolução acumulada do saldo.</p>
         </div>
 
-        <div className="cashflow-status">
+        <div
+          className={`cashflow-status ${
+            carregando ? "cashflow-status-loading" : ""
+          }`}
+        >
           <span className="cashflow-status-dot" />
-          Atualizado
+
+          {carregando ? "Atualizando..." : "Atualizado"}
         </div>
       </div>
 
@@ -95,7 +117,7 @@ function CashFlowChart({ dados }: CashFlowChartProps) {
         <div className="cashflow-summary-item">
           <span>Entradas no período</span>
 
-          <strong>{formatarMoeda(totalEntradas)}</strong>
+          <strong>{carregando ? "..." : formatarMoeda(totalEntradas)}</strong>
 
           <small className="cashflow-positive">
             Receita no período selecionado
@@ -105,7 +127,7 @@ function CashFlowChart({ dados }: CashFlowChartProps) {
         <div className="cashflow-summary-item">
           <span>Saídas no período</span>
 
-          <strong>{formatarMoeda(totalSaidas)}</strong>
+          <strong>{carregando ? "..." : formatarMoeda(totalSaidas)}</strong>
 
           <small className="cashflow-negative">
             Despesas no período selecionado
@@ -115,7 +137,7 @@ function CashFlowChart({ dados }: CashFlowChartProps) {
         <div className="cashflow-summary-item cashflow-balance">
           <span>Resultado do período</span>
 
-          <strong>{formatarMoeda(saldoPeriodo)}</strong>
+          <strong>{carregando ? "..." : formatarMoeda(saldoPeriodo)}</strong>
 
           <small>
             {primeiroMes?.mes ?? "—"} até {ultimoMes?.mes ?? "—"}
@@ -124,173 +146,206 @@ function CashFlowChart({ dados }: CashFlowChartProps) {
       </div>
 
       <div className="cashflow-chart-header">
-        <div>
+        <div className="cashflow-chart-title">
           <h3>Evolução financeira</h3>
 
           <p>Comparativo mensal do período</p>
         </div>
 
-        <div className="cashflow-period-filter">
+        <div
+          className="cashflow-period-filter"
+          role="group"
+          aria-label="Período do fluxo de caixa"
+        >
           <button
             type="button"
             className={periodo === 6 ? "active" : ""}
-            onClick={() => setPeriodo(6)}
+            disabled={carregando}
+            aria-pressed={periodo === 6}
+            onClick={() => onPeriodoChange(6)}
           >
-            6 meses
+            <span>6</span>
+            <small>meses</small>
           </button>
 
           <button
             type="button"
             className={periodo === 12 ? "active" : ""}
-            onClick={() => setPeriodo(12)}
+            disabled={carregando}
+            aria-pressed={periodo === 12}
+            onClick={() => onPeriodoChange(12)}
           >
-            12 meses
+            <span>12</span>
+            <small>meses</small>
           </button>
 
           <button
             type="button"
             className={periodo === "todos" ? "active" : ""}
-            onClick={() => setPeriodo("todos")}
+            disabled={carregando}
+            aria-pressed={periodo === "todos"}
+            onClick={() => onPeriodoChange("todos")}
           >
-            Todo período
+            <span>Todo</span>
+            <small>período</small>
           </button>
         </div>
       </div>
 
       <div className="cashflow-chart-container">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={dadosGrafico}
-            margin={{
-              top: 10,
-              right: 15,
-              left: 5,
-              bottom: 5,
-            }}
-          >
-            <CartesianGrid
-              strokeDasharray="4 4"
-              vertical={false}
-              stroke="#e8edf3"
-            />
+        {carregando && dados.length === 0 ? (
+          <div className="cashflow-chart-empty">
+            Carregando fluxo de caixa...
+          </div>
+        ) : dados.length === 0 ? (
+          <div className="cashflow-chart-empty">
+            Nenhum dado encontrado para o período selecionado.
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={dados}
+              margin={{
+                top: 12,
+                right: 18,
+                left: 8,
+                bottom: 8,
+              }}
+            >
+              <CartesianGrid
+                strokeDasharray="4 4"
+                vertical={false}
+                stroke="#e8edf3"
+              />
 
-            <XAxis
-              dataKey="mes"
-              axisLine={false}
-              tickLine={false}
-              tick={{
-                fill: "#64748b",
-                fontSize: 12,
-              }}
-              dy={10}
-            />
+              <XAxis
+                dataKey="mes"
+                axisLine={false}
+                tickLine={false}
+                tick={{
+                  fill: "#64748b",
+                  fontSize: 12,
+                }}
+                dy={10}
+                minTickGap={20}
+              />
 
-            <YAxis
-              tickFormatter={formatarCompacto}
-              axisLine={false}
-              tickLine={false}
-              tick={{
-                fill: "#94a3b8",
-                fontSize: 12,
-              }}
-              width={60}
-            />
+              <YAxis
+                domain={[dominioMinimo, dominioMaximo]}
+                tickFormatter={formatarCompacto}
+                axisLine={false}
+                tickLine={false}
+                tick={{
+                  fill: "#94a3b8",
+                  fontSize: 12,
+                }}
+                width={70}
+              />
 
-            <Tooltip
-              cursor={{
-                stroke: "#cbd5e1",
-                strokeDasharray: "4 4",
-              }}
-              contentStyle={{
-                border: "1px solid #e2e8f0",
-                borderRadius: "12px",
-                boxShadow:
-                  "0 12px 30px rgba(15, 23, 42, 0.12)",
-                padding: "12px 14px",
-              }}
-              labelStyle={{
-                fontWeight: 700,
-                marginBottom: "8px",
-                color: "#0f172a",
-              }}
-              formatter={(value) =>
-                formatarMoeda(Number(value))
-              }
-            />
+              <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1.5} />
 
-            <Legend
-              verticalAlign="top"
-              align="right"
-              height={45}
-              iconType="circle"
-              wrapperStyle={{
-                fontSize: "13px",
-              }}
-            />
+              <Tooltip
+                cursor={{
+                  stroke: "#cbd5e1",
+                  strokeDasharray: "4 4",
+                }}
+                contentStyle={{
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  boxShadow: "0 12px 30px rgba(15, 23, 42, 0.12)",
+                  padding: "12px 14px",
+                }}
+                labelStyle={{
+                  fontWeight: 700,
+                  marginBottom: "8px",
+                  color: "#0f172a",
+                }}
+                formatter={(value) => formatarMoeda(Number(value))}
+              />
 
-            <Line
-              type="monotone"
-              dataKey="entradas"
-              name="Entradas"
-              stroke="#16a34a"
-              strokeWidth={3}
-              dot={{
-                r: 4,
-                strokeWidth: 2,
-                fill: "#ffffff",
-              }}
-              activeDot={{
-                r: 7,
-                strokeWidth: 3,
-              }}
-            />
+              <Legend
+                verticalAlign="top"
+                align="right"
+                height={45}
+                iconType="circle"
+                wrapperStyle={{
+                  fontSize: "13px",
+                }}
+              />
 
-            <Line
-              type="monotone"
-              dataKey="saidas"
-              name="Saídas"
-              stroke="#dc2626"
-              strokeWidth={3}
-              dot={{
-                r: 4,
-                strokeWidth: 2,
-                fill: "#ffffff",
-              }}
-              activeDot={{
-                r: 7,
-                strokeWidth: 3,
-              }}
-            />
+              <Line
+                type="monotone"
+                dataKey="entradas"
+                name="Entradas"
+                stroke="#16a34a"
+                strokeWidth={3}
+                dot={{
+                  r: 4,
+                  strokeWidth: 2,
+                  fill: "#ffffff",
+                }}
+                activeDot={{
+                  r: 7,
+                  strokeWidth: 3,
+                }}
+              />
 
-            <Line
-              type="monotone"
-              dataKey="saldoFinal"
-              name="Saldo acumulado"
-              stroke="#2563eb"
-              strokeWidth={4}
-              dot={{
-                r: 4,
-                strokeWidth: 2,
-                fill: "#ffffff",
-              }}
-              activeDot={{
-                r: 7,
-                strokeWidth: 3,
-              }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+              <Line
+                type="monotone"
+                dataKey="saidas"
+                name="Saídas"
+                stroke="#dc2626"
+                strokeWidth={3}
+                dot={{
+                  r: 4,
+                  strokeWidth: 2,
+                  fill: "#ffffff",
+                }}
+                activeDot={{
+                  r: 7,
+                  strokeWidth: 3,
+                }}
+              />
+
+              <Line
+                type="monotone"
+                dataKey="saldoFinal"
+                name="Saldo acumulado"
+                stroke="#2563eb"
+                strokeWidth={4}
+                dot={{
+                  r: 4,
+                  strokeWidth: 2,
+                  fill: "#ffffff",
+                }}
+                activeDot={{
+                  r: 7,
+                  strokeWidth: 3,
+                }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       <div className="cashflow-chart-footer">
-        <span>
-          Período exibido: <strong>{descricaoPeriodo}</strong>
-        </span>
+        <div className="cashflow-footer-info">
+          <span className="cashflow-footer-label">Período exibido</span>
 
-        <span>
-          Saldo acumulado ao final:{" "}
-          <strong>{formatarMoeda(saldoAcumuladoFinal)}</strong>
-        </span>
+          <strong className="cashflow-footer-value">{descricaoPeriodo}</strong>
+        </div>
+
+        <div className="cashflow-footer-divider" />
+
+        <div className="cashflow-footer-info cashflow-footer-info-right">
+          <span className="cashflow-footer-label">
+            Saldo acumulado ao final
+          </span>
+
+          <strong className={`cashflow-footer-value ${classeSaldoFinal}`}>
+            {carregando ? "..." : formatarMoeda(saldoAcumuladoFinal)}
+          </strong>
+        </div>
       </div>
     </section>
   );

@@ -9,193 +9,268 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.time.YearMonth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+
 class CashFlowServiceTest {
 
-        private static final Long CLIENTE_ID = 1L;
+    private static final Long CLIENTE_ID = 1L;
 
-        private FinancialTransactionRepository financialTransactionRepository;
+    private FinancialTransactionRepository financialTransactionRepository;
 
-        private ClienteContextService clienteContextService;
+    private ClienteContextService clienteContextService;
 
-        private CashFlowService service;
+    private FinancialReferenceService financialReferenceService;
 
-        @BeforeEach
-        void configurar() {
 
-                financialTransactionRepository = mock(
-                                FinancialTransactionRepository.class);
+    private CashFlowService service;
 
-                clienteContextService = mock(
-                                ClienteContextService.class);
+    @BeforeEach
+    void configurar() {
 
-                when(
-        clienteContextService.getClienteAtualId()
-).thenReturn(CLIENTE_ID);
-                FinancialTransactionAggregationService transactionAggregationService = new FinancialTransactionAggregationService(
-                                financialTransactionRepository,
-                                clienteContextService);
+        financialTransactionRepository = mock(
+                FinancialTransactionRepository.class
+        );
 
-                service = new CashFlowService(
-                                transactionAggregationService);
-        }
+        clienteContextService = mock(
+                ClienteContextService.class
+        );
 
-        @Test
-        void deveCalcularFluxoCaixaPartindoDeZero() {
+        financialReferenceService = mock(
+        FinancialReferenceService.class
+);
 
-                FinancialTransaction receitaSetembro = criarLancamento(
-                                LocalDate.of(2026, 9, 10),
-                                "RECEITA",
-                                "10000.00");
+when(
+        financialReferenceService.obterMesReferencia()
+).thenReturn(
+        YearMonth.of(2026, 10)
+);
 
-                FinancialTransaction despesaSetembro = criarLancamento(
-                                LocalDate.of(2026, 9, 15),
-                                "DESPESA",
-                                "4000.00");
+        when(
+                clienteContextService.getClienteAtualId()
+        ).thenReturn(CLIENTE_ID);
 
-                FinancialTransaction receitaOutubro = criarLancamento(
-                                LocalDate.of(2026, 10, 10),
-                                "RECEITA",
-                                "5000.00");
+        FinancialTransactionAggregationService transactionAggregationService
+                = new FinancialTransactionAggregationService(
+                        financialTransactionRepository,
+                        clienteContextService
+                );
 
-                FinancialTransaction despesaOutubro = criarLancamento(
-                                LocalDate.of(2026, 10, 15),
-                                "DESPESA",
-                                "7000.00");
+        service = new CashFlowService(
+        transactionAggregationService,
+        financialReferenceService
+);
+    }
 
-                LocalDate menorData = LocalDate.of(2026, 9, 10);
+    @Test
+    void deveCalcularFluxoCaixaCompletoPartindoDeZero() {
 
-                LocalDate maiorData = LocalDate.of(2026, 10, 15);
+        FinancialTransaction receitaSetembro
+                = criarLancamento(
+                        LocalDate.of(2026, 9, 10),
+                        "RECEITA",
+                        "10000.00"
+                );
 
-                when(
-                                financialTransactionRepository
-                                                .findMenorDataByClienteId(
-                                                                CLIENTE_ID))
-                                .thenReturn(
-                                                Optional.of(menorData));
+        FinancialTransaction despesaSetembro
+                = criarLancamento(
+                        LocalDate.of(2026, 9, 15),
+                        "DESPESA",
+                        "4000.00"
+                );
 
-                when(
-                                financialTransactionRepository
-                                                .findMaiorDataByClienteId(
-                                                                CLIENTE_ID))
-                                .thenReturn(
-                                                Optional.of(maiorData));
+        FinancialTransaction receitaOutubro
+                = criarLancamento(
+                        LocalDate.of(2026, 10, 10),
+                        "RECEITA",
+                        "5000.00"
+                );
 
-                when(
-                                financialTransactionRepository
-                                                .findByClienteIdAndDataBetweenOrderByDataAsc(
-                                                                CLIENTE_ID,
-                                                                menorData,
-                                                                maiorData))
-                                .thenReturn(
-                                                List.of(
-                                                                receitaSetembro,
-                                                                despesaSetembro,
-                                                                receitaOutubro,
-                                                                despesaOutubro));
+        FinancialTransaction despesaOutubro
+                = criarLancamento(
+                        LocalDate.of(2026, 10, 15),
+                        "DESPESA",
+                        "7000.00"
+                );
 
-                var resultado = service.obterFluxoCaixa();
+        LocalDate menorData
+                = LocalDate.of(2026, 9, 10);
 
-                assertEquals(
-                                2,
-                                resultado.size());
+        LocalDate maiorData
+                = LocalDate.of(2026, 10, 15);
 
-                assertEquals(
-                                "Set/2026",
-                                resultado.get(0).mes());
+        when(
+                financialTransactionRepository
+                        .findMenorDataByClienteId(
+                                CLIENTE_ID
+                        )
+        ).thenReturn(
+                Optional.of(menorData)
+        );
 
-                assertEquals(
-                                "Out/2026",
-                                resultado.get(1).mes());
+        when(
+                financialTransactionRepository
+                        .findMaiorDataByClienteId(
+                                CLIENTE_ID
+                        )
+        ).thenReturn(
+                Optional.of(maiorData)
+        );
 
-                assertValor(
-                                "0",
-                                resultado.get(0).saldoInicial());
+        when(
+                financialTransactionRepository
+                        .findByClienteIdAndDataBetweenOrderByDataAsc(
+                                CLIENTE_ID,
+                                menorData,
+                                maiorData
+                        )
+        ).thenReturn(
+                List.of(
+                        receitaSetembro,
+                        despesaSetembro,
+                        receitaOutubro,
+                        despesaOutubro
+                )
+        );
 
-                assertValor(
-                                "10000.00",
-                                resultado.get(0).entradas());
+        /*
+         * "todos" representa todo o período existente
+         * nos dados do cliente.
+         *
+         * Neste teste existem apenas setembro e outubro.
+         */
+        var resultado
+                = service.obterFluxoCaixa("todos");
 
-                assertValor(
-                                "4000.00",
-                                resultado.get(0).saidas());
+        assertEquals(
+                2,
+                resultado.size()
+        );
 
-                assertValor(
-                                "6000.00",
-                                resultado.get(0).saldoFinal());
+        assertEquals(
+                "Set/2026",
+                resultado.get(0).mes()
+        );
 
-                assertValor(
-                                "6000.00",
-                                resultado.get(1).saldoInicial());
+        assertEquals(
+                "Out/2026",
+                resultado.get(1).mes()
+        );
 
-                assertValor(
-                                "5000.00",
-                                resultado.get(1).entradas());
+        /*
+         * SETEMBRO
+         */
+        assertValor(
+                "0",
+                resultado.get(0).saldoInicial()
+        );
 
-                assertValor(
-                                "7000.00",
-                                resultado.get(1).saidas());
+        assertValor(
+                "10000.00",
+                resultado.get(0).entradas()
+        );
 
-                assertValor(
-                                "4000.00",
-                                resultado.get(1).saldoFinal());
-        }
+        assertValor(
+                "4000.00",
+                resultado.get(0).saidas()
+        );
 
-        @Test
-        void deveRetornarListaVaziaSemRegistrosDoCliente() {
+        assertValor(
+                "6000.00",
+                resultado.get(0).saldoFinal()
+        );
 
-                when(
-                                financialTransactionRepository
-                                                .findMenorDataByClienteId(
-                                                                CLIENTE_ID))
-                                .thenReturn(
-                                                Optional.empty());
+        /*
+         * OUTUBRO
+         */
+        assertValor(
+                "6000.00",
+                resultado.get(1).saldoInicial()
+        );
 
-                when(
-                                financialTransactionRepository
-                                                .findMaiorDataByClienteId(
-                                                                CLIENTE_ID))
-                                .thenReturn(
-                                                Optional.empty());
+        assertValor(
+                "5000.00",
+                resultado.get(1).entradas()
+        );
 
-                var resultado = service.obterFluxoCaixa();
+        assertValor(
+                "7000.00",
+                resultado.get(1).saidas()
+        );
 
-                assertEquals(
-                                0,
-                                resultado.size());
-        }
+        assertValor(
+                "4000.00",
+                resultado.get(1).saldoFinal()
+        );
+    }
 
-        private FinancialTransaction criarLancamento(
-                        LocalDate data,
-                        String tipo,
-                        String valor) {
+    @Test
+    void deveRetornarListaVaziaNoPeriodoCompletoSemRegistros() {
 
-                FinancialTransaction lancamento = new FinancialTransaction();
+        when(
+                financialTransactionRepository
+                        .findMenorDataByClienteId(
+                                CLIENTE_ID
+                        )
+        ).thenReturn(
+                Optional.empty()
+        );
 
-                lancamento.setData(data);
+        when(
+                financialTransactionRepository
+                        .findMaiorDataByClienteId(
+                                CLIENTE_ID
+                        )
+        ).thenReturn(
+                Optional.empty()
+        );
 
-                lancamento.setDescricao(
-                                "Lançamento de teste");
+        var resultado
+                = service.obterFluxoCaixa("todos");
 
-                lancamento.setTipo(tipo);
+        assertEquals(
+                0,
+                resultado.size()
+        );
+    }
 
-                lancamento.setValor(
-                                new BigDecimal(valor));
+    private FinancialTransaction criarLancamento(
+            LocalDate data,
+            String tipo,
+            String valor
+    ) {
 
-                return lancamento;
-        }
+        FinancialTransaction lancamento
+                = new FinancialTransaction();
 
-        private void assertValor(
-                        String esperado,
-                        BigDecimal atual) {
+        lancamento.setData(data);
 
-                assertEquals(
-                                0,
-                                new BigDecimal(esperado)
-                                                .compareTo(atual));
-        }
+        lancamento.setDescricao(
+                "Lançamento de teste"
+        );
+
+        lancamento.setTipo(tipo);
+
+        lancamento.setValor(
+                new BigDecimal(valor)
+        );
+
+        return lancamento;
+    }
+
+    private void assertValor(
+            String esperado,
+            BigDecimal atual
+    ) {
+
+        assertEquals(
+                0,
+                new BigDecimal(esperado)
+                        .compareTo(atual)
+        );
+    }
 }

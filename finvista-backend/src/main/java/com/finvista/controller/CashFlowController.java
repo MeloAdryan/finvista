@@ -5,6 +5,7 @@ import com.finvista.service.CashFlowService;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -13,17 +14,25 @@ import java.util.List;
 @RequestMapping("/api/fluxo-caixa")
 public class CashFlowController {
 
-        private final CashFlowService cashFlowService;
+    private final CashFlowService cashFlowService;
 
-        public CashFlowController(
-                        CashFlowService cashFlowService) {
-                this.cashFlowService = cashFlowService;
-        }
+    public CashFlowController(
+            CashFlowService cashFlowService
+    ) {
+        this.cashFlowService = cashFlowService;
+    }
 
-        @GetMapping
-        public List<CashFlowResponse> getFluxoCaixa() {
+    @GetMapping
+    public List<CashFlowResponse> getFluxoCaixa(
+            @RequestParam(
+                    required = false,
+                    defaultValue = "6"
+            )
+            String periodo
+    ) {
 
-                return cashFlowService
-                                .obterFluxoCaixa();
-        }
+        return cashFlowService.obterFluxoCaixa(
+                periodo
+        );
+    }
 }

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import Dashboard from "./pages/Dashboard";
-
+import useDragScroll from "./hooks/useDragScroll";
 import SpendingGoals from "./pages/SpendingGoals";
 
 import ImportData from "./pages/ImportData";
@@ -22,11 +22,24 @@ import Budgets from "./pages/Budgets";
 
 import History from "./pages/History";
 
+import ClientSelector from "./components/ClientSelector";
+
+import {
+  obterClienteAtual,
+  selecionarCliente,
+  type Cliente,
+} from "./services/clientService";
+
 import {
   logout,
   obterUsuarioAtual,
   type AuthUser,
 } from "./services/authService";
+
+import {
+  obterReferenciaFinanceira,
+  type FinancialReference,
+} from "./services/financialReferenceService";
 
 import "./styles/app-layout.css";
 
@@ -183,10 +196,22 @@ function App() {
   const location = useLocation();
 
   const navigate = useNavigate();
+  const {
+    ref: dragScrollRef,
+    arrastando,
+    iniciarArrasto,
+  } = useDragScroll<HTMLElement>();
 
   const [usuario, setUsuario] = useState<AuthUser | null>(null);
 
   const [verificandoSessao, setVerificandoSessao] = useState(true);
+
+  const [clienteAtual, setClienteAtual] = useState<Cliente | null>(null);
+
+  const [verificandoCliente, setVerificandoCliente] = useState(false);
+
+  const [referenciaFinanceira, setReferenciaFinanceira] =
+    useState<FinancialReference | null>(null);
 
   const paginaAtiva: PaginaAtiva =
     location.pathname === "/dashboard"
@@ -241,6 +266,108 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    let ativo = true;
+
+    const verificarCliente = async () => {
+      if (!usuario) {
+        if (ativo) {
+          setClienteAtual(null);
+          setVerificandoCliente(false);
+        }
+
+        return;
+      }
+
+      /*
+       * Usuários comuns não precisam escolher cliente.
+       * O backend resolve automaticamente o cliente
+       * associado ao usuário.
+       */
+      if (usuario.perfil !== "ADMIN") {
+        if (ativo) {
+          setClienteAtual(null);
+          setVerificandoCliente(false);
+        }
+
+        return;
+      }
+
+      try {
+        setVerificandoCliente(true);
+
+        const cliente = await obterClienteAtual();
+
+        if (ativo) {
+          setClienteAtual(cliente);
+        }
+      } catch (error) {
+        console.error("Erro ao verificar cliente atual:", error);
+
+        if (ativo) {
+          setClienteAtual(null);
+        }
+      } finally {
+        if (ativo) {
+          setVerificandoCliente(false);
+        }
+      }
+    };
+
+    void verificarCliente();
+
+    return () => {
+      ativo = false;
+    };
+  }, [usuario]);
+
+  useEffect(() => {
+    let ativo = true;
+
+    const carregarReferenciaFinanceira = async () => {
+      if (!usuario) {
+        return;
+      }
+
+      /*
+       * Para ADMIN, a referência só pode ser carregada
+       * depois que houver um cliente selecionado.
+       *
+       * Para usuários comuns, o backend identifica
+       * automaticamente o cliente da sessão.
+       */
+      if (usuario.perfil === "ADMIN" && !clienteAtual) {
+        return;
+      }
+
+      try {
+        const referencia = await obterReferenciaFinanceira();
+
+        if (ativo) {
+          setReferenciaFinanceira(referencia);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar referência financeira:", error);
+
+        if (ativo) {
+          setReferenciaFinanceira(null);
+        }
+      }
+    };
+
+    void carregarReferenciaFinanceira();
+
+    return () => {
+      ativo = false;
+    };
+  }, [usuario, clienteAtual]);
+
+  const selecionarClienteAdmin = async (cliente: Cliente) => {
+    const clienteSelecionado = await selecionarCliente(cliente.id);
+
+    setClienteAtual(clienteSelecionado);
+  };
+
   const fecharMenuMobile = () => {
     setMenuMobileAberto(false);
   };
@@ -293,6 +420,8 @@ function App() {
     } catch (error) {
       console.error("Erro ao encerrar sessão:", error);
     } finally {
+      setClienteAtual(null);
+
       setUsuario(null);
 
       navigate("/metas");
@@ -324,7 +453,21 @@ function App() {
       />
     );
   }
+  if (usuario.perfil === "ADMIN" && verificandoCliente) {
+    return (
+      <main className="finvista-auth-loading">
+        <div className="finvista-auth-loading-brand">
+          <strong>FinVista</strong>
 
+          <span>Verificando cliente...</span>
+        </div>
+      </main>
+    );
+  }
+
+  if (usuario.perfil === "ADMIN" && !clienteAtual) {
+    return <ClientSelector onSelecionar={selecionarClienteAdmin} />;
+  }
   const usuarioAdmin = usuario.perfil === "ADMIN";
 
   return (
@@ -716,7 +859,7 @@ function App() {
             <div className="finvista-topbar-period">
               <small>REFERÊNCIA</small>
 
-              <strong>Setembro 2026</strong>
+              <strong>{referenciaFinanceira?.mesAno ?? "—"}</strong>
             </div>
 
             <button
@@ -741,7 +884,13 @@ function App() {
           </div>
         </header>
 
-        <main className="finvista-main">
+        <main
+          ref={dragScrollRef}
+          className={`finvista-main finvista-drag-scroll ${
+            arrastando ? "finvista-drag-scroll-active" : ""
+          }`}
+          onMouseDown={iniciarArrasto}
+        >
           {paginaAtiva === "dashboard" ? (
             <Dashboard />
           ) : paginaAtiva === "metas" ? (

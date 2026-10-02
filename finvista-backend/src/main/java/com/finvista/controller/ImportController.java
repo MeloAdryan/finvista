@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.finvista.dto.importacao.ImportColumnMappingRequest;
+import com.finvista.dto.importacao.FinancialTransactionResponse;
 import com.finvista.dto.importacao.ImportPreviewResponse;
 import com.finvista.model.FinancialTransaction;
 import com.finvista.repository.FinancialTransactionRepository;
@@ -32,471 +33,468 @@ import java.util.Map;
 @RequestMapping("/api/importacoes")
 public class ImportController {
 
-        private final CsvImportService csvImportService;
-        private final ExcelImportService excelImportService;
-        private final FinancialImportService financialImportService;
-        private final ImportPreviewService importPreviewService;
-        private final ImportMappingService importMappingService;
-        private final FinancialTransactionRepository financialTransactionRepository;
-        private final ObjectMapper objectMapper;
-        private final ClienteContextService clienteContextService;
+    private final CsvImportService csvImportService;
+    private final ExcelImportService excelImportService;
+    private final FinancialImportService financialImportService;
+    private final ImportPreviewService importPreviewService;
+    private final ImportMappingService importMappingService;
+    private final FinancialTransactionRepository financialTransactionRepository;
+    private final ObjectMapper objectMapper;
+    private final ClienteContextService clienteContextService;
 
-        public ImportController(
-                        CsvImportService csvImportService,
-                        ExcelImportService excelImportService,
-                        FinancialImportService financialImportService,
-                        ImportPreviewService importPreviewService,
-                        ImportMappingService importMappingService,
-                        FinancialTransactionRepository financialTransactionRepository,
-                        ObjectMapper objectMapper,
-                        ClienteContextService clienteContextService) {
-                this.csvImportService = csvImportService;
-                this.excelImportService = excelImportService;
-                this.financialImportService = financialImportService;
-                this.importPreviewService = importPreviewService;
-                this.importMappingService = importMappingService;
-                this.financialTransactionRepository = financialTransactionRepository;
-                this.objectMapper = objectMapper;
-                this.clienteContextService = clienteContextService;
+    public ImportController(
+            CsvImportService csvImportService,
+            ExcelImportService excelImportService,
+            FinancialImportService financialImportService,
+            ImportPreviewService importPreviewService,
+            ImportMappingService importMappingService,
+            FinancialTransactionRepository financialTransactionRepository,
+            ObjectMapper objectMapper,
+            ClienteContextService clienteContextService) {
+        this.csvImportService = csvImportService;
+        this.excelImportService = excelImportService;
+        this.financialImportService = financialImportService;
+        this.importPreviewService = importPreviewService;
+        this.importMappingService = importMappingService;
+        this.financialTransactionRepository = financialTransactionRepository;
+        this.objectMapper = objectMapper;
+        this.clienteContextService = clienteContextService;
+    }
+
+    @GetMapping("/lancamentos")
+    public ResponseEntity<Map<String, Object>> listarLancamentos() {
+
+        Long clienteId = clienteContextService
+                .getClienteAtual()
+                .getId();
+
+        List<FinancialTransaction> lancamentos
+                = financialTransactionRepository
+                        .findAllByClienteIdOrderByDataDesc(
+                                clienteId
+                        );
+
+        List<FinancialTransactionResponse> lancamentosResponse
+                = lancamentos.stream()
+                        .map(FinancialTransactionResponse::from)
+                        .toList();
+
+        Map<String, Object> resposta = new LinkedHashMap<>();
+
+        resposta.put("sucesso", true);
+        resposta.put(
+                "quantidade",
+                lancamentosResponse.size()
+        );
+        resposta.put(
+                "lancamentos",
+                lancamentosResponse
+        );
+
+        return ResponseEntity.ok(resposta);
+    }
+
+    @PostMapping("/preview-estrutura")
+    public ResponseEntity<Map<String, Object>> visualizarEstrutura(
+            @RequestParam("arquivo") MultipartFile arquivo) {
+
+        Map<String, Object> resposta = new LinkedHashMap<>();
+
+        try {
+
+            ImportPreviewResponse preview = importPreviewService
+                    .gerarPreview(arquivo);
+
+            resposta.put("sucesso", true);
+            resposta.put(
+                    "arquivo",
+                    preview.getArquivo());
+            resposta.put(
+                    "tipoArquivo",
+                    preview.getTipoArquivo());
+            resposta.put(
+                    "colunas",
+                    preview.getColunas());
+            resposta.put(
+                    "linhas",
+                    preview.getLinhas());
+            resposta.put(
+                    "quantidadeLinhas",
+                    preview.getQuantidadeLinhas());
+
+            return ResponseEntity.ok(resposta);
+
+        } catch (IllegalArgumentException exception) {
+
+            resposta.put("sucesso", false);
+            resposta.put(
+                    "erro",
+                    exception.getMessage());
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(resposta);
+
+        } catch (IOException exception) {
+
+            resposta.put("sucesso", false);
+            resposta.put(
+                    "erro",
+                    "Não foi possível ler o arquivo enviado.");
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(resposta);
+        }
+    }
+
+    @PostMapping("/mapeamento/preview")
+    public ResponseEntity<Map<String, Object>> visualizarMapeamento(
+            @RequestParam("arquivo") MultipartFile arquivo,
+            @RequestParam("mapeamento") String mapeamentoJson) {
+
+        Map<String, Object> resposta = new LinkedHashMap<>();
+
+        try {
+
+            ImportColumnMappingRequest mapeamento = converterMapeamento(mapeamentoJson);
+
+            List<FinancialTransaction> lancamentos = importMappingService.processar(
+                    arquivo,
+                    mapeamento);
+
+            resposta.put("sucesso", true);
+            resposta.put(
+                    "arquivo",
+                    arquivo.getOriginalFilename());
+            resposta.put(
+                    "quantidade",
+                    lancamentos.size());
+            resposta.put(
+                    "lancamentos",
+                    lancamentos);
+
+            return ResponseEntity.ok(resposta);
+
+        } catch (IllegalArgumentException exception) {
+
+            resposta.put("sucesso", false);
+            resposta.put(
+                    "erro",
+                    exception.getMessage());
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(resposta);
+
+        } catch (IOException exception) {
+
+            resposta.put("sucesso", false);
+            resposta.put(
+                    "erro",
+                    "Não foi possível ler o arquivo enviado.");
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(resposta);
+        }
+    }
+
+    @PostMapping("/mapeamento/importar")
+    public ResponseEntity<Map<String, Object>> importarMapeamento(
+            @RequestParam("arquivo") MultipartFile arquivo,
+            @RequestParam("mapeamento") String mapeamentoJson) {
+
+        Map<String, Object> resposta = new LinkedHashMap<>();
+
+        try {
+
+            ImportColumnMappingRequest mapeamento = converterMapeamento(mapeamentoJson);
+
+            List<FinancialTransaction> processados = importMappingService.processar(
+                    arquivo,
+                    mapeamento);
+
+            List<FinancialTransaction> importados = financialImportService.salvar(
+                    processados);
+
+            int ignorados = processados.size()
+                    - importados.size();
+
+            resposta.put("sucesso", true);
+            resposta.put(
+                    "arquivo",
+                    arquivo.getOriginalFilename());
+            resposta.put(
+                    "processados",
+                    processados.size());
+            resposta.put(
+                    "importados",
+                    importados.size());
+            resposta.put(
+                    "ignoradosDuplicidade",
+                    ignorados);
+            resposta.put(
+                    "lancamentos",
+                    importados);
+
+            return ResponseEntity.ok(resposta);
+
+        } catch (IllegalArgumentException exception) {
+
+            resposta.put("sucesso", false);
+            resposta.put(
+                    "erro",
+                    exception.getMessage());
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(resposta);
+
+        } catch (IOException exception) {
+
+            resposta.put("sucesso", false);
+            resposta.put(
+                    "erro",
+                    "Não foi possível ler o arquivo enviado.");
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(resposta);
+        }
+    }
+
+    @PostMapping("/csv/preview")
+    public ResponseEntity<Map<String, Object>> visualizarCsv(
+            @RequestParam("arquivo") MultipartFile arquivo) {
+
+        Map<String, Object> resposta = new LinkedHashMap<>();
+
+        try {
+
+            List<FinancialTransaction> lancamentos = csvImportService.processar(arquivo);
+
+            resposta.put("sucesso", true);
+            resposta.put(
+                    "arquivo",
+                    arquivo.getOriginalFilename());
+            resposta.put(
+                    "quantidade",
+                    lancamentos.size());
+            resposta.put(
+                    "lancamentos",
+                    lancamentos);
+
+            return ResponseEntity.ok(resposta);
+
+        } catch (IllegalArgumentException exception) {
+
+            resposta.put("sucesso", false);
+            resposta.put(
+                    "erro",
+                    exception.getMessage());
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(resposta);
+
+        } catch (IOException exception) {
+
+            resposta.put("sucesso", false);
+            resposta.put(
+                    "erro",
+                    "Não foi possível ler o arquivo CSV enviado.");
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(resposta);
+        }
+    }
+
+    @PostMapping("/csv/importar")
+    public ResponseEntity<Map<String, Object>> importarCsv(
+            @RequestParam("arquivo") MultipartFile arquivo) {
+
+        Map<String, Object> resposta = new LinkedHashMap<>();
+
+        try {
+
+            List<FinancialTransaction> processados = csvImportService.processar(arquivo);
+
+            List<FinancialTransaction> importados = financialImportService.salvar(
+                    processados);
+
+            int ignorados = processados.size()
+                    - importados.size();
+
+            resposta.put("sucesso", true);
+            resposta.put(
+                    "arquivo",
+                    arquivo.getOriginalFilename());
+            resposta.put(
+                    "processados",
+                    processados.size());
+            resposta.put(
+                    "importados",
+                    importados.size());
+            resposta.put(
+                    "ignoradosDuplicidade",
+                    ignorados);
+            resposta.put(
+                    "lancamentos",
+                    importados);
+
+            return ResponseEntity.ok(resposta);
+
+        } catch (IllegalArgumentException exception) {
+
+            resposta.put("sucesso", false);
+            resposta.put(
+                    "erro",
+                    exception.getMessage());
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(resposta);
+
+        } catch (IOException exception) {
+
+            resposta.put("sucesso", false);
+            resposta.put(
+                    "erro",
+                    "Não foi possível ler o arquivo CSV enviado.");
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(resposta);
+        }
+    }
+
+    @PostMapping("/excel/preview")
+    public ResponseEntity<Map<String, Object>> visualizarExcel(
+            @RequestParam("arquivo") MultipartFile arquivo) {
+
+        Map<String, Object> resposta = new LinkedHashMap<>();
+
+        try {
+
+            List<FinancialTransaction> lancamentos = excelImportService.processar(arquivo);
+
+            resposta.put("sucesso", true);
+            resposta.put(
+                    "arquivo",
+                    arquivo.getOriginalFilename());
+            resposta.put(
+                    "quantidade",
+                    lancamentos.size());
+            resposta.put(
+                    "lancamentos",
+                    lancamentos);
+
+            return ResponseEntity.ok(resposta);
+
+        } catch (IllegalArgumentException exception) {
+
+            resposta.put("sucesso", false);
+            resposta.put(
+                    "erro",
+                    exception.getMessage());
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(resposta);
+
+        } catch (IOException exception) {
+
+            resposta.put("sucesso", false);
+            resposta.put(
+                    "erro",
+                    "Não foi possível ler o arquivo Excel enviado.");
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(resposta);
+        }
+    }
+
+    @PostMapping("/excel/importar")
+    public ResponseEntity<Map<String, Object>> importarExcel(
+            @RequestParam("arquivo") MultipartFile arquivo) {
+
+        Map<String, Object> resposta = new LinkedHashMap<>();
+
+        try {
+
+            List<FinancialTransaction> processados = excelImportService.processar(arquivo);
+
+            List<FinancialTransaction> importados = financialImportService.salvar(
+                    processados);
+
+            int ignorados = processados.size()
+                    - importados.size();
+
+            resposta.put("sucesso", true);
+            resposta.put(
+                    "arquivo",
+                    arquivo.getOriginalFilename());
+            resposta.put(
+                    "processados",
+                    processados.size());
+            resposta.put(
+                    "importados",
+                    importados.size());
+            resposta.put(
+                    "ignoradosDuplicidade",
+                    ignorados);
+            resposta.put(
+                    "lancamentos",
+                    importados);
+
+            return ResponseEntity.ok(resposta);
+
+        } catch (IllegalArgumentException exception) {
+
+            resposta.put("sucesso", false);
+            resposta.put(
+                    "erro",
+                    exception.getMessage());
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(resposta);
+
+        } catch (IOException exception) {
+
+            resposta.put("sucesso", false);
+            resposta.put(
+                    "erro",
+                    "Não foi possível ler o arquivo Excel enviado.");
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(resposta);
+        }
+    }
+
+    private ImportColumnMappingRequest converterMapeamento(
+            String mapeamentoJson) {
+
+        if (mapeamentoJson == null
+                || mapeamentoJson.isBlank()) {
+            throw new IllegalArgumentException(
+                    "O mapeamento das colunas não foi informado.");
         }
 
-        @GetMapping("/lancamentos")
-        public ResponseEntity<Map<String, Object>> listarLancamentos() {
+        try {
 
-                List<FinancialTransaction> lancamentos;
+            return objectMapper.readValue(
+                    mapeamentoJson,
+                    ImportColumnMappingRequest.class);
 
-                if (clienteContextService.isAdmin()) {
+        } catch (JsonProcessingException exception) {
 
-                        lancamentos = financialTransactionRepository
-                                        .findAllByOrderByDataDesc();
-
-                } else {
-
-                        Long clienteId = clienteContextService
-                                        .getClienteDoUsuarioAutenticado()
-                                        .getId();
-
-                        lancamentos = financialTransactionRepository
-                                        .findAllByClienteIdOrderByDataDesc(
-                                                        clienteId);
-                }
-
-                Map<String, Object> resposta = new LinkedHashMap<>();
-
-                resposta.put("sucesso", true);
-
-                resposta.put(
-                                "quantidade",
-                                lancamentos.size());
-
-                resposta.put(
-                                "lancamentos",
-                                lancamentos);
-
-                return ResponseEntity.ok(resposta);
+            throw new IllegalArgumentException(
+                    "O mapeamento informado possui um JSON inválido.");
         }
-
-        @PostMapping("/preview-estrutura")
-        public ResponseEntity<Map<String, Object>> visualizarEstrutura(
-                        @RequestParam("arquivo") MultipartFile arquivo) {
-
-                Map<String, Object> resposta = new LinkedHashMap<>();
-
-                try {
-
-                        ImportPreviewResponse preview = importPreviewService
-                                        .gerarPreview(arquivo);
-
-                        resposta.put("sucesso", true);
-                        resposta.put(
-                                        "arquivo",
-                                        preview.getArquivo());
-                        resposta.put(
-                                        "tipoArquivo",
-                                        preview.getTipoArquivo());
-                        resposta.put(
-                                        "colunas",
-                                        preview.getColunas());
-                        resposta.put(
-                                        "linhas",
-                                        preview.getLinhas());
-                        resposta.put(
-                                        "quantidadeLinhas",
-                                        preview.getQuantidadeLinhas());
-
-                        return ResponseEntity.ok(resposta);
-
-                } catch (IllegalArgumentException exception) {
-
-                        resposta.put("sucesso", false);
-                        resposta.put(
-                                        "erro",
-                                        exception.getMessage());
-
-                        return ResponseEntity
-                                        .badRequest()
-                                        .body(resposta);
-
-                } catch (IOException exception) {
-
-                        resposta.put("sucesso", false);
-                        resposta.put(
-                                        "erro",
-                                        "Não foi possível ler o arquivo enviado.");
-
-                        return ResponseEntity
-                                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                        .body(resposta);
-                }
-        }
-
-        @PostMapping("/mapeamento/preview")
-        public ResponseEntity<Map<String, Object>> visualizarMapeamento(
-                        @RequestParam("arquivo") MultipartFile arquivo,
-                        @RequestParam("mapeamento") String mapeamentoJson) {
-
-                Map<String, Object> resposta = new LinkedHashMap<>();
-
-                try {
-
-                        ImportColumnMappingRequest mapeamento = converterMapeamento(mapeamentoJson);
-
-                        List<FinancialTransaction> lancamentos = importMappingService.processar(
-                                        arquivo,
-                                        mapeamento);
-
-                        resposta.put("sucesso", true);
-                        resposta.put(
-                                        "arquivo",
-                                        arquivo.getOriginalFilename());
-                        resposta.put(
-                                        "quantidade",
-                                        lancamentos.size());
-                        resposta.put(
-                                        "lancamentos",
-                                        lancamentos);
-
-                        return ResponseEntity.ok(resposta);
-
-                } catch (IllegalArgumentException exception) {
-
-                        resposta.put("sucesso", false);
-                        resposta.put(
-                                        "erro",
-                                        exception.getMessage());
-
-                        return ResponseEntity
-                                        .badRequest()
-                                        .body(resposta);
-
-                } catch (IOException exception) {
-
-                        resposta.put("sucesso", false);
-                        resposta.put(
-                                        "erro",
-                                        "Não foi possível ler o arquivo enviado.");
-
-                        return ResponseEntity
-                                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                        .body(resposta);
-                }
-        }
-
-        @PostMapping("/mapeamento/importar")
-        public ResponseEntity<Map<String, Object>> importarMapeamento(
-                        @RequestParam("arquivo") MultipartFile arquivo,
-                        @RequestParam("mapeamento") String mapeamentoJson) {
-
-                Map<String, Object> resposta = new LinkedHashMap<>();
-
-                try {
-
-                        ImportColumnMappingRequest mapeamento = converterMapeamento(mapeamentoJson);
-
-                        List<FinancialTransaction> processados = importMappingService.processar(
-                                        arquivo,
-                                        mapeamento);
-
-                        List<FinancialTransaction> importados = financialImportService.salvar(
-                                        processados);
-
-                        int ignorados = processados.size()
-                                        - importados.size();
-
-                        resposta.put("sucesso", true);
-                        resposta.put(
-                                        "arquivo",
-                                        arquivo.getOriginalFilename());
-                        resposta.put(
-                                        "processados",
-                                        processados.size());
-                        resposta.put(
-                                        "importados",
-                                        importados.size());
-                        resposta.put(
-                                        "ignoradosDuplicidade",
-                                        ignorados);
-                        resposta.put(
-                                        "lancamentos",
-                                        importados);
-
-                        return ResponseEntity.ok(resposta);
-
-                } catch (IllegalArgumentException exception) {
-
-                        resposta.put("sucesso", false);
-                        resposta.put(
-                                        "erro",
-                                        exception.getMessage());
-
-                        return ResponseEntity
-                                        .badRequest()
-                                        .body(resposta);
-
-                } catch (IOException exception) {
-
-                        resposta.put("sucesso", false);
-                        resposta.put(
-                                        "erro",
-                                        "Não foi possível ler o arquivo enviado.");
-
-                        return ResponseEntity
-                                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                        .body(resposta);
-                }
-        }
-
-        @PostMapping("/csv/preview")
-        public ResponseEntity<Map<String, Object>> visualizarCsv(
-                        @RequestParam("arquivo") MultipartFile arquivo) {
-
-                Map<String, Object> resposta = new LinkedHashMap<>();
-
-                try {
-
-                        List<FinancialTransaction> lancamentos = csvImportService.processar(arquivo);
-
-                        resposta.put("sucesso", true);
-                        resposta.put(
-                                        "arquivo",
-                                        arquivo.getOriginalFilename());
-                        resposta.put(
-                                        "quantidade",
-                                        lancamentos.size());
-                        resposta.put(
-                                        "lancamentos",
-                                        lancamentos);
-
-                        return ResponseEntity.ok(resposta);
-
-                } catch (IllegalArgumentException exception) {
-
-                        resposta.put("sucesso", false);
-                        resposta.put(
-                                        "erro",
-                                        exception.getMessage());
-
-                        return ResponseEntity
-                                        .badRequest()
-                                        .body(resposta);
-
-                } catch (IOException exception) {
-
-                        resposta.put("sucesso", false);
-                        resposta.put(
-                                        "erro",
-                                        "Não foi possível ler o arquivo CSV enviado.");
-
-                        return ResponseEntity
-                                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                        .body(resposta);
-                }
-        }
-
-        @PostMapping("/csv/importar")
-        public ResponseEntity<Map<String, Object>> importarCsv(
-                        @RequestParam("arquivo") MultipartFile arquivo) {
-
-                Map<String, Object> resposta = new LinkedHashMap<>();
-
-                try {
-
-                        List<FinancialTransaction> processados = csvImportService.processar(arquivo);
-
-                        List<FinancialTransaction> importados = financialImportService.salvar(
-                                        processados);
-
-                        int ignorados = processados.size()
-                                        - importados.size();
-
-                        resposta.put("sucesso", true);
-                        resposta.put(
-                                        "arquivo",
-                                        arquivo.getOriginalFilename());
-                        resposta.put(
-                                        "processados",
-                                        processados.size());
-                        resposta.put(
-                                        "importados",
-                                        importados.size());
-                        resposta.put(
-                                        "ignoradosDuplicidade",
-                                        ignorados);
-                        resposta.put(
-                                        "lancamentos",
-                                        importados);
-
-                        return ResponseEntity.ok(resposta);
-
-                } catch (IllegalArgumentException exception) {
-
-                        resposta.put("sucesso", false);
-                        resposta.put(
-                                        "erro",
-                                        exception.getMessage());
-
-                        return ResponseEntity
-                                        .badRequest()
-                                        .body(resposta);
-
-                } catch (IOException exception) {
-
-                        resposta.put("sucesso", false);
-                        resposta.put(
-                                        "erro",
-                                        "Não foi possível ler o arquivo CSV enviado.");
-
-                        return ResponseEntity
-                                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                        .body(resposta);
-                }
-        }
-
-        @PostMapping("/excel/preview")
-        public ResponseEntity<Map<String, Object>> visualizarExcel(
-                        @RequestParam("arquivo") MultipartFile arquivo) {
-
-                Map<String, Object> resposta = new LinkedHashMap<>();
-
-                try {
-
-                        List<FinancialTransaction> lancamentos = excelImportService.processar(arquivo);
-
-                        resposta.put("sucesso", true);
-                        resposta.put(
-                                        "arquivo",
-                                        arquivo.getOriginalFilename());
-                        resposta.put(
-                                        "quantidade",
-                                        lancamentos.size());
-                        resposta.put(
-                                        "lancamentos",
-                                        lancamentos);
-
-                        return ResponseEntity.ok(resposta);
-
-                } catch (IllegalArgumentException exception) {
-
-                        resposta.put("sucesso", false);
-                        resposta.put(
-                                        "erro",
-                                        exception.getMessage());
-
-                        return ResponseEntity
-                                        .badRequest()
-                                        .body(resposta);
-
-                } catch (IOException exception) {
-
-                        resposta.put("sucesso", false);
-                        resposta.put(
-                                        "erro",
-                                        "Não foi possível ler o arquivo Excel enviado.");
-
-                        return ResponseEntity
-                                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                        .body(resposta);
-                }
-        }
-
-        @PostMapping("/excel/importar")
-        public ResponseEntity<Map<String, Object>> importarExcel(
-                        @RequestParam("arquivo") MultipartFile arquivo) {
-
-                Map<String, Object> resposta = new LinkedHashMap<>();
-
-                try {
-
-                        List<FinancialTransaction> processados = excelImportService.processar(arquivo);
-
-                        List<FinancialTransaction> importados = financialImportService.salvar(
-                                        processados);
-
-                        int ignorados = processados.size()
-                                        - importados.size();
-
-                        resposta.put("sucesso", true);
-                        resposta.put(
-                                        "arquivo",
-                                        arquivo.getOriginalFilename());
-                        resposta.put(
-                                        "processados",
-                                        processados.size());
-                        resposta.put(
-                                        "importados",
-                                        importados.size());
-                        resposta.put(
-                                        "ignoradosDuplicidade",
-                                        ignorados);
-                        resposta.put(
-                                        "lancamentos",
-                                        importados);
-
-                        return ResponseEntity.ok(resposta);
-
-                } catch (IllegalArgumentException exception) {
-
-                        resposta.put("sucesso", false);
-                        resposta.put(
-                                        "erro",
-                                        exception.getMessage());
-
-                        return ResponseEntity
-                                        .badRequest()
-                                        .body(resposta);
-
-                } catch (IOException exception) {
-
-                        resposta.put("sucesso", false);
-                        resposta.put(
-                                        "erro",
-                                        "Não foi possível ler o arquivo Excel enviado.");
-
-                        return ResponseEntity
-                                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                        .body(resposta);
-                }
-        }
-
-        private ImportColumnMappingRequest converterMapeamento(
-                        String mapeamentoJson) {
-
-                if (mapeamentoJson == null
-                                || mapeamentoJson.isBlank()) {
-                        throw new IllegalArgumentException(
-                                        "O mapeamento das colunas não foi informado.");
-                }
-
-                try {
-
-                        return objectMapper.readValue(
-                                        mapeamentoJson,
-                                        ImportColumnMappingRequest.class);
-
-                } catch (JsonProcessingException exception) {
-
-                        throw new IllegalArgumentException(
-                                        "O mapeamento informado possui um JSON inválido.");
-                }
-        }
+    }
 }

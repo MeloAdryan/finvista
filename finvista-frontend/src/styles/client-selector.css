@@ -1,0 +1,737 @@
+.finvista-client-selector {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 100vh;
+  padding: 48px 24px;
+
+  overflow: hidden;
+
+  background:
+    linear-gradient(
+      135deg,
+      #f7f9fc 0%,
+      #eef3f8 50%,
+      #f8fafc 100%
+    );
+
+  color: #08213b;
+}
+
+.finvista-client-selector *,
+.finvista-client-selector *::before,
+.finvista-client-selector *::after {
+  box-sizing: border-box;
+}
+
+.finvista-client-selector-background {
+  position: absolute;
+  inset: 0;
+
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.finvista-client-selector-background::before {
+  content: "";
+
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  width: 100%;
+  height: 5px;
+
+  background: linear-gradient(
+    90deg,
+    #0b2d4c,
+    #d7892f,
+    #0b2d4c
+  );
+}
+
+.finvista-client-selector-orb {
+  position: absolute;
+
+  display: block;
+
+  border-radius: 50%;
+
+  filter: blur(1px);
+  opacity: 0.35;
+}
+
+.finvista-client-selector-orb-one {
+  width: 420px;
+  height: 420px;
+
+  top: -190px;
+  right: -130px;
+
+  background: radial-gradient(
+    circle,
+    rgba(215, 137, 47, 0.17) 0%,
+    rgba(215, 137, 47, 0) 70%
+  );
+}
+
+.finvista-client-selector-orb-two {
+  width: 520px;
+  height: 520px;
+
+  bottom: -260px;
+  left: -180px;
+
+  background: radial-gradient(
+    circle,
+    rgba(11, 45, 76, 0.14) 0%,
+    rgba(11, 45, 76, 0) 70%
+  );
+}
+
+.finvista-client-selector-card {
+  position: relative;
+  z-index: 1;
+
+  width: 100%;
+  max-width: 720px;
+
+  padding: 38px 42px 26px;
+
+  background: rgba(255, 255, 255, 0.96);
+
+  border: 1px solid #dbe3eb;
+  border-radius: 22px;
+
+  box-shadow:
+    0 24px 60px rgba(15, 39, 64, 0.09),
+    0 4px 14px rgba(15, 39, 64, 0.04);
+}
+
+.finvista-client-selector-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+
+  margin-bottom: 34px;
+}
+
+.finvista-client-selector-logo {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+
+  width: 42px;
+  height: 42px;
+
+  padding: 10px;
+
+  border-radius: 12px;
+
+  background: linear-gradient(
+    145deg,
+    #0a365b,
+    #082642
+  );
+
+  box-shadow:
+    0 6px 14px rgba(7, 42, 72, 0.2);
+}
+
+.finvista-client-selector-logo span {
+  display: block;
+
+  width: 5px;
+
+  border-radius: 5px;
+
+  background: #dc9137;
+}
+
+.finvista-client-selector-logo span:nth-child(1) {
+  height: 9px;
+  opacity: 0.72;
+}
+
+.finvista-client-selector-logo span:nth-child(2) {
+  height: 15px;
+  opacity: 0.88;
+}
+
+.finvista-client-selector-logo span:nth-child(3) {
+  height: 21px;
+}
+
+.finvista-client-selector-brand-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.finvista-client-selector-brand-text strong {
+  color: #082b49;
+
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.4px;
+}
+
+.finvista-client-selector-brand-text span {
+  margin-top: 4px;
+
+  color: #75879a;
+
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+.finvista-client-selector-heading {
+  max-width: 570px;
+  margin: 0 auto 32px;
+
+  text-align: center;
+}
+
+.finvista-client-selector-eyebrow {
+  display: inline-flex;
+
+  margin-bottom: 12px;
+
+  color: #c77626;
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.finvista-client-selector-heading h1 {
+  margin: 0;
+
+  color: #061d34;
+
+  font-size: clamp(30px, 5vw, 42px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -1.4px;
+}
+
+.finvista-client-selector-heading p {
+  max-width: 490px;
+
+  margin: 14px auto 0;
+
+  color: #64778a;
+
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.finvista-client-selector-content {
+  width: 100%;
+}
+
+.finvista-client-selector-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+
+  margin-bottom: 12px;
+}
+
+.finvista-client-selector-list-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.finvista-client-selector-list-header strong {
+  color: #17324c;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.finvista-client-selector-list-header > div > span {
+  color: #8493a2;
+
+  font-size: 11px;
+}
+
+.finvista-client-selector-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 29px;
+  height: 29px;
+
+  padding: 0 9px;
+
+  border: 1px solid #e2e8ef;
+  border-radius: 999px;
+
+  background: #f3f6f9;
+
+  color: #26425d;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.finvista-client-selector-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  max-height: 350px;
+  overflow-y: auto;
+
+  padding: 2px;
+}
+
+.finvista-client-selector-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.finvista-client-selector-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #cad4de;
+}
+
+.finvista-client-selector-item {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+
+  gap: 14px;
+
+  padding: 15px 16px;
+
+  border: 1px solid #dfe6ed;
+  border-radius: 14px;
+
+  background: #ffffff;
+
+  color: inherit;
+
+  font-family: inherit;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.finvista-client-selector-item:hover:not(:disabled) {
+  transform: translateY(-1px);
+
+  border-color: rgba(211, 128, 42, 0.55);
+
+  background: #fffdfb;
+
+  box-shadow:
+    0 8px 22px rgba(17, 44, 70, 0.08);
+}
+
+.finvista-client-selector-item:focus-visible {
+  outline: 3px solid rgba(211, 128, 42, 0.2);
+  outline-offset: 2px;
+
+  border-color: #cf7d2b;
+}
+
+.finvista-client-selector-item:disabled {
+  cursor: default;
+}
+
+.finvista-client-selector-item:not(
+  .finvista-client-selector-item-loading
+):disabled {
+  opacity: 0.55;
+}
+
+.finvista-client-selector-item-loading {
+  border-color: rgba(211, 128, 42, 0.55);
+
+  background: #fffaf4;
+}
+
+.finvista-client-selector-avatar {
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 46px;
+  height: 46px;
+
+  border-radius: 12px;
+
+  background: linear-gradient(
+    145deg,
+    #0b395f,
+    #082943
+  );
+
+  color: #ffffff;
+
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+
+  box-shadow:
+    0 5px 12px rgba(9, 47, 79, 0.16);
+}
+
+.finvista-client-selector-info {
+  min-width: 0;
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.finvista-client-selector-info strong {
+  overflow: hidden;
+
+  color: #0c2944;
+
+  font-size: 14px;
+  font-weight: 800;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finvista-client-selector-info small {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+
+  color: #7b8c9d;
+
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.finvista-client-selector-status-dot {
+  display: inline-block;
+
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: #20b77a;
+
+  box-shadow:
+    0 0 0 3px rgba(32, 183, 122, 0.1);
+}
+
+.finvista-client-selector-info-separator {
+  color: #bdc7d0;
+}
+
+.finvista-client-selector-action {
+  flex: 0 0 auto;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  min-width: 92px;
+
+  padding: 10px 13px;
+
+  border: 1px solid #efd9c1;
+  border-radius: 9px;
+
+  background: #fff8f0;
+
+  color: #ad6423;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.finvista-client-selector-action svg {
+  width: 15px;
+  height: 15px;
+
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  transition: transform 160ms ease;
+}
+
+.finvista-client-selector-item:hover:not(:disabled)
+  .finvista-client-selector-action svg {
+  transform: translateX(2px);
+}
+
+.finvista-client-selector-button-spinner {
+  width: 13px;
+  height: 13px;
+
+  border: 2px solid rgba(173, 100, 35, 0.25);
+  border-top-color: #ad6423;
+  border-radius: 50%;
+
+  animation:
+    finvista-client-selector-spin 700ms linear infinite;
+}
+
+.finvista-client-selector-loading,
+.finvista-client-selector-empty {
+  min-height: 180px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 30px;
+
+  border: 1px dashed #d6dfe7;
+  border-radius: 14px;
+
+  background: #fafcfd;
+
+  text-align: center;
+}
+
+.finvista-client-selector-loading strong,
+.finvista-client-selector-empty strong {
+  margin-top: 14px;
+
+  color: #15334e;
+
+  font-size: 14px;
+}
+
+.finvista-client-selector-loading > span,
+.finvista-client-selector-empty > span {
+  margin-top: 5px;
+
+  color: #7b8d9f;
+
+  font-size: 11px;
+}
+
+.finvista-client-selector-spinner {
+  width: 30px;
+  height: 30px;
+
+  border: 3px solid #e3e9ef;
+  border-top-color: #d48330;
+  border-radius: 50%;
+
+  animation:
+    finvista-client-selector-spin 800ms linear infinite;
+}
+
+.finvista-client-selector-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 48px;
+  height: 48px;
+
+  border: 1px solid #dce4eb;
+  border-radius: 50%;
+
+  background: #ffffff;
+}
+
+.finvista-client-selector-empty-icon svg {
+  width: 22px;
+  height: 22px;
+
+  fill: none;
+  stroke: #b67637;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.finvista-client-selector-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  padding: 16px;
+
+  border: 1px solid #f0c8c8;
+  border-radius: 12px;
+
+  background: #fff6f6;
+}
+
+.finvista-client-selector-error-icon {
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 30px;
+  height: 30px;
+
+  border-radius: 50%;
+
+  background: #d94a4a;
+
+  color: #ffffff;
+
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.finvista-client-selector-error > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.finvista-client-selector-error strong {
+  color: #9e3232;
+
+  font-size: 12px;
+}
+
+.finvista-client-selector-error span {
+  color: #a85c5c;
+
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.finvista-client-selector-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-top: 28px;
+  padding-top: 18px;
+
+  border-top: 1px solid #edf1f4;
+
+  color: #8a99a8;
+
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.finvista-client-selector-footer-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.finvista-client-selector-footer-status i {
+  display: block;
+
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: #20b77a;
+
+  box-shadow:
+    0 0 0 3px rgba(32, 183, 122, 0.1);
+}
+
+@keyframes finvista-client-selector-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .finvista-client-selector {
+    align-items: flex-start;
+
+    padding: 24px 14px;
+  }
+
+  .finvista-client-selector-card {
+    margin-top: 20px;
+
+    padding: 28px 18px 20px;
+
+    border-radius: 18px;
+  }
+
+  .finvista-client-selector-brand {
+    margin-bottom: 27px;
+  }
+
+  .finvista-client-selector-heading {
+    margin-bottom: 27px;
+  }
+
+  .finvista-client-selector-heading h1 {
+    font-size: 30px;
+  }
+
+  .finvista-client-selector-heading p {
+    font-size: 13px;
+  }
+
+  .finvista-client-selector-list-header {
+    align-items: flex-end;
+  }
+
+  .finvista-client-selector-list-header
+    > div
+    > span {
+    display: none;
+  }
+
+  .finvista-client-selector-item {
+    gap: 11px;
+
+    padding: 13px 12px;
+  }
+
+  .finvista-client-selector-avatar {
+    width: 42px;
+    height: 42px;
+  }
+
+  .finvista-client-selector-action {
+    min-width: 40px;
+
+    padding: 9px;
+  }
+
+  .finvista-client-selector-action > span {
+    display: none;
+  }
+
+  .finvista-client-selector-footer {
+    gap: 15px;
+  }
+}

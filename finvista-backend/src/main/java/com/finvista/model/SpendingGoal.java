@@ -50,6 +50,15 @@ public class SpendingGoal {
     )
     private Integer percentualAlerta;
 
+    @Column(length = 255)
+    private String categoria;
+
+    @Column(
+            name = "centro_custo",
+            length = 255
+    )
+    private String centroCusto;
+
     @ManyToOne(
             fetch = FetchType.LAZY,
             optional = false
@@ -122,8 +131,8 @@ public class SpendingGoal {
     public void setPercentualAlerta(
             Integer percentualAlerta
     ) {
-        this.percentualAlerta =
-                percentualAlerta;
+        this.percentualAlerta
+                = percentualAlerta;
     }
 
     public Cliente getCliente() {
@@ -135,4 +144,21 @@ public class SpendingGoal {
     ) {
         this.cliente = cliente;
     }
+
+    public String getCategoria() {
+        return categoria;
+    }
+
+    public void setCategoria(String categoria) {
+        this.categoria = categoria;
+    }
+
+    public String getCentroCusto() {
+        return centroCusto;
+    }
+
+    public void setCentroCusto(String centroCusto) {
+        this.centroCusto = centroCusto;
+    }
+
 }

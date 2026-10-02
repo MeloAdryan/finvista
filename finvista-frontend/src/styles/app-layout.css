@@ -48,19 +48,11 @@ body {
   padding: 26px 20px;
 
   color: #ffffff;
-  background:
-    linear-gradient(
-      180deg,
-      #1a2942 0%,
-      #0f2a44 100%
-    );
+  background: linear-gradient(180deg, #1a2942 0%, #0f2a44 100%);
 
-  border-right: 1px solid
-    rgba(255, 255, 255, 0.06);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
 
-  box-shadow:
-    8px 0 30px
-    rgba(15, 42, 68, 0.08);
+  box-shadow: 8px 0 30px rgba(15, 42, 68, 0.08);
 
   z-index: 100;
 }
@@ -99,15 +91,11 @@ body {
 
   padding: 17px 32px;
 
-  background:
-    rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.94);
 
-  border-bottom:
-    1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
 
-  box-shadow:
-    0 2px 12px
-    rgba(15, 42, 68, 0.035);
+  box-shadow: 0 2px 12px rgba(15, 42, 68, 0.035);
 }
 
 .finvista-topbar-eyebrow {
@@ -172,14 +160,11 @@ body {
 
   padding: 16px 32px;
 
-  color:
-    rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.7);
 
   background: #0f2a44;
 
-  border-top:
-    1px solid
-    rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .finvista-footer > span {
@@ -198,7 +183,6 @@ body {
    ========================================================= */
 
 @media (max-width: 900px) {
-
   .finvista-app {
     display: block;
   }
@@ -212,23 +196,19 @@ body {
   }
 
   .finvista-main {
-    padding:
-      22px 18px 32px;
+    padding: 22px 18px 32px;
   }
 
   .finvista-topbar {
-    padding:
-      16px 18px;
+    padding: 16px 18px;
   }
 
   .finvista-footer {
-    padding:
-      16px 18px;
+    padding: 16px 18px;
   }
 }
 
 @media (max-width: 600px) {
-
   .finvista-topbar {
     min-height: 70px;
   }
@@ -257,7 +237,6 @@ body {
 
   padding: 26px 16px 18px;
 }
-
 
 /* =========================================================
    MARCA
@@ -289,12 +268,7 @@ body {
 
   padding: 9px 8px;
 
-  background:
-    linear-gradient(
-      145deg,
-      #173b5d,
-      #0b2238
-    );
+  background: linear-gradient(145deg, #173b5d, #0b2238);
 
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 12px;
@@ -309,17 +283,11 @@ body {
 
   width: 6px;
 
-  background:
-    linear-gradient(
-      180deg,
-      #e89b3d,
-      #b8763d
-    );
+  background: linear-gradient(180deg, #e89b3d, #b8763d);
 
   border-radius: 3px 3px 1px 1px;
 
-  box-shadow:
-    0 2px 7px rgba(232, 155, 61, 0.2);
+  box-shadow: 0 2px 7px rgba(232, 155, 61, 0.2);
 }
 
 .finvista-brand-mark span:nth-child(1) {
@@ -363,7 +331,6 @@ body {
   white-space: nowrap;
 }
 
-
 /* =========================================================
    DIVISOR
    ========================================================= */
@@ -374,15 +341,13 @@ body {
 
   margin: 22px 8px 20px;
 
-  background:
-    linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.03),
-      rgba(255, 255, 255, 0.13),
-      rgba(255, 255, 255, 0.03)
-    );
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.13),
+    rgba(255, 255, 255, 0.03)
+  );
 }
-
 
 /* =========================================================
    NAVEGAÇÃO
@@ -492,7 +457,6 @@ body {
   background: rgba(255, 255, 255, 0.05);
 }
 
-
 /* =========================================================
    ITEM ATIVO
    ========================================================= */
@@ -500,12 +464,11 @@ body {
 .finvista-nav-item-active {
   color: #ffffff;
 
-  background:
-    linear-gradient(
-      90deg,
-      rgba(184, 118, 61, 0.18),
-      rgba(232, 155, 61, 0.07)
-    );
+  background: linear-gradient(
+    90deg,
+    rgba(184, 118, 61, 0.18),
+    rgba(232, 155, 61, 0.07)
+  );
 
   border-color: rgba(232, 155, 61, 0.16);
 
@@ -525,17 +488,11 @@ body {
 
   width: 3px;
 
-  background:
-    linear-gradient(
-      180deg,
-      #e89b3d,
-      #b8763d
-    );
+  background: linear-gradient(180deg, #e89b3d, #b8763d);
 
   border-radius: 0 4px 4px 0;
 
-  box-shadow:
-    0 0 10px rgba(232, 155, 61, 0.28);
+  box-shadow: 0 0 10px rgba(232, 155, 61, 0.28);
 }
 
 .finvista-nav-item-active .finvista-nav-icon {
@@ -543,7 +500,6 @@ body {
 
   background: rgba(232, 155, 61, 0.09);
 }
-
 
 /* =========================================================
    PARTE INFERIOR
@@ -639,7 +595,6 @@ body {
   border-radius: 5px;
 }
 
-
 /* =========================================================
    SIDEBAR — AJUSTE
    ========================================================= */
@@ -714,12 +669,7 @@ html {
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 10px;
 
-  background:
-    linear-gradient(
-      145deg,
-      #e89b3d 0%,
-      #b8763d 100%
-    );
+  background: linear-gradient(145deg, #e89b3d 0%, #b8763d 100%);
 
   color: #ffffff;
 
@@ -765,7 +715,6 @@ html {
   stroke-linejoin: round;
 }
 
-
 /* =========================================================
    ESTADO RECOLHIDO
    ========================================================= */
@@ -783,7 +732,6 @@ html {
   padding-right: 10px;
 }
 
-
 /* Marca */
 
 .finvista-app-sidebar-collapsed .finvista-brand {
@@ -798,17 +746,14 @@ html {
   margin: 0;
 }
 
-
 /* Títulos dos grupos */
 
-.finvista-app-sidebar-collapsed
-.finvista-navigation-label {
+.finvista-app-sidebar-collapsed .finvista-navigation-label {
   height: 0;
   margin: 0;
   overflow: hidden;
   opacity: 0;
 }
-
 
 /* Navegação */
 
@@ -827,7 +772,8 @@ html {
 }
 
 .finvista-app-sidebar-collapsed
-.finvista-nav-item > span:not(.finvista-nav-icon) {
+  .finvista-nav-item
+  > span:not(.finvista-nav-icon) {
   display: none;
 }
 
@@ -835,48 +781,38 @@ html {
   margin: 0;
 }
 
-
 /* Indicador ativo */
 
-.finvista-app-sidebar-collapsed
-.finvista-nav-item-active::before {
+.finvista-app-sidebar-collapsed .finvista-nav-item-active::before {
   left: -10px;
 }
 
-
 /* Área inferior */
 
-.finvista-app-sidebar-collapsed
-.finvista-system-status {
+.finvista-app-sidebar-collapsed .finvista-system-status {
   justify-content: center;
   padding-left: 0;
   padding-right: 0;
 }
 
-.finvista-app-sidebar-collapsed
-.finvista-system-status > div {
+.finvista-app-sidebar-collapsed .finvista-system-status > div {
   display: none;
 }
 
-.finvista-app-sidebar-collapsed
-.finvista-sidebar-version {
+.finvista-app-sidebar-collapsed .finvista-sidebar-version {
   justify-content: center;
   font-size: 0;
 }
 
-.finvista-app-sidebar-collapsed
-.finvista-sidebar-version span {
+.finvista-app-sidebar-collapsed .finvista-sidebar-version span {
   font-size: 10px;
 }
 
-
 /* Botão acompanha a borda da sidebar */
 
-.finvista-app-sidebar-collapsed
-.finvista-sidebar-toggle {
+.finvista-app-sidebar-collapsed .finvista-sidebar-toggle {
   right: -16px;
 }
-
 
 /* =========================================================
    MOBILE
@@ -935,8 +871,7 @@ html {
 
     z-index: 1000;
 
-    box-shadow:
-      18px 0 45px rgba(15, 42, 68, 0.24);
+    box-shadow: 18px 0 45px rgba(15, 42, 68, 0.24);
 
     transition:
       transform 0.28s ease,
@@ -967,8 +902,7 @@ html {
     align-items: stretch;
   }
 
-  .finvista-app-sidebar-collapsed
-  .finvista-navigation-label {
+  .finvista-app-sidebar-collapsed .finvista-navigation-label {
     height: auto;
     margin: initial;
     overflow: visible;
@@ -986,28 +920,25 @@ html {
   }
 
   .finvista-app-sidebar-collapsed
-  .finvista-nav-item > span:not(.finvista-nav-icon) {
+    .finvista-nav-item
+    > span:not(.finvista-nav-icon) {
     display: inline;
   }
 
-  .finvista-app-sidebar-collapsed
-  .finvista-system-status {
+  .finvista-app-sidebar-collapsed .finvista-system-status {
     justify-content: flex-start;
   }
 
-  .finvista-app-sidebar-collapsed
-  .finvista-system-status > div {
+  .finvista-app-sidebar-collapsed .finvista-system-status > div {
     display: flex;
   }
 
-  .finvista-app-sidebar-collapsed
-  .finvista-sidebar-version {
+  .finvista-app-sidebar-collapsed .finvista-sidebar-version {
     justify-content: initial;
     font-size: inherit;
   }
 
-  .finvista-app-sidebar-collapsed
-  .finvista-sidebar-version span {
+  .finvista-app-sidebar-collapsed .finvista-sidebar-version span {
     font-size: inherit;
   }
 
@@ -1051,8 +982,7 @@ html {
   .finvista-mobile-menu-button:hover {
     transform: translateY(-1px);
 
-    box-shadow:
-      0 6px 16px rgba(15, 42, 68, 0.13);
+    box-shadow: 0 6px 16px rgba(15, 42, 68, 0.13);
   }
 
   .finvista-mobile-menu-button:active {
@@ -1203,12 +1133,11 @@ html {
   border: 1px solid rgba(184, 118, 61, 0.25);
   border-radius: 12px;
 
-  background:
-    linear-gradient(
-      145deg,
-      rgba(232, 155, 61, 0.11),
-      rgba(184, 118, 61, 0.07)
-    );
+  background: linear-gradient(
+    145deg,
+    rgba(232, 155, 61, 0.11),
+    rgba(184, 118, 61, 0.07)
+  );
 
   color: #9c6839;
 
@@ -1330,15 +1259,9 @@ html {
 
   padding: 14px 32px;
 
-  background:
-    linear-gradient(
-      135deg,
-      #1a2942 0%,
-      #0f2a44 100%
-    );
+  background: linear-gradient(135deg, #1a2942 0%, #0f2a44 100%);
 
-  border-top:
-    1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .finvista-footer-brand {
@@ -1359,13 +1282,11 @@ html {
 
   gap: 3px;
 
-  border:
-    1px solid rgba(232, 155, 61, 0.22);
+  border: 1px solid rgba(232, 155, 61, 0.22);
 
   border-radius: 9px;
 
-  background:
-    rgba(255, 255, 255, 0.045);
+  background: rgba(255, 255, 255, 0.045);
 }
 
 .finvista-footer-mark span {
@@ -1375,12 +1296,7 @@ html {
 
   border-radius: 3px 3px 1px 1px;
 
-  background:
-    linear-gradient(
-      180deg,
-      #e89b3d,
-      #b8763d
-    );
+  background: linear-gradient(180deg, #e89b3d, #b8763d);
 }
 
 .finvista-footer-mark span:nth-child(1) {
@@ -1413,7 +1329,6 @@ html {
 
   font-size: 9px;
 }
-
 
 /* Informações */
 
@@ -1462,16 +1377,14 @@ html {
 
   background: #10b981;
 
-  box-shadow:
-    0 0 0 3px rgba(16, 185, 129, 0.08);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08);
 }
 
 .finvista-footer-separator {
   width: 1px;
   height: 26px;
 
-  background:
-    rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .finvista-footer-copyright {
@@ -1479,7 +1392,6 @@ html {
 
   font-size: 9px;
 }
-
 
 /* =========================================================
    FOOTER — RESPONSIVO
@@ -1524,8 +1436,7 @@ html {
     width: 100%;
   }
 
-  .finvista-footer-info
-  .finvista-footer-separator:last-of-type {
+  .finvista-footer-info .finvista-footer-separator:last-of-type {
     display: none;
   }
 }
@@ -1585,12 +1496,7 @@ html {
   border: 1px solid rgba(15, 42, 68, 0.08);
   border-radius: 13px;
 
-  background:
-    linear-gradient(
-      145deg,
-      #ffffff 0%,
-      #f8fafb 100%
-    );
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafb 100%);
 
   box-shadow:
     0 4px 13px rgba(15, 42, 68, 0.055),
@@ -1608,12 +1514,7 @@ html {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
 
-  background:
-    linear-gradient(
-      145deg,
-      #173b5d,
-      #0f2a44
-    );
+  background: linear-gradient(145deg, #173b5d, #0f2a44);
 
   color: #ffffff;
 
@@ -1682,12 +1583,7 @@ html {
   border: 1px solid rgba(184, 118, 61, 0.2);
   border-radius: 9px;
 
-  background:
-    linear-gradient(
-      180deg,
-      #fffaf6 0%,
-      #f8eee5 100%
-    );
+  background: linear-gradient(180deg, #fffaf6 0%, #f8eee5 100%);
 
   color: #9c6232;
 
@@ -1723,12 +1619,7 @@ html {
 .finvista-topbar-logout:hover {
   border-color: rgba(184, 118, 61, 0.4);
 
-  background:
-    linear-gradient(
-      180deg,
-      #fff7f0 0%,
-      #f3e4d7 100%
-    );
+  background: linear-gradient(180deg, #fff7f0 0%, #f3e4d7 100%);
 
   color: #81491f;
 
@@ -1752,8 +1643,7 @@ html {
    ========================================================= */
 
 .finvista-main {
-  padding:
-    22px 24px 34px;
+  padding: 22px 24px 34px;
 }
 
 #dashboard,
@@ -1827,15 +1717,13 @@ html {
   }
 
   .finvista-main {
-    padding:
-      18px 14px 28px;
+    padding: 18px 14px 28px;
   }
 }
 
 @media (max-width: 650px) {
   .finvista-topbar {
-    padding:
-      10px 12px;
+    padding: 10px 12px;
   }
 
   .finvista-topbar-eyebrow {
@@ -1873,7 +1761,6 @@ html {
   .finvista-topbar-logout span {
     display: none;
   }
-
 }
 /* =========================================================
    FINVISTA — ÁREA FINANCEIRA PANORÂMICA
@@ -1947,21 +1834,11 @@ html {
   border: 3px solid #e7edf2;
   border-radius: 999px;
 
-  background:
-    linear-gradient(
-      90deg,
-      #b8763d,
-      #e89b3d
-    );
+  background: linear-gradient(90deg, #b8763d, #e89b3d);
 }
 
 .finvista-main::-webkit-scrollbar-thumb:hover {
-  background:
-    linear-gradient(
-      90deg,
-      #a86732,
-      #d98a39
-    );
+  background: linear-gradient(90deg, #a86732, #d98a39);
 }
 
 /*
@@ -2002,131 +1879,5 @@ html {
   .finvista-main > * {
     width: 100%;
     min-width: 0;
-  }
-}
-/* =========================================================
-   FINVISTA — SCROLLBAR HORIZONTAL FIXA E SINCRONIZADA
-   ========================================================= */
-
-/*
- * Desktop:
- * a área financeira continua rolando horizontalmente,
- * mas a scrollbar nativa do conteúdo fica escondida.
- * A barra fixa inferior controla o mesmo scroll.
- */
-@media (min-width: 901px) {
-
-  /* Área financeira */
-  .finvista-main {
-    padding-bottom: 48px;
-    scrollbar-width: none;
-  }
-
-  .finvista-main::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-  }
-
-  /* Estrutura fixa da barra */
-  .finvista-horizontal-scrollbar-shell {
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    left: 240px;
-
-    height: 26px;
-    padding: 5px 14px;
-
-    border-top: 1px solid #d9e2e9;
-    background: rgba(244, 246, 248, 0.96);
-
-    box-shadow:
-      0 -4px 14px rgba(15, 42, 68, 0.07);
-
-    backdrop-filter: blur(8px);
-
-    z-index: 250;
-
-    transition:
-      left 0.28s ease;
-  }
-
-  /* Ajuste quando a sidebar estiver recolhida */
-  .finvista-app-sidebar-collapsed
-    .finvista-horizontal-scrollbar-shell {
-    left: 72px;
-  }
-
-  /* Área realmente rolável */
-  .finvista-horizontal-scrollbar {
-    width: 100%;
-    height: 16px;
-
-    overflow-x: auto;
-    overflow-y: hidden;
-
-    scrollbar-width: auto;
-    scrollbar-color:
-      #b8763d
-      #e7edf2;
-  }
-
-  /*
-   * Elemento invisível responsável por dar à barra
-   * a mesma largura do conteúdo financeiro.
-   */
-  .finvista-horizontal-scrollbar-spacer {
-    min-width: 100%;
-    height: 1px;
-  }
-
-  /* Chrome / Edge */
-  .finvista-horizontal-scrollbar::-webkit-scrollbar {
-    height: 12px;
-  }
-
-  .finvista-horizontal-scrollbar::-webkit-scrollbar-track {
-    border: 1px solid #d9e2e9;
-    border-radius: 999px;
-
-    background: #e7edf2;
-  }
-
-  .finvista-horizontal-scrollbar::-webkit-scrollbar-thumb {
-    min-width: 110px;
-
-    border: 3px solid #e7edf2;
-    border-radius: 999px;
-
-    background:
-      linear-gradient(
-        90deg,
-        #b8763d,
-        #e89b3d
-      );
-  }
-
-  .finvista-horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
-    background:
-      linear-gradient(
-        90deg,
-        #a86732,
-        #d98a39
-      );
-  }
-}
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
-@media (max-width: 900px) {
-
-  /*
-   * Em telas pequenas usamos o comportamento responsivo
-   * normal e escondemos a scrollbar fixa.
-   */
-  .finvista-horizontal-scrollbar-shell {
-    display: none;
   }
 }

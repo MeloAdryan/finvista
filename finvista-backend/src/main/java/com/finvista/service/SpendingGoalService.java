@@ -92,28 +92,65 @@ public class SpendingGoalService {
     }
 
     public List<SpendingGoalResponse> listarComSituacao() {
+    return listarComSituacao(
+            null,
+            null
+    );
+}
+
+    public List<SpendingGoalResponse> listarComSituacao(
+            String centroCusto,
+            String categoria
+    ) {
+
+        String centroCustoNormalizado
+                = normalizarFiltro(centroCusto);
+
+        String categoriaNormalizada
+                = normalizarFiltro(categoria);
 
         return listarMetas()
                 .stream()
-                .map(this::calcularSituacao)
+                .map(
+                        meta -> calcularSituacao(
+                                meta,
+                                centroCustoNormalizado,
+                                categoriaNormalizada
+                        )
+                )
                 .toList();
     }
 
     public SpendingGoalResponse buscarSituacao(
-            Long id
+        Long id
+) {
+    return buscarSituacao(
+            id,
+            null,
+            null
+    );
+}
+
+    public SpendingGoalResponse buscarSituacao(
+            Long id,
+            String centroCusto,
+            String categoria
     ) {
 
-        /*
-         * buscarPorId já garante que a meta pertence
-         * ao cliente atualmente selecionado.
-         */
-        SpendingGoal meta = buscarPorId(id);
+        SpendingGoal meta
+                = buscarPorId(id);
 
-        return calcularSituacao(meta);
+        return calcularSituacao(
+                meta,
+                normalizarFiltro(centroCusto),
+                normalizarFiltro(categoria)
+        );
     }
 
     private SpendingGoalResponse calcularSituacao(
-            SpendingGoal meta
+            SpendingGoal meta,
+            String centroCusto,
+            String categoria
     ) {
 
         Long clienteId = meta.getCliente().getId();
@@ -125,8 +162,8 @@ public class SpendingGoalService {
          * Dessa forma, uma meta da empresa A jamais soma
          * despesas pertencentes à empresa B.
          */
-        List<FinancialTransaction> despesas =
-                financialTransactionRepository
+        List<FinancialTransaction> despesas
+                = financialTransactionRepository
                         .findByClienteIdAndTipoAndDataBetweenOrderByDataAsc(
                                 clienteId,
                                 TIPO_DESPESA,
@@ -135,21 +172,32 @@ public class SpendingGoalService {
                         );
 
         BigDecimal gastoAtual = despesas.stream()
+                .filter(
+                        lancamento -> correspondeCentroCusto(
+                                lancamento,
+                                centroCusto
+                        )
+                )
+                .filter(
+                        lancamento -> correspondeCategoria(
+                                lancamento,
+                                categoria
+                        )
+                )
                 .map(FinancialTransaction::getValor)
                 .filter(valor -> valor != null)
                 .reduce(
                         BigDecimal.ZERO,
                         BigDecimal::add
                 );
-
-        BigDecimal percentualUtilizado =
-                calculationService.calcularPercentualUtilizado(
+        BigDecimal percentualUtilizado
+                = calculationService.calcularPercentualUtilizado(
                         gastoAtual,
                         meta.getValorLimite()
                 );
 
-        BigDecimal saldoMeta =
-                calculationService.calcularSaldoMeta(
+        BigDecimal saldoMeta
+                = calculationService.calcularSaldoMeta(
                         meta.getValorLimite(),
                         gastoAtual
                 );
@@ -169,8 +217,71 @@ public class SpendingGoalService {
                 percentualUtilizado,
                 saldoMeta,
                 meta.getPercentualAlerta(),
-                status
+                status,
+                categoria,
+                centroCusto
         );
+    }
+
+    private boolean correspondeCentroCusto(
+            FinancialTransaction lancamento,
+            String centroCusto
+    ) {
+
+        if (centroCusto == null) {
+            return true;
+        }
+
+        String centroCustoLancamento
+                = normalizarFiltro(
+                        lancamento.getCentroCusto()
+                );
+
+        if (centroCustoLancamento == null) {
+            return false;
+        }
+
+        return centroCustoLancamento
+                .equalsIgnoreCase(centroCusto);
+    }
+
+    private boolean correspondeCategoria(
+            FinancialTransaction lancamento,
+            String categoria
+    ) {
+
+        if (categoria == null) {
+            return true;
+        }
+
+        String categoriaLancamento
+                = normalizarFiltro(
+                        lancamento.getCategoria()
+                );
+
+        if (categoriaLancamento == null) {
+            return false;
+        }
+
+        return categoriaLancamento
+                .equalsIgnoreCase(categoria);
+    }
+
+    private String normalizarFiltro(
+            String valor
+    ) {
+
+        if (valor == null) {
+            return null;
+        }
+
+        String valorNormalizado = valor.trim();
+
+        if (valorNormalizado.isEmpty()) {
+            return null;
+        }
+
+        return valorNormalizado;
     }
 
     private Long obterClienteIdAtual() {
@@ -246,8 +357,8 @@ public class SpendingGoalService {
             );
         }
 
-        String tipoNormalizado =
-                tipo.trim().toUpperCase();
+        String tipoNormalizado
+                = tipo.trim().toUpperCase();
 
         if (!TIPO_MENSAL.equals(tipoNormalizado)
                 && !TIPO_SEMESTRAL.equals(tipoNormalizado)) {
@@ -276,16 +387,16 @@ public class SpendingGoalService {
             );
         }
 
-        String tipoNormalizado =
-                tipo.trim().toUpperCase();
+        String tipoNormalizado
+                = tipo.trim().toUpperCase();
 
         if (TIPO_MENSAL.equals(tipoNormalizado)) {
 
-            LocalDate inicioEsperado =
-                    dataInicio.withDayOfMonth(1);
+            LocalDate inicioEsperado
+                    = dataInicio.withDayOfMonth(1);
 
-            LocalDate fimEsperado =
-                    dataInicio.withDayOfMonth(
+            LocalDate fimEsperado
+                    = dataInicio.withDayOfMonth(
                             dataInicio.lengthOfMonth()
                     );
 
@@ -319,8 +430,8 @@ public class SpendingGoalService {
                 );
             }
 
-            LocalDate fimEsperado =
-                    inicioEsperado
+            LocalDate fimEsperado
+                    = inicioEsperado
                             .plusMonths(6)
                             .minusDays(1);
 
