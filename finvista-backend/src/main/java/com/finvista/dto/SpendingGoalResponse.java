@@ -15,6 +15,10 @@ public record SpendingGoalResponse(
         Integer percentualAlerta,
         String status,
         String categoria,
-        String centroCusto
+        String centroCusto,
+        BigDecimal gastoFiltrado,
+        BigDecimal percentualFiltrado,
+        String filtroCategoria,
+        String filtroCentroCusto
 ) {
 }

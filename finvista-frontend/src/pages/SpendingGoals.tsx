@@ -114,8 +114,8 @@ function SpendingGoals() {
         const resultados = await Promise.allSettled([
           listarMetas(),
           obterUsuarioAtual(),
-          getCostCenters(),
-          getExpenseDistribution(),
+         getCostCenters(true),
+          getExpenseDistribution(true),
         ]);
 
         if (!ativo) {
@@ -266,7 +266,7 @@ function SpendingGoals() {
     );
 
     const gastoTotal = metasFiltradas.reduce(
-      (total, meta) => total + Number(meta.gastoAtual),
+      (total, meta) => total + Number(meta.gastoFiltrado),
       0,
     );
 
@@ -409,23 +409,6 @@ function SpendingGoals() {
 
       {usuarioAdmin && mostrarFormulario && (
         <form className="metas-formulario" onSubmit={salvarMeta}>
-          <div className="metas-formulario-header">
-            <div>
-              <span>CONFIGURAÇÃO</span>
-
-              <h3>Nova meta de gastos</h3>
-            </div>
-
-            <button
-              type="button"
-              className="metas-fechar"
-              onClick={() => setMostrarFormulario(false)}
-              aria-label="Fechar formulário"
-            >
-              ×
-            </button>
-          </div>
-
           <div className="metas-form-grid">
             <label>
               Tipo da meta
@@ -436,7 +419,6 @@ function SpendingGoals() {
                 }
               >
                 <option value="MENSAL">Mensal</option>
-
                 <option value="SEMESTRAL">Semestral</option>
               </select>
             </label>
@@ -492,59 +474,57 @@ function SpendingGoals() {
                     )
                   }
                 />
-
                 <span>%</span>
               </div>
             </label>
           </div>
-          <label>
-            Centro de custo
-            <select
-              value={formulario.centroCusto ?? ""}
-              onChange={(event) => {
-                void alterarCentroCustoFormulario(event.target.value);
-              }}
-            >
-              <option value="">Todos os centros de custo</option>
 
-              {opcoesCentroCusto.map((centro) => (
-                <option key={centro} value={centro}>
-                  {centro}
+          <div className="metas-form-grid metas-form-grid-contexto">
+            <label>
+              Centro de custo
+              <select
+                value={formulario.centroCusto ?? ""}
+                onChange={(event) => {
+                  void alterarCentroCustoFormulario(event.target.value);
+                }}
+              >
+                <option value="">Todos os centros de custo</option>
+
+                {opcoesCentroCusto.map((centro) => (
+                  <option key={centro} value={centro}>
+                    {centro}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Categoria
+              <select
+                value={formulario.categoria ?? ""}
+                disabled={
+                  !formulario.centroCusto || carregandoCategoriasFormulario
+                }
+                onChange={(event) =>
+                  atualizarFormulario("categoria", event.target.value || null)
+                }
+              >
+                <option value="">
+                  {carregandoCategoriasFormulario
+                    ? "Carregando categorias..."
+                    : formulario.centroCusto
+                      ? "Todas as categorias"
+                      : "Selecione um centro de custo"}
                 </option>
-              ))}
-            </select>
-          </label>
 
-          <label>
-            Categoria
-            <select
-              value={formulario.categoria ?? ""}
-              disabled={
-                !formulario.centroCusto || carregandoCategoriasFormulario
-              }
-              onChange={(event) => {
-                const novaCategoria = event.target.value;
-
-                setFiltroCategoria(novaCategoria);
-
-                void carregarMetas(filtroCentroCusto, novaCategoria);
-              }}
-            >
-              <option value="">
-                {carregandoCategoriasFormulario
-                  ? "Carregando categorias..."
-                  : formulario.centroCusto
-                    ? "Todas as categorias"
-                    : "Selecione um centro de custo"}
-              </option>
-
-              {categoriasFormulario.map((categoria) => (
-                <option key={categoria} value={categoria}>
-                  {categoria}
-                </option>
-              ))}
-            </select>
-          </label>
+                {categoriasFormulario.map((categoria) => (
+                  <option key={categoria} value={categoria}>
+                    {categoria}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
 
           <div className="metas-formulario-footer">
             <span>
@@ -578,15 +558,20 @@ function SpendingGoals() {
           <div>
             <span className="metas-filtros-eyebrow">VISUALIZAÇÃO</span>
 
-            <h3>Filtrar metas</h3>
+            <h3>Analisar despesas das metas</h3>
 
-            <p>Analise as metas por centro de custo ou categoria.</p>
+            <p>
+              Consulte as despesas por centro de custo ou categoria sem criar
+              uma meta para cada grupo. Saldo e alertas consideram o consumo
+              total de cada meta.
+            </p>
           </div>
 
           {filtrosAtivos && (
             <button
               type="button"
               className="metas-limpar-filtros"
+              disabled={carregando}
               onClick={limparFiltros}
             >
               Limpar filtros
@@ -600,6 +585,7 @@ function SpendingGoals() {
 
             <select
               value={filtroCentroCusto}
+              disabled={carregando}
               onChange={(event) => {
                 const novoCentroCusto = event.target.value;
 
@@ -624,6 +610,7 @@ function SpendingGoals() {
 
             <select
               value={filtroCategoria}
+              disabled={carregando}
               onChange={(event) => {
                 const novaCategoria = event.target.value;
 
@@ -661,18 +648,20 @@ function SpendingGoals() {
           <strong>{formatarMoeda(resumo.limiteTotal)}</strong>
 
           <small>
-            {filtrosAtivos
-              ? "Total das metas filtradas"
-              : "Soma das metas cadastradas"}
+            Limites das metas cadastradas, sem alteração pelos filtros
           </small>
         </article>
 
         <article>
-          <span>Gastos acumulados</span>
+          <span>{filtrosAtivos ? "Gastos no filtro" : "Gastos acumulados"}</span>
 
           <strong>{formatarMoeda(resumo.gastoTotal)}</strong>
 
-          <small>Valor consumido nas metas</small>
+          <small>
+            {filtrosAtivos
+              ? "Despesas selecionadas nos períodos das metas"
+              : "Valor consumido nas metas"}
+          </small>
         </article>
 
         <article>
@@ -680,7 +669,7 @@ function SpendingGoals() {
 
           <strong>{formatarMoeda(resumo.saldoTotal)}</strong>
 
-          <small>Margem restante planejada</small>
+          <small>Considera o consumo total, sem filtros</small>
         </article>
 
         <article>
@@ -688,7 +677,7 @@ function SpendingGoals() {
 
           <strong>{resumo.metasAtencao}</strong>
 
-          <small>Metas em alerta ou excedidas</small>
+          <small>Alertas pelo consumo total, sem filtros</small>
         </article>
       </div>
 
@@ -801,20 +790,41 @@ function SpendingGoals() {
                     </div>
 
                     <div>
-                      <span>Utilizado</span>
+                      <span>Utilizado total</span>
 
                       <strong>{formatarMoeda(Number(meta.gastoAtual))}</strong>
                     </div>
 
                     <div>
-                      <span>Saldo</span>
+                      <span>Saldo total</span>
 
                       <strong>{formatarMoeda(Number(meta.saldoMeta))}</strong>
                     </div>
                   </div>
 
+                  {filtrosAtivos && (
+                    <div className="meta-contexto">
+                      <span>
+                        <small>Filtro de despesas</small>
+                        <strong>
+                          {meta.filtroCentroCusto || "Todos os centros"}
+                          {" · "}
+                          {meta.filtroCategoria || "Todas as categorias"}
+                        </strong>
+                      </span>
+                      <span>
+                        <small>Gastos no filtro</small>
+                        <strong>{formatarMoeda(Number(meta.gastoFiltrado))}</strong>
+                      </span>
+                      <span>
+                        <small>Participação no limite da meta</small>
+                        <strong>{Number(meta.percentualFiltrado).toFixed(1)}%</strong>
+                      </span>
+                    </div>
+                  )}
+
                   <div className="meta-progresso-header">
-                    <span>Utilização da meta</span>
+                    <span>Utilização total da meta</span>
 
                     <strong>{percentual.toFixed(1)}%</strong>
                   </div>

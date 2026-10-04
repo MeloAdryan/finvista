@@ -527,20 +527,17 @@ class SpendingGoalServiceTest {
 
     @Test
     void deveFiltrarGastoPorCentroCusto() {
-
         SpendingGoal meta = criarMetaMensal(
                 new BigDecimal("100000.00"),
                 80
         );
 
+        meta.setCentroCusto("Custo Operacional");
+
         configurarBuscaDaMetaComFiltros(meta);
 
         SpendingGoalResponse resultado
-                = spendingGoalService.buscarSituacao(
-                        1L,
-                        "Custo Operacional",
-                        null
-                );
+                = spendingGoalService.buscarSituacao(1L);
 
         assertEquals(
                 new BigDecimal("15000.00"),
@@ -557,33 +554,23 @@ class SpendingGoalServiceTest {
                 resultado.saldoMeta()
         );
 
-        assertEquals(
-                "Custo Operacional",
-                resultado.centroCusto()
-        );
-
-        assertEquals(
-                null,
-                resultado.categoria()
-        );
+        assertEquals("Custo Operacional", resultado.centroCusto());
+        assertEquals(null, resultado.categoria());
     }
 
     @Test
     void deveFiltrarGastoSomentePorCategoria() {
-
         SpendingGoal meta = criarMetaMensal(
                 new BigDecimal("100000.00"),
                 80
         );
 
+        meta.setCategoria("Exames Médicos");
+
         configurarBuscaDaMetaComFiltros(meta);
 
         SpendingGoalResponse resultado
-                = spendingGoalService.buscarSituacao(
-                        1L,
-                        null,
-                        "Exames Médicos"
-                );
+                = spendingGoalService.buscarSituacao(1L);
 
         assertEquals(
                 new BigDecimal("12000.00"),
@@ -600,33 +587,24 @@ class SpendingGoalServiceTest {
                 resultado.saldoMeta()
         );
 
-        assertEquals(
-                "Exames Médicos",
-                resultado.categoria()
-        );
-
-        assertEquals(
-                null,
-                resultado.centroCusto()
-        );
+        assertEquals("Exames Médicos", resultado.categoria());
+        assertEquals(null, resultado.centroCusto());
     }
 
     @Test
     void deveCombinarCentroCustoECategoria() {
-
         SpendingGoal meta = criarMetaMensal(
                 new BigDecimal("100000.00"),
                 80
         );
 
+        meta.setCentroCusto("Custo Operacional");
+        meta.setCategoria("Exames Médicos");
+
         configurarBuscaDaMetaComFiltros(meta);
 
         SpendingGoalResponse resultado
-                = spendingGoalService.buscarSituacao(
-                        1L,
-                        "Custo Operacional",
-                        "Exames Médicos"
-                );
+                = spendingGoalService.buscarSituacao(1L);
 
         assertEquals(
                 new BigDecimal("10000.00"),
@@ -643,15 +621,158 @@ class SpendingGoalServiceTest {
                 resultado.saldoMeta()
         );
 
-        assertEquals(
-                "Custo Operacional",
-                resultado.centroCusto()
+        assertEquals("Custo Operacional", resultado.centroCusto());
+        assertEquals("Exames Médicos", resultado.categoria());
+    }
+
+    @Test
+    void deveConsultarCategoriaDentroDeMetaGeral() {
+        SpendingGoal meta = criarMetaMensal(new BigDecimal("100000.00"), 80);
+        meta.setCentroCusto(null);
+        meta.setCategoria(null);
+        configurarBuscaDaMetaComFiltros(meta);
+
+        SpendingGoalResponse resultado = spendingGoalService.buscarSituacao(
+                1L, null, "Exames Médicos"
         );
 
+        assertEquals(0, new BigDecimal("17000.00").compareTo(resultado.gastoAtual()));
+        assertEquals(0, new BigDecimal("12000.00").compareTo(resultado.gastoFiltrado()));
+        assertEquals(0, new BigDecimal("83000.00").compareTo(resultado.saldoMeta()));
+        assertEquals("NORMAL", resultado.status());
+        assertEquals(null, resultado.centroCusto());
+        assertEquals(null, resultado.categoria());
+        assertEquals(null, resultado.filtroCentroCusto());
+        assertEquals("Exames Médicos", resultado.filtroCategoria());
         assertEquals(
-                "Exames Médicos",
-                resultado.categoria()
+                calculationService.calcularPercentualUtilizado(
+                        resultado.gastoFiltrado(), meta.getValorLimite()
+                ),
+                resultado.percentualFiltrado()
         );
+    }
+
+    @Test
+    void deveConsultarCentroECategoriaDentroDeMetaGeral() {
+        SpendingGoal meta = criarMetaMensal(new BigDecimal("100000.00"), 80);
+        meta.setCentroCusto(null);
+        meta.setCategoria(null);
+        configurarBuscaDaMetaComFiltros(meta);
+
+        SpendingGoalResponse resultado = spendingGoalService.buscarSituacao(
+                1L, "Custo Operacional", "Exames Médicos"
+        );
+
+        assertEquals(0, new BigDecimal("17000.00").compareTo(resultado.gastoAtual()));
+        assertEquals(0, new BigDecimal("10000.00").compareTo(resultado.gastoFiltrado()));
+        assertEquals(0, new BigDecimal("83000.00").compareTo(resultado.saldoMeta()));
+        assertEquals("NORMAL", resultado.status());
+        assertEquals(null, resultado.centroCusto());
+        assertEquals(null, resultado.categoria());
+        assertEquals("Custo Operacional", resultado.filtroCentroCusto());
+        assertEquals("Exames Médicos", resultado.filtroCategoria());
+        assertEquals(
+                calculationService.calcularPercentualUtilizado(
+                        resultado.gastoFiltrado(), meta.getValorLimite()
+                ),
+                resultado.percentualFiltrado()
+        );
+    }
+
+    @Test
+    void deveRespeitarCentroSalvoAoConsultarCategoria() {
+        SpendingGoal meta = criarMetaMensal(new BigDecimal("100000.00"), 80);
+        meta.setCentroCusto("Custo Operacional");
+        meta.setCategoria(null);
+        configurarBuscaDaMetaComFiltros(meta);
+
+        SpendingGoalResponse resultado = spendingGoalService.buscarSituacao(
+                1L, null, "Exames Médicos"
+        );
+
+        assertEquals(0, new BigDecimal("15000.00").compareTo(resultado.gastoAtual()));
+        assertEquals(0, new BigDecimal("10000.00").compareTo(resultado.gastoFiltrado()));
+        assertEquals(0, new BigDecimal("85000.00").compareTo(resultado.saldoMeta()));
+        assertEquals("NORMAL", resultado.status());
+        assertEquals("Custo Operacional", resultado.centroCusto());
+        assertEquals(null, resultado.categoria());
+        assertEquals(null, resultado.filtroCentroCusto());
+        assertEquals("Exames Médicos", resultado.filtroCategoria());
+        assertEquals(
+                calculationService.calcularPercentualUtilizado(
+                        resultado.gastoFiltrado(), meta.getValorLimite()
+                ),
+                resultado.percentualFiltrado()
+        );
+    }
+
+    @Test
+    void deveRetornarZeroQuandoFiltroConflitaComMeta() {
+        SpendingGoal meta = criarMetaMensal(new BigDecimal("100000.00"), 80);
+        meta.setCentroCusto("Custo Operacional");
+        meta.setCategoria("Exames Médicos");
+        configurarBuscaDaMetaComFiltros(meta);
+
+        SpendingGoalResponse resultado = spendingGoalService.buscarSituacao(
+                1L, "Administrativo", null
+        );
+
+        assertEquals(0, new BigDecimal("10000.00").compareTo(resultado.gastoAtual()));
+        assertEquals(0, new BigDecimal("0").compareTo(resultado.gastoFiltrado()));
+        assertEquals(0, new BigDecimal("90000.00").compareTo(resultado.saldoMeta()));
+        assertEquals("NORMAL", resultado.status());
+        assertEquals("Custo Operacional", resultado.centroCusto());
+        assertEquals("Exames Médicos", resultado.categoria());
+        assertEquals("Administrativo", resultado.filtroCentroCusto());
+        assertEquals(null, resultado.filtroCategoria());
+        assertEquals(
+                calculationService.calcularPercentualUtilizado(
+                        resultado.gastoFiltrado(), meta.getValorLimite()
+                ),
+                resultado.percentualFiltrado()
+        );
+    }
+
+    @Test
+    void deveManterMetaExcedidaMesmoComFiltroSemDespesas() {
+        SpendingGoal meta = criarMetaMensal(new BigDecimal("10000.00"), 80);
+        meta.setCentroCusto(null);
+        meta.setCategoria(null);
+        configurarBuscaDaMetaComFiltros(meta);
+
+        SpendingGoalResponse resultado = spendingGoalService.buscarSituacao(
+                1L, null, "Categoria inexistente"
+        );
+
+        assertEquals(0, new BigDecimal("17000.00").compareTo(resultado.gastoAtual()));
+        assertEquals(0, new BigDecimal("0").compareTo(resultado.gastoFiltrado()));
+        assertEquals(0, new BigDecimal("-7000.00").compareTo(resultado.saldoMeta()));
+        assertEquals("EXCEDIDA", resultado.status());
+        assertEquals(null, resultado.centroCusto());
+        assertEquals(null, resultado.categoria());
+        assertEquals(null, resultado.filtroCentroCusto());
+        assertEquals("Categoria inexistente", resultado.filtroCategoria());
+        assertEquals(
+                calculationService.calcularPercentualUtilizado(
+                        resultado.gastoFiltrado(), meta.getValorLimite()
+                ),
+                resultado.percentualFiltrado()
+        );
+    }
+
+    @Test
+    void deveManterMetaGeralNaListagemAoFiltrarCategoria() {
+        SpendingGoal meta = criarMetaMensal(new BigDecimal("100000.00"), 80);
+        configurarBuscaDaMetaComFiltros(meta);
+        when(spendingGoalRepository.findByClienteIdOrderByDataInicioDesc(CLIENTE_ID))
+                .thenReturn(List.of(meta));
+
+        List<SpendingGoalResponse> resultado =
+                spendingGoalService.listarComSituacao(null, "Exames Médicos");
+
+        assertEquals(1, resultado.size());
+        assertEquals(0, new BigDecimal("12000.00").compareTo(resultado.get(0).gastoFiltrado()));
+        assertEquals(0, new BigDecimal("17000.00").compareTo(resultado.get(0).gastoAtual()));
     }
 
     private SpendingGoal criarMetaMensal(
@@ -785,50 +906,5 @@ class SpendingGoalServiceTest {
         despesa.setCentroCusto(centroCusto);
 
         return despesa;
-    }}
-
-    
-            
-                    
-                
-                        
-                                
-                                
-                        
-        
-                
-                
-                 
-                        
-                        
-                        
-                        
-                 
-                        
-                        
-                        
-                        
-                 
-                        
-                        
-                        
-                        
-                
-                        
-                                
-                                
-                                
-                                
-                        
-        
-                
-                        
-                        
-                        
-                
-                
-            
-            
-            
-            
-                                                     
+    }
+}

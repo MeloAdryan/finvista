@@ -5,21 +5,19 @@ export interface CostCenterData {
   valor: number
 }
 
-export async function getCostCenters():
-Promise<CostCenterData[]> {
-  const response = await fetch(
-    `${API_URL}/api/centros-custo`,
-    {
-      method: 'GET',
-      credentials: 'include',
-    },
-  )
+export async function getCostCenters(
+  historico = false,
+): Promise<CostCenterData[]> {
+  const query = historico ? "?historico=true" : "";
+
+  const response = await fetch(`${API_URL}/api/centros-custo${query}`, {
+    method: "GET",
+    credentials: "include",
+  });
 
   if (!response.ok) {
-    throw new Error(
-      'Erro ao carregar os centros de custo',
-    )
+    throw new Error("Não foi possível carregar a análise financeira.");
   }
 
-  return response.json()
+  return response.json();
 }

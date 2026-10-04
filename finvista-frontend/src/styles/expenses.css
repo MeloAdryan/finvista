@@ -680,10 +680,7 @@
   }
 }
 
-/* =========================================================
-   TELAS MUITO PEQUENAS
-   ========================================================= */
-
+/* Ajustes para celulares pequenos */
 @media (max-width: 360px) {
   .expense-distribution-chart-box {
     padding: 11px;
@@ -691,60 +688,74 @@
 
   .expense-mobile-item-header {
     flex-direction: column;
-
     gap: 6px;
   }
 
   .expense-mobile-value {
-    flex-direction: row;
-    align-items: baseline;
+    flex-direction: column;
+    align-items: flex-start;
 
-    gap: 7px;
+    min-width: 0;
+    max-width: 100%;
 
     padding-left: 30px;
-
     text-align: left;
   }
 
   .expense-mobile-value span {
-    margin-top: 0;
+    margin-top: 2px;
   }
-/* =========================================================
-   ROLAGEM DA TELA DE DESPESAS
-   ========================================================= */
 
-html {
-  overflow-y: scroll;
-  overflow-x: hidden;
-}
+  /* Expansão da lista de despesas no celular */
+  .expense-mobile-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
 
-body {
-  min-height: 100vh;
-}
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+  }
 
-/* Firefox */
-html {
-  scrollbar-width: thin;
-  scrollbar-color: #8da6bb #edf2f6;
-}
+  .expense-mobile-controls p {
+    margin: 0;
+    color: #667085;
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: center;
+  }
 
-/* Chrome, Edge e Safari */
-html::-webkit-scrollbar {
-  width: 10px;
-}
+  .expense-mobile-toggle {
+    width: 100%;
+    min-height: 44px;
+    padding: 12px 16px;
 
-html::-webkit-scrollbar-track {
-  background: #edf2f6;
-}
+    border: 1px solid #315f87;
+    border-radius: 10px;
 
-html::-webkit-scrollbar-thumb {
-  background: #8da6bb;
-  border-radius: 999px;
-  border: 2px solid #edf2f6;
-}
+    background: #f5f8fb;
+    color: #173a5e;
 
-html::-webkit-scrollbar-thumb:hover {
-  background: #6f8da7;
-}
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
 
+    cursor: pointer;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease;
+  }
+
+  @media (hover: hover) {
+    .expense-mobile-toggle:hover {
+      background: #e8eff6;
+      border-color: #173a5e;
+    }
+  }
+
+  .expense-mobile-toggle:focus-visible {
+    outline: 3px solid #315f87;
+    outline-offset: 3px;
+  }
 }

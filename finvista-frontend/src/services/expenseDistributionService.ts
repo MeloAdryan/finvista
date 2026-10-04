@@ -5,21 +5,22 @@ export interface ExpenseDistributionData {
   valor: number;
 }
 
-export async function getExpenseDistribution(): Promise<
-  ExpenseDistributionData[]
-> {
-  const response = await fetch(`${API_URL}/api/distribuicao-despesas`, {
+export async function getExpenseDistribution(
+  historico = false,
+): Promise<ExpenseDistributionData[]> {
+  const query = historico ? "?historico=true" : "";
+
+  const response = await fetch(`${API_URL}/api/distribuicao-despesas${query}`, {
     method: "GET",
     credentials: "include",
   });
 
   if (!response.ok) {
-    throw new Error("Erro ao carregar a distribuição das despesas");
+    throw new Error("Não foi possível carregar a análise financeira.");
   }
 
   return response.json();
 }
-
 export async function getCategoriesByCostCenter(
   centroCusto: string,
 ): Promise<string[]> {

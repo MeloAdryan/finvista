@@ -4989,17 +4989,45 @@ body {
 
     text-align: left;
   }
-  /* =========================================================
-   FINVISTA — DESPESAS RESPONSIVAS
-   ========================================================= */
-
-  .expense-chart-desktop {
-    display: block;
-    width: 100%;
-    min-width: 0;
   }
 
-  .expense-chart-mobile {
-    display: none;
-  }
+/* Comparações dos indicadores com o mês anterior */
+.executive-dashboard .kpi-comparison {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e7edf3;
+
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
 }
+
+.executive-dashboard .kpi-comparison > span {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.executive-dashboard .kpi-comparison > small {
+  color: #667085;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.executive-dashboard .kpi-comparison-positive > span {
+  color: #167044;
+}
+
+.executive-dashboard .kpi-comparison-negative > span {
+  color: #b42318;
+}
+
+.executive-dashboard .kpi-comparison-neutral > span {
+  color: #667085;
+}
+

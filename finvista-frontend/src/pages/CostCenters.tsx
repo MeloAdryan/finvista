@@ -101,7 +101,7 @@ function CostCenters() {
 
             <p>
               Ranking das áreas por participação
-              nas despesas totais.
+              nas despesas do mês de referência.
             </p>
           </div>
 

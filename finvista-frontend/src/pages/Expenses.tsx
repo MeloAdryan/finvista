@@ -80,7 +80,7 @@ function Expenses() {
       </section>
 
       <section className="expense-distribution-table-card">
-        <h2>Detalhamento das despesas</h2>
+       <h2>Despesas do mês de referência</h2>
 
         <div className="table-wrapper">
           <table className="expense-distribution-table">

@@ -9,6 +9,8 @@ import {
   YAxis,
 } from "recharts";
 
+import { useState } from "react";
+
 import type { ExpenseDistributionData } from "../services/expenseDistributionService";
 
 interface ExpenseDistributionChartProps {
@@ -20,14 +22,15 @@ interface ExpenseChartData extends ExpenseDistributionData {
   percentual: number;
 }
 
-function ExpenseDistributionChart({
-  dados,
-}: ExpenseDistributionChartProps) {
+function ExpenseDistributionChart({ dados }: ExpenseDistributionChartProps) {
   const formatarMoeda = (valor: number) =>
     valor.toLocaleString("pt-BR", {
       style: "currency",
       currency: "BRL",
     });
+
+  const [mostrarTodas, setMostrarTodas] = useState(false);
+  const limiteMobile = 10;
 
   const formatarMoedaCompacta = (valor: number) =>
     new Intl.NumberFormat("pt-BR", {
@@ -52,26 +55,24 @@ function ExpenseDistributionChart({
     0,
   );
 
-  const dadosOrdenados: ExpenseChartData[] =
-    dadosNormalizados
-      .map((item) => ({
-        ...item,
-        percentual:
-          totalDespesas > 0
-            ? (item.valor / totalDespesas) * 100
-            : 0,
-      }))
-      .sort((a, b) => b.valor - a.valor);
+  const dadosOrdenados: ExpenseChartData[] = dadosNormalizados
+    .map((item) => ({
+      ...item,
+      percentual: totalDespesas > 0 ? (item.valor / totalDespesas) * 100 : 0,
+    }))
+    .sort((a, b) => b.valor - a.valor);
+
+  const despesasMobile = mostrarTodas
+    ? dadosOrdenados
+    : dadosOrdenados.slice(0, limiteMobile);
+
+  const podeExpandir = dadosOrdenados.length > limiteMobile;
 
   const maiorCategoria = dadosOrdenados[0];
 
-  const percentualMaior =
-    maiorCategoria?.percentual ?? 0;
+  const percentualMaior = maiorCategoria?.percentual ?? 0;
 
-  const alturaGrafico = Math.max(
-    380,
-    dadosOrdenados.length * 52,
-  );
+  const alturaGrafico = Math.max(380, dadosOrdenados.length * 52);
 
   const obterCorBarra = (index: number) => {
     if (index === 0) return "#173a5e";
@@ -91,10 +92,7 @@ function ExpenseDistributionChart({
 
           <h2>Distribuição das Despesas</h2>
 
-          <p>
-            Compare as categorias de maior impacto
-            financeiro no período.
-          </p>
+          <p>Compare as categorias de maior impacto financeiro no período.</p>
         </div>
 
         <span className="expense-distribution-status">
@@ -107,13 +105,9 @@ function ExpenseDistributionChart({
         <div className="expense-distribution-summary-item">
           <span>Total de despesas</span>
 
-          <strong>
-            {formatarMoeda(totalDespesas)}
-          </strong>
+          <strong>{formatarMoeda(totalDespesas)}</strong>
 
-          <small>
-            Valor consolidado no período
-          </small>
+          <small>Valor consolidado no período</small>
         </div>
 
         <div className="expense-distribution-summary-item">
@@ -133,13 +127,9 @@ function ExpenseDistributionChart({
         <div className="expense-distribution-summary-item">
           <span>Maior participação</span>
 
-          <strong>
-            {formatarPercentual(percentualMaior)}%
-          </strong>
+          <strong>{formatarPercentual(percentualMaior)}%</strong>
 
-          <small>
-            Participação nas despesas totais
-          </small>
+          <small>Participação nas despesas totais</small>
         </div>
       </div>
 
@@ -150,17 +140,12 @@ function ExpenseDistributionChart({
 
             <h3>Despesas por categoria</h3>
 
-            <p>
-              Categorias ordenadas do maior para o
-              menor valor.
-            </p>
+            <p>Categorias ordenadas do maior para o menor valor.</p>
           </div>
 
           <span className="expense-distribution-chart-badge">
             {dadosOrdenados.length}{" "}
-            {dadosOrdenados.length === 1
-              ? "categoria"
-              : "categorias"}
+            {dadosOrdenados.length === 1 ? "categoria" : "categorias"}
           </span>
         </div>
 
@@ -168,10 +153,7 @@ function ExpenseDistributionChart({
           <>
             {/* DESKTOP / TABLET */}
             <div className="expense-chart-desktop">
-              <ResponsiveContainer
-                width="100%"
-                height={alturaGrafico}
-              >
+              <ResponsiveContainer width="100%" height={alturaGrafico}>
                 <BarChart
                   data={dadosOrdenados}
                   layout="vertical"
@@ -197,9 +179,7 @@ function ExpenseDistributionChart({
                       fill: "#7c8796",
                       fontSize: 11,
                     }}
-                    tickFormatter={
-                      formatarMoedaCompacta
-                    }
+                    tickFormatter={formatarMoedaCompacta}
                   />
 
                   <YAxis
@@ -217,41 +197,23 @@ function ExpenseDistributionChart({
 
                   <Tooltip
                     cursor={{
-                      fill:
-                        "rgba(15, 42, 68, 0.035)",
+                      fill: "rgba(15, 42, 68, 0.035)",
                     }}
-                    content={({
-                      active,
-                      payload,
-                    }) => {
-                      if (
-                        !active ||
-                        !payload?.length
-                      ) {
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) {
                         return null;
                       }
 
-                      const item =
-                        payload[0]
-                          .payload as ExpenseChartData;
+                      const item = payload[0].payload as ExpenseChartData;
 
                       return (
                         <div className="expense-chart-tooltip">
-                          <span>
-                            {item.categoria}
-                          </span>
+                          <span>{item.categoria}</span>
 
-                          <strong>
-                            {formatarMoeda(
-                              item.valor,
-                            )}
-                          </strong>
+                          <strong>{formatarMoeda(item.valor)}</strong>
 
                           <small>
-                            {formatarPercentual(
-                              item.percentual,
-                            )}
-                            % do total
+                            {formatarPercentual(item.percentual)}% do total
                           </small>
                         </div>
                       );
@@ -264,16 +226,9 @@ function ExpenseDistributionChart({
                     maxBarSize={30}
                     animationDuration={650}
                   >
-                    {dadosOrdenados.map(
-                      (item, index) => (
-                        <Cell
-                          key={item.categoria}
-                          fill={obterCorBarra(
-                            index,
-                          )}
-                        />
-                      ),
-                    )}
+                    {dadosOrdenados.map((item, index) => (
+                      <Cell key={item.categoria} fill={obterCorBarra(index)} />
+                    ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -281,75 +236,65 @@ function ExpenseDistributionChart({
 
             {/* CELULAR */}
             <div className="expense-chart-mobile">
-              {dadosOrdenados.map(
-                (item, index) => {
-                  const maiorValor =
-                    dadosOrdenados[0]?.valor || 1;
+              {despesasMobile.map((item, index) => {
+                const maiorValor = dadosOrdenados[0]?.valor || 1;
+                const largura = (item.valor / maiorValor) * 100;
 
-                  const largura =
-                    (item.valor / maiorValor) *
-                    100;
+                return (
+                  <div className="expense-mobile-item" key={item.categoria}>
+                    <div className="expense-mobile-item-header">
+                      <div className="expense-mobile-category">
+                        <span className="expense-mobile-rank">{index + 1}</span>
 
-                  return (
-                    <div
-                      className="expense-mobile-item"
-                      key={item.categoria}
-                    >
-                      <div className="expense-mobile-item-header">
-                        <div className="expense-mobile-category">
-                          <span className="expense-mobile-rank">
-                            {index + 1}
-                          </span>
-
-                          <strong>
-                            {item.categoria}
-                          </strong>
-                        </div>
-
-                        <div className="expense-mobile-value">
-                          <strong>
-                            {formatarMoeda(
-                              item.valor,
-                            )}
-                          </strong>
-
-                          <span>
-                            {formatarPercentual(
-                              item.percentual,
-                            )}
-                            %
-                          </span>
-                        </div>
+                        <strong>{item.categoria}</strong>
                       </div>
 
-                      <div className="expense-mobile-track">
-                        <div
-                          className="expense-mobile-bar"
-                          style={{
-                            width: `${largura}%`,
-                            backgroundColor:
-                              obterCorBarra(
-                                index,
-                              ),
-                          }}
-                        />
+                      <div className="expense-mobile-value">
+                        <strong>{formatarMoeda(item.valor)}</strong>
+
+                        <span>{formatarPercentual(item.percentual)}%</span>
                       </div>
                     </div>
-                  );
-                },
-              )}
+
+                    <div className="expense-mobile-track">
+                      <div
+                        className="expense-mobile-bar"
+                        style={{
+                          width: `${largura}%`,
+                          backgroundColor: obterCorBarra(index),
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div className="expense-mobile-controls">
+                <p aria-live="polite">
+                  Exibindo {despesasMobile.length} de {dadosOrdenados.length}{" "}
+                  categorias
+                </p>
+
+                {podeExpandir && (
+                  <button
+                    type="button"
+                    className="expense-mobile-toggle"
+                    aria-expanded={mostrarTodas}
+                    onClick={() => setMostrarTodas((atual) => !atual)}
+                  >
+                    {mostrarTodas
+                      ? "Mostrar menos"
+                      : `Ver todas (${dadosOrdenados.length})`}
+                  </button>
+                )}
+              </div>
             </div>
           </>
         ) : (
           <div className="expense-distribution-empty">
-            <strong>
-              Nenhuma despesa encontrada
-            </strong>
+            <strong>Nenhuma despesa encontrada</strong>
 
-            <span>
-              Os dados aparecerão aqui quando
-              estiverem disponíveis.
-            </span>
+            <span>Os dados aparecerão aqui quando estiverem disponíveis.</span>
           </div>
         )}
       </div>

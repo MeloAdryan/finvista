@@ -1,10 +1,19 @@
 import { API_URL } from '../config/api'
 
 export interface DashboardData {
-  receita: number
-  despesa: number
-  resultado: number
-  margem: number
+  receita: number;
+  despesa: number;
+  resultado: number;
+  margem: number;
+
+  receitaMesAnterior?: number | null;
+  despesaMesAnterior?: number | null;
+  resultadoMesAnterior?: number | null;
+  margemMesAnterior?: number | null;
+
+  variacaoReceita?: number | null;
+  variacaoDespesa?: number | null;
+  variacaoResultado?: number | null;
 }
 
 export async function getDashboard():

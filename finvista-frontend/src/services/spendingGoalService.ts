@@ -13,6 +13,10 @@ export interface SpendingGoal {
   saldoMeta: number;
   percentualAlerta: number;
   status: SpendingGoalStatus;
+  gastoFiltrado: number;
+  percentualFiltrado: number;
+  filtroCategoria: string | null;
+  filtroCentroCusto: string | null;
 
   categoria: string | null;
   centroCusto: string | null;

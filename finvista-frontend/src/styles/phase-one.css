@@ -1,0 +1,190 @@
+/* Valores e nomes completos dos cards*/
+.finvista-main .executive-kpi > strong,
+.finvista-main .goal-summary-item strong,
+.finvista-main .cost-center-summary-item strong,
+.finvista-main .expense-distribution-summary-item > strong,
+.finvista-main .metas-resumo article strong,
+.finvista-main .meta-valores strong,
+.finvista-main .meta-contexto strong {
+  min-width: 0;
+  max-width: 100%;
+
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rolagem horizontal */
+.finvista-main .table-wrapper,
+.finvista-main .import-table-wrapper {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  overflow-x: auto;
+}
+
+.finvista-main .expense-distribution-table td:first-child {
+  overflow-wrap: anywhere;
+}
+
+/* Valores monetários*/
+.finvista-main .expense-distribution-table td:nth-child(2),
+.finvista-main .expense-distribution-table td:nth-child(3) {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.finvista-app button:focus-visible,
+.finvista-app a:focus-visible {
+  outline: 3px solid #315f87;
+  outline-offset: 3px;
+}
+
+/* Tablet e celular */
+@media (max-width: 900px) {
+  .finvista-main > * {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .finvista-main .dashboard {
+    padding: 0;
+  }
+
+  .finvista-main .history-filters .filter-group {
+    flex: 1 1 180px;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .finvista-main .history-filters .filter-group input {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .finvista-app .finvista-mobile-menu-button,
+  .finvista-app .finvista-topbar-logout {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Celular: lista de despesas */
+@media (max-width: 768px) {
+  .finvista-main .expense-distribution-card .expense-chart-desktop {
+    display: none;
+  }
+
+  .finvista-main .expense-distribution-card .expense-chart-mobile {
+    display: flex;
+    flex-direction: column;
+
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Nome completo, inclusive categorias extensas */
+  .finvista-main .expense-mobile-category strong {
+    display: block;
+
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: anywhere;
+
+    -webkit-line-clamp: unset;
+  }
+
+  /* Campos confortáveis para toque */
+  .finvista-main input:not([type="checkbox"]):not([type="radio"]),
+  .finvista-main select {
+    min-width: 0;
+    max-width: 100%;
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .finvista-main button {
+    min-height: 44px;
+  }
+}
+
+/* Celulares estreitos */
+@media (max-width: 480px) {
+  .finvista-main .expense-mobile-item-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 7px;
+  }
+
+  .finvista-main .expense-mobile-value {
+    flex-direction: column;
+    align-items: flex-start;
+
+    min-width: 0;
+    max-width: 100%;
+
+    padding-left: 30px;
+    text-align: left;
+  }
+
+  .finvista-main .expense-mobile-value strong {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+
+    font-variant-numeric: tabular-nums;
+  }
+
+  .finvista-main .expense-mobile-value span {
+    margin-top: 2px;
+  }
+
+  .finvista-main .history-filters .filter-group {
+    flex-basis: 100%;
+  }
+
+  .finvista-main .expense-distribution-table-card {
+    min-width: 0;
+    padding: 14px;
+  }
+  .finvista-main .expense-mobile-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .finvista-main .expense-mobile-controls p {
+    margin: 0;
+    color: #667085;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .finvista-main .expense-mobile-toggle {
+    width: 100%;
+    min-height: 44px;
+    padding: 12px 16px;
+    border: 1px solid #315f87;
+    border-radius: 10px;
+    background: #f5f8fb;
+    color: #173a5e;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .finvista-main .expense-mobile-toggle:focus-visible {
+    outline: 3px solid #315f87;
+    outline-offset: 3px;
+  }
+}

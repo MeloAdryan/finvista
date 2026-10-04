@@ -6,6 +6,7 @@ import com.finvista.repository.FinancialTransactionRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.YearMonth;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -34,15 +35,15 @@ public class ExpenseDistributionService {
 
         Long clienteId = obterClienteIdAtual();
 
-        List<FinancialTransaction> despesas =
-                financialTransactionRepository
+        List<FinancialTransaction> despesas
+                = financialTransactionRepository
                         .findByClienteIdAndTipoOrderByDataDesc(
                                 clienteId,
                                 TIPO_DESPESA
                         );
 
-        Map<String, BigDecimal> totaisPorCategoria =
-                despesas.stream()
+        Map<String, BigDecimal> totaisPorCategoria
+                = despesas.stream()
                         .collect(
                                 Collectors.groupingBy(
                                         this::obterCategoria,
@@ -90,20 +91,20 @@ public class ExpenseDistributionService {
                 )
                 .stream()
                 .filter(
-                        lancamento ->
-                                lancamento.getCentroCusto() != null
-                                        && lancamento
-                                                .getCentroCusto()
-                                                .trim()
-                                                .equalsIgnoreCase(
-                                                        centroCusto.trim()
-                                                )
+                        lancamento
+                        -> lancamento.getCentroCusto() != null
+                        && lancamento
+                                .getCentroCusto()
+                                .trim()
+                                .equalsIgnoreCase(
+                                        centroCusto.trim()
+                                )
                 )
                 .map(FinancialTransaction::getCategoria)
                 .filter(
-                        categoria ->
-                                categoria != null
-                                        && !categoria.isBlank()
+                        categoria
+                        -> categoria != null
+                        && !categoria.isBlank()
                 )
                 .map(String::trim)
                 .distinct()
@@ -139,5 +140,42 @@ public class ExpenseDistributionService {
         return valor != null
                 ? valor
                 : BigDecimal.ZERO;
+    }
+
+    public List<ExpenseDistributionResponse> listarNoMes(YearMonth mes) {
+        if (mes == null) {
+            throw new IllegalArgumentException("Mês de análise é obrigatório.");
+        }
+
+        Long clienteId = obterClienteIdAtual();
+
+        List<FinancialTransaction> lancamentos = financialTransactionRepository
+                .findByClienteIdAndDataBetweenOrderByDataAsc(
+                        clienteId, mes.atDay(1), mes.atEndOfMonth()
+                );
+
+        Map<String, BigDecimal> totais = lancamentos.stream()
+                .filter(lancamento -> lancamento.getData() != null
+                && mes.equals(YearMonth.from(lancamento.getData()))
+                && lancamento.getValor() != null
+                && lancamento.getTipo() != null
+                && TIPO_DESPESA.equalsIgnoreCase(
+                        lancamento.getTipo().trim()
+                ))
+                .collect(Collectors.groupingBy(
+                        this::obterCategoria,
+                        Collectors.reducing(
+                                BigDecimal.ZERO,
+                                FinancialTransaction::getValor,
+                                BigDecimal::add
+                        )
+                ));
+
+        return totais.entrySet().stream()
+                .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
+                .map(entrada -> new ExpenseDistributionResponse(
+                entrada.getKey(), entrada.getValue()
+        ))
+                .toList();
     }
 }

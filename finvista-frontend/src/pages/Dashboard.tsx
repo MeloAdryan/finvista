@@ -1,13 +1,6 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import {
-  getDashboard,
-  type DashboardData,
-} from "../services/dashboardService";
+import { getDashboard, type DashboardData } from "../services/dashboardService";
 
 import {
   listarMetas,
@@ -16,35 +9,29 @@ import {
 
 import RevenueExpenseChart from "../charts/RevenueExpenseChart";
 
+import KpiComparison from "../components/KpiComparison";
+
 import SpendingGoalGauge from "../components/SpendingGoalGauge";
 
 import "../styles/dashboard.css";
 
 function Dashboard() {
-  const [dados, setDados] =
-    useState<DashboardData | null>(null);
+  const [dados, setDados] = useState<DashboardData | null>(null);
 
-  const [metas, setMetas] =
-    useState<SpendingGoal[]>([]);
+  const [metas, setMetas] = useState<SpendingGoal[]>([]);
 
-  const [
-    metaSelecionadaId,
-    setMetaSelecionadaId,
-  ] = useState<number | null>(null);
+  const [metaSelecionadaId, setMetaSelecionadaId] = useState<number | null>(
+    null,
+  );
 
-  const [carregando, setCarregando] =
-    useState(true);
+  const [carregando, setCarregando] = useState(true);
 
-  const [erro, setErro] =
-    useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
     async function carregarDashboard() {
       try {
-        const [
-          resultadoDashboard,
-          resultadoMetas,
-        ] = await Promise.all([
+        const [resultadoDashboard, resultadoMetas] = await Promise.all([
           getDashboard(),
           listarMetas(),
         ]);
@@ -54,9 +41,7 @@ function Dashboard() {
         setMetas(resultadoMetas);
 
         if (resultadoMetas.length > 0) {
-          const metasOrdenadas = [
-            ...resultadoMetas,
-          ].sort((a, b) => {
+          const metasOrdenadas = [...resultadoMetas].sort((a, b) => {
             const prioridade = {
               EXCEDIDA: 3,
               ALERTA: 2,
@@ -64,35 +49,24 @@ function Dashboard() {
             };
 
             const diferencaPrioridade =
-              prioridade[b.status] -
-              prioridade[a.status];
+              prioridade[b.status] - prioridade[a.status];
 
             if (diferencaPrioridade !== 0) {
               return diferencaPrioridade;
             }
 
-            return (
-              b.percentualUtilizado -
-              a.percentualUtilizado
-            );
+            return b.percentualUtilizado - a.percentualUtilizado;
           });
 
-          setMetaSelecionadaId(
-            metasOrdenadas[0].id,
-          );
+          setMetaSelecionadaId(metasOrdenadas[0].id);
         }
       } catch (error) {
-        console.error(
-          "Erro ao carregar dashboard:",
-          error,
-        );
+        console.error("Erro ao carregar dashboard:", error);
 
         if (error instanceof Error) {
           setErro(error.message);
         } else {
-          setErro(
-            "Não foi possível carregar os dados financeiros.",
-          );
+          setErro("Não foi possível carregar os dados financeiros.");
         }
       } finally {
         setCarregando(false);
@@ -103,19 +77,11 @@ function Dashboard() {
   }, []);
 
   const metaSelecionada = useMemo(() => {
-    if (
-      metaSelecionadaId === null ||
-      metas.length === 0
-    ) {
+    if (metaSelecionadaId === null || metas.length === 0) {
       return null;
     }
 
-    return (
-      metas.find(
-        (meta) =>
-          meta.id === metaSelecionadaId,
-      ) ?? null
-    );
+    return metas.find((meta) => meta.id === metaSelecionadaId) ?? null;
   }, [metas, metaSelecionadaId]);
 
   const formatarMoeda = (valor: number) =>
@@ -124,9 +90,7 @@ function Dashboard() {
       currency: "BRL",
     });
 
-  const formatarPercentual = (
-    valor: number,
-  ) =>
+  const formatarPercentual = (valor: number) =>
     valor.toLocaleString("pt-BR", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -145,9 +109,7 @@ function Dashboard() {
   if (erro) {
     return (
       <div className="dashboard-state dashboard-state-error">
-        <strong>
-          Não foi possível carregar o painel.
-        </strong>
+        <strong>Não foi possível carregar o painel.</strong>
 
         <p>{erro}</p>
       </div>
@@ -163,22 +125,16 @@ function Dashboard() {
   }
 
   return (
-    <div
-      id="dashboard"
-      className="dashboard executive-dashboard"
-    >
+    <div id="dashboard" className="dashboard executive-dashboard">
       <header className="executive-header">
         <div>
-          <span className="executive-page-label">
-            Painel Executivo
-          </span>
+          <span className="executive-page-label">Painel Executivo</span>
 
           <h1>Visão financeira</h1>
 
           <p>
-            Acompanhe os principais indicadores e
-            limites financeiros em uma visão
-            consolidada.
+            Acompanhe os principais indicadores e limites financeiros em uma
+            visão consolidada.
           </p>
         </div>
 
@@ -192,78 +148,80 @@ function Dashboard() {
         <article className="executive-kpi">
           <div className="executive-kpi-top">
             <span>Receita</span>
-
             <span className="kpi-marker" />
           </div>
 
-          <strong>
-            {formatarMoeda(dados.receita)}
-          </strong>
-
+          <strong>{formatarMoeda(dados.receita)}</strong>
           <p>Receita total do período</p>
+
+          <KpiComparison
+            atual={dados.receita}
+            anterior={dados.receitaMesAnterior}
+            variacao={dados.variacaoReceita}
+          />
         </article>
 
         <article className="executive-kpi">
           <div className="executive-kpi-top">
             <span>Despesa</span>
-
             <span className="kpi-marker" />
           </div>
 
-          <strong>
-            {formatarMoeda(dados.despesa)}
-          </strong>
-
+          <strong>{formatarMoeda(dados.despesa)}</strong>
           <p>Despesas totais do período</p>
+
+          <KpiComparison
+            atual={dados.despesa}
+            anterior={dados.despesaMesAnterior}
+            variacao={dados.variacaoDespesa}
+            despesa
+          />
         </article>
 
         <article className="executive-kpi">
           <div className="executive-kpi-top">
             <span>Resultado</span>
-
             <span className="kpi-marker" />
           </div>
 
-          <strong>
-            {formatarMoeda(dados.resultado)}
-          </strong>
-
+          <strong>{formatarMoeda(dados.resultado)}</strong>
           <p>Receita menos despesas</p>
+
+          <KpiComparison
+            atual={dados.resultado}
+            anterior={dados.resultadoMesAnterior}
+            variacao={dados.variacaoResultado}
+          />
         </article>
 
         <article className="executive-kpi">
           <div className="executive-kpi-top">
             <span>Margem</span>
-
             <span className="kpi-marker" />
           </div>
 
-          <strong>
-            {formatarPercentual(
-              dados.margem,
-            )}
-            %
-          </strong>
+          <strong>{formatarPercentual(dados.margem)}%</strong>
+          <p>Margem do resultado sobre a receita</p>
 
-          <p>Margem operacional do período</p>
+          <KpiComparison
+            atual={dados.margem}
+            anterior={dados.margemMesAnterior}
+            margem
+            margemComparavel={
+              dados.receita > 0 && (dados.receitaMesAnterior ?? 0) > 0
+            }
+          />
         </article>
       </section>
 
       <section className="executive-overview-grid">
-        <RevenueExpenseChart
-          receita={dados.receita}
-          despesa={dados.despesa}
-        />
+        <RevenueExpenseChart receita={dados.receita} despesa={dados.despesa} />
 
         <SpendingGoalGauge
           meta={metaSelecionada}
           metas={metas}
-          metaSelecionadaId={
-            metaSelecionadaId
-          }
-          onSelecionarMeta={
-            setMetaSelecionadaId
-          }
+          metaSelecionadaId={metaSelecionadaId}
+          onSelecionarMeta={setMetaSelecionadaId}
         />
       </section>
 
