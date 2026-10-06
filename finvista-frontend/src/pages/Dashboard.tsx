@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { getDashboard, type DashboardData } from "../services/dashboardService";
 import FinancialDetailModal from "../components/FinancialDetailModal";
 import type { FinancialDetailKind } from "../services/financialDetailService";
+import FinancialHelp from "../components/FinancialHelp";
+import DashboardQuickActions from "../components/DashboardQuickActions";
 
 import FinancialChanges from "../components/FinancialChanges";
 
@@ -152,11 +154,13 @@ function Dashboard() {
         </div>
       </header>
 
+      <DashboardQuickActions />
+
       <section className="executive-kpi-grid">
         <article className="executive-kpi">
           <div className="executive-kpi-top">
             <span>Receita</span>
-            <span className="kpi-marker" />
+            <FinancialHelp termo="receita" />
           </div>
 
           <strong>{formatarMoeda(dados.receita)}</strong>
@@ -181,7 +185,7 @@ function Dashboard() {
         <article className="executive-kpi">
           <div className="executive-kpi-top">
             <span>Despesa</span>
-            <span className="kpi-marker" />
+            <FinancialHelp termo="despesa" />
           </div>
 
           <strong>{formatarMoeda(dados.despesa)}</strong>
@@ -207,7 +211,7 @@ function Dashboard() {
         <article className="executive-kpi">
           <div className="executive-kpi-top">
             <span>Resultado</span>
-            <span className="kpi-marker" />
+            <FinancialHelp termo="resultado" />
           </div>
 
           <strong>{formatarMoeda(dados.resultado)}</strong>
@@ -223,7 +227,7 @@ function Dashboard() {
         <article className="executive-kpi">
           <div className="executive-kpi-top">
             <span>Margem</span>
-            <span className="kpi-marker" />
+            <FinancialHelp termo="margem" />
           </div>
 
           <strong>{formatarPercentual(dados.margem)}%</strong>

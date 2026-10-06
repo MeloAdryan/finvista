@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 76" role="img" aria-label="FinVista - Financial Intelligence">
+  <title>FinVista</title>
+  <g transform="translate(-58,0)">
+    <circle cx="95" cy="38" r="20" fill="#e8892b"/>
+    <rect x="62" y="44" width="11" height="14" rx="2" fill="#16233f"/>
+    <rect x="76" y="32" width="11" height="26" rx="2" fill="#16233f"/>
+    <rect x="90" y="38" width="11" height="20" rx="2" fill="#16233f"/>
+    <rect x="104" y="26" width="11" height="32" rx="2" fill="#16233f"/>
+    <rect x="118" y="40" width="11" height="18" rx="2" fill="#16233f"/>
+  </g>
+  <text x="84" y="38" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="26" font-weight="700" fill="#16233f">FinVista</text>
+  <text x="85" y="56" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" letter-spacing="0.6" fill="#6b7a99">Financial Intelligence</text>
+</svg>
