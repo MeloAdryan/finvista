@@ -5,11 +5,13 @@ import com.finvista.model.FinancialTransaction;
 import com.finvista.model.SpendingGoal;
 import com.finvista.repository.FinancialTransactionRepository;
 import com.finvista.repository.SpendingGoalRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class SpendingGoalService {
@@ -23,6 +25,22 @@ public class SpendingGoalService {
     private final FinancialCalculationService calculationService;
     private final ClienteContextService clienteContextService;
 
+    private ExpenseAllocationService expenseAllocationService;
+
+    // O Spring usa este construtor para incluir os rateios nos cálculos.
+    @Autowired
+    public SpendingGoalService(
+            SpendingGoalRepository goals,
+            FinancialTransactionRepository transactions,
+            FinancialCalculationService calculation,
+            ClienteContextService context,
+            ExpenseAllocationService allocations
+    ) {
+        this(goals, transactions, calculation, context);
+        this.expenseAllocationService = Objects.requireNonNull(allocations);
+    }
+
+    // Mantém a compatibilidade com os testes anteriores.
     public SpendingGoalService(
             SpendingGoalRepository spendingGoalRepository,
             FinancialTransactionRepository financialTransactionRepository,
@@ -40,7 +58,7 @@ public class SpendingGoalService {
 
         meta.setTipo(meta.getTipo().trim().toUpperCase());
 
-        // O proprietário é determinado pelo contexto do usuário conectado.
+        // O proprietário vem do contexto do usuário conectado.
         meta.setCliente(clienteContextService.getClienteAtual());
 
         return spendingGoalRepository.save(meta);
@@ -116,43 +134,49 @@ public class SpendingGoalService {
         Long clienteId = meta.getCliente().getId();
 
         // Busca apenas despesas do proprietário e do período da meta.
-        List<FinancialTransaction> despesas =
-                financialTransactionRepository
-                        .findByClienteIdAndTipoAndDataBetweenOrderByDataAsc(
-                                clienteId,
-                                TIPO_DESPESA,
-                                meta.getDataInicio(),
-                                meta.getDataFim()
-                        );
+        List<FinancialTransaction> despesas = financialTransactionRepository
+                .findByClienteIdAndTipoAndDataBetweenOrderByDataAsc(
+                        clienteId,
+                        TIPO_DESPESA,
+                        meta.getDataInicio(),
+                        meta.getDataFim()
+                );
 
-        // Aplica o centro de custo e a categoria cadastrados na meta.
-        List<FinancialTransaction> despesasDaMeta = despesas.stream()
-                .filter(lancamento -> correspondeCentroCusto(
-                        lancamento,
-                        centroCusto
-                ))
-                .filter(lancamento -> correspondeCategoria(
-                        lancamento,
-                        categoria
-                ))
-                .toList();
+        // Divide as despesas e aplica os critérios cadastrados na meta.
+        List<ExpenseAllocationService.Parte> despesasDaMeta =
+                partes(clienteId, despesas)
+                        .stream()
+                        .filter(parte -> correspondeCentroCusto(
+                                parte,
+                                centroCusto
+                        ))
+                        .filter(parte -> correspondeCategoria(
+                                parte,
+                                categoria
+                        ))
+                        .toList();
 
         BigDecimal gastoAtual = somarDespesas(despesasDaMeta);
 
-        // Interseção: critérios salvos na meta E filtros da consulta.
-        List<FinancialTransaction> despesasNoFiltro = despesasDaMeta.stream()
-                .filter(lancamento -> correspondeCentroCusto(
-                        lancamento, filtroCentroCusto
-                ))
-                .filter(lancamento -> correspondeCategoria(
-                        lancamento, filtroCategoria
-                ))
-                .toList();
+        // Combina os critérios da meta com os filtros escolhidos na tela.
+        List<ExpenseAllocationService.Parte> despesasNoFiltro =
+                despesasDaMeta.stream()
+                        .filter(parte -> correspondeCentroCusto(
+                                parte,
+                                filtroCentroCusto
+                        ))
+                        .filter(parte -> correspondeCategoria(
+                                parte,
+                                filtroCategoria
+                        ))
+                        .toList();
 
         BigDecimal gastoFiltrado = somarDespesas(despesasNoFiltro);
+
         BigDecimal percentualFiltrado =
                 calculationService.calcularPercentualUtilizado(
-                        gastoFiltrado, meta.getValorLimite()
+                        gastoFiltrado,
+                        meta.getValorLimite()
                 );
 
         BigDecimal percentualUtilizado =
@@ -166,6 +190,7 @@ public class SpendingGoalService {
                 gastoAtual
         );
 
+        // O status usa o consumo da meta, independentemente do filtro da tela.
         String status = calcularStatus(
                 percentualUtilizado,
                 meta.getPercentualAlerta()
@@ -192,40 +217,36 @@ public class SpendingGoalService {
     }
 
     private boolean correspondeCentroCusto(
-            FinancialTransaction lancamento,
+            ExpenseAllocationService.Parte parte,
             String centroCusto
     ) {
-        if (centroCusto == null) {
-            return true;
-        }
-
-        String centroCustoLancamento =
-                normalizarFiltro(lancamento.getCentroCusto());
-
-        return centroCustoLancamento != null
-                && centroCustoLancamento.equalsIgnoreCase(centroCusto);
+        return centroCusto == null
+                || parte.centroCusto().equalsIgnoreCase(centroCusto);
     }
 
     private boolean correspondeCategoria(
-            FinancialTransaction lancamento,
+            ExpenseAllocationService.Parte parte,
             String categoria
     ) {
-        if (categoria == null) {
-            return true;
-        }
-
-        String categoriaLancamento =
-                normalizarFiltro(lancamento.getCategoria());
-
-        return categoriaLancamento != null
-                && categoriaLancamento.equalsIgnoreCase(categoria);
+        return categoria == null
+                || parte.categoria().equalsIgnoreCase(categoria);
     }
 
-    private BigDecimal somarDespesas(List<FinancialTransaction> despesas) {
+    private BigDecimal somarDespesas(
+            List<ExpenseAllocationService.Parte> despesas
+    ) {
         return despesas.stream()
-                .map(FinancialTransaction::getValor)
-                .filter(valor -> valor != null)
+                .map(ExpenseAllocationService.Parte::valor)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private List<ExpenseAllocationService.Parte> partes(
+            Long clienteId,
+            List<FinancialTransaction> despesas
+    ) {
+        return expenseAllocationService == null
+                ? ExpenseAllocationService.legado(despesas)
+                : expenseAllocationService.dividir(clienteId, despesas);
     }
 
     private String normalizarFiltro(String valor) {
@@ -235,11 +256,9 @@ public class SpendingGoalService {
 
         String valorNormalizado = valor.trim();
 
-        if (valorNormalizado.isEmpty()) {
-            return null;
-        }
-
-        return valorNormalizado;
+        return valorNormalizado.isEmpty()
+                ? null
+                : valorNormalizado;
     }
 
     private Long obterClienteIdAtual() {
@@ -346,21 +365,13 @@ public class SpendingGoalService {
         }
 
         if (TIPO_SEMESTRAL.equals(tipoNormalizado)) {
-            LocalDate inicioEsperado;
+            int mesInicial = dataInicio.getMonthValue() <= 6 ? 1 : 7;
 
-            if (dataInicio.getMonthValue() <= 6) {
-                inicioEsperado = LocalDate.of(
-                        dataInicio.getYear(),
-                        1,
-                        1
-                );
-            } else {
-                inicioEsperado = LocalDate.of(
-                        dataInicio.getYear(),
-                        7,
-                        1
-                );
-            }
+            LocalDate inicioEsperado = LocalDate.of(
+                    dataInicio.getYear(),
+                    mesInicial,
+                    1
+            );
 
             LocalDate fimEsperado = inicioEsperado
                     .plusMonths(6)

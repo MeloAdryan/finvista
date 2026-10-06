@@ -2,8 +2,7 @@ package com.finvista.service;
 
 import com.finvista.dto.FinancialReferenceResponse;
 import org.springframework.stereotype.Service;
-
-import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
 import java.util.Locale;
@@ -26,27 +25,12 @@ public class FinancialReferenceService {
     }
 
     /**
-     * Retorna o mês considerado como referência
-     * financeira do cliente atual.
-     *
-     * Se existirem lançamentos, utiliza o mês do
-     * lançamento mais recente.
-     *
-     * Caso contrário, utiliza o mês atual.
-     */
-    public YearMonth obterMesReferencia() {
-
-        LocalDate maiorData =
-                transactionAggregationService
-                        .obterMaiorData();
-
-        if (maiorData != null) {
-            return YearMonth.from(maiorData);
-        }
-
-        return YearMonth.now();
-    }
-
+ * Retorna o mês atual no fuso de São Paulo,
+ * independentemente das datas dos lançamentos.
+ */
+public YearMonth obterMesReferencia() {
+    return YearMonth.now(ZoneId.of("America/Sao_Paulo"));
+}
     public FinancialReferenceResponse obterReferencia() {
 
         YearMonth referencia =

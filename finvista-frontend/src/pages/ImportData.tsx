@@ -8,7 +8,9 @@ import {
   type FinancialTransaction,
   type ImportResult,
 } from "../services/importService";
+import ContaAzulImport from "../components/ContaAzulImport";
 
+import type { Cliente } from "../services/clientService";
 import "../styles/import-data.css";
 
 type EstadoImportacao =
@@ -19,7 +21,8 @@ type EstadoImportacao =
   | "importando"
   | "concluido";
 
-function ImportData() {
+function ImportData({ cliente }: { cliente: Cliente | null }) {
+  const [modo, setModo] = useState<"conta-azul" | "padrao">("conta-azul");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -197,6 +200,14 @@ function ImportData() {
           </div>
         </div>
       </header>
+       <div className="ca-mode" aria-label="Tipo de importação">
+        <button type="button" aria-pressed={modo === "conta-azul"} onClick={() => setModo("conta-azul")}>Contas Conta Azul</button>
+        <button type="button" aria-pressed={modo === "padrao"} onClick={() => setModo("padrao")}>CSV e Excel padrão</button>
+      </div>
+      <div style={{ display: modo === "conta-azul" ? "block" : "none" }}>
+        <ContaAzulImport cliente={cliente} />
+      </div>
+      <div style={{ display: modo === "padrao" ? "block" : "none" }}>
 
       <section className="import-card">
         <div
@@ -424,7 +435,9 @@ function ImportData() {
             </button>
           </div>
         </section>
+ 
       )}
+      </div>
     </div>
   );
 }
