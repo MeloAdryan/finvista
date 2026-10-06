@@ -1,0 +1,17 @@
+.finvista-brand-image {
+  display: block;
+  width: 230px;
+  max-width: 100%;
+  height: auto;
+  flex-shrink: 0;
+}
+.finvista-brand .finvista-brand-image { width: 160px; }
+.finvista-footer-brand .finvista-brand-image { width: 150px; }
+.finvista-login-logo .finvista-brand-image { width: 280px; }
+.finvista-client-selector-brand .finvista-brand-image { width: 230px; }
+
+.finvista-brand-icon { display: none; width: 40px; height: 40px; }
+@media (min-width: 901px) {
+ .finvista-app-sidebar-collapsed .finvista-brand-image { display: none; }
+ .finvista-app-sidebar-collapsed .finvista-brand-icon { display: block; }
+}

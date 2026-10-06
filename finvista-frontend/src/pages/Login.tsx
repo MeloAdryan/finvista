@@ -1,3 +1,5 @@
+import logoEscuro from "../assets/logo-skyline-escuro.svg";
+import "../styles/brand-assets.css";
 import { type FormEvent, useState } from "react";
 
 import { login, type AuthUser } from "../services/authService";
@@ -47,18 +49,7 @@ function Login({ onLogin }: LoginProps) {
     <main className="finvista-login">
       <section className="finvista-login-brand">
         <div className="finvista-login-brand-content">
-          <div className="finvista-login-logo">
-            <div className="finvista-login-logo-mark">
-              <span />
-              <span />
-              <span />
-            </div>
-
-            <div>
-              <strong>FinVista</strong>
-              <small>Financial Intelligence</small>
-            </div>
-          </div>
+<div className="finvista-login-logo"><img className="finvista-brand-image" src={logoEscuro} alt="FinVista — Financial Intelligence" /></div>
 
           <div className="finvista-login-message">
             <span className="finvista-login-eyebrow">GESTÃO FINANCEIRA</span>

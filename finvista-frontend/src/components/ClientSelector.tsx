@@ -1,3 +1,5 @@
+import logoClaro from "../assets/logo-skyline-claro.svg";
+import "../styles/brand-assets.css";
 import { useEffect, useState } from 'react'
 
 import {
@@ -114,18 +116,7 @@ function ClientSelector({
       </div>
 
       <section className="finvista-client-selector-card">
-        <div className="finvista-client-selector-brand">
-          <div className="finvista-client-selector-logo">
-            <span />
-            <span />
-            <span />
-          </div>
-
-          <div className="finvista-client-selector-brand-text">
-            <strong>FinVista</strong>
-            <span>Financial Intelligence</span>
-          </div>
-        </div>
+<div className="finvista-client-selector-brand"><img className="finvista-brand-image" src={logoClaro} alt="FinVista — Financial Intelligence" /></div>
 
         <div className="finvista-client-selector-heading">
           <span className="finvista-client-selector-eyebrow">

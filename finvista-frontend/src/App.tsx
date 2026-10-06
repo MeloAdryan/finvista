@@ -1,3 +1,6 @@
+import marcaIcone from "./assets/brand-icon.svg";
+import logoEscuro from "./assets/logo-skyline-escuro.svg";
+import "./styles/brand-assets.css";
 import { useEffect, useState } from "react";
 
 import { useLocation, useNavigate } from "react-router-dom";
@@ -500,21 +503,7 @@ function App() {
             </svg>
           </button>
 
-          <div className="finvista-brand">
-            <div className="finvista-brand-mark">
-              <span />
-
-              <span />
-
-              <span />
-            </div>
-
-            <div className="finvista-brand-text">
-              <strong>FinVista</strong>
-
-              <small>Financial Intelligence</small>
-            </div>
-          </div>
+<div className="finvista-brand"><img className="finvista-brand-image" src={logoEscuro} alt="FinVista — Financial Intelligence" /><img className="finvista-brand-icon" src={marcaIcone} alt="FinVista" /></div>
 
           <div className="finvista-sidebar-divider" />
 
@@ -918,21 +907,7 @@ function App() {
         </main>
 
         <footer className="finvista-footer">
-          <div className="finvista-footer-brand">
-            <div className="finvista-footer-mark">
-              <span />
-
-              <span />
-
-              <span />
-            </div>
-
-            <div>
-              <strong>FinVista</strong>
-
-              <small>Inteligência financeira</small>
-            </div>
-          </div>
+<div className="finvista-footer-brand"><img className="finvista-brand-image" src={logoEscuro} alt="FinVista — Financial Intelligence" /></div>
 
           <div className="finvista-footer-info">
             <div className="finvista-footer-item">
