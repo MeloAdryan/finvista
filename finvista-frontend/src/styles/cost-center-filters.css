@@ -1,0 +1,89 @@
+.cost-filters {
+  margin-bottom: 20px;
+  padding: 22px;
+  background: white;
+  border: 1px solid #d8e2ed;
+  border-radius: 14px;
+  text-align: left;
+}
+.cost-filters h2 {
+  margin: 0 0 8px;
+}
+.cost-filters p {
+  color: #52677d;
+  line-height: 1.5;
+}
+.cost-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 18px 0;
+}
+.cost-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.cost-filters input,
+.cost-filters select {
+  min-height: 44px;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #cbd8e5;
+  border-radius: 8px;
+  background: white;
+  padding: 9px;
+  color: #14324e;
+}
+.cost-filters button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid #cbd8e5;
+  background: #f3f6fa;
+  color: #14324e;
+  cursor: pointer;
+}
+.cost-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.cost-filters button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.cost-filters summary {
+  padding: 12px 0;
+  min-height: 44px;
+  cursor: pointer;
+}
+.cost-filters details {
+  margin-top: 18px;
+  border-top: 1px solid #d8e2ed;
+}
+.cost-filters :is(input, select, button, summary):focus-visible {
+  outline: 3px solid #bc812c;
+  outline-offset: 2px;
+}
+@media (max-width: 900px) {
+  .cost-filters-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .cost-filters {
+    padding: 16px;
+  }
+  .cost-filters-grid {
+    grid-template-columns: 1fr;
+  }
+  .cost-filters input,
+  .cost-filters select {
+    font-size: 16px;
+  }
+  .cost-filter-actions button {
+    width: 100%;
+  }
+}

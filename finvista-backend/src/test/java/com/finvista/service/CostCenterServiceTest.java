@@ -115,40 +115,23 @@ class CostCenterServiceTest {
     }
 
     @Test
-    void deveIgnorarLancamentosSemCentroDeCusto() {
-
-        FinancialTransaction comCentro
-                = criarDespesa(
-                        "Despesas Financeiras",
-                        new BigDecimal("10000.00")
-                );
-
-        FinancialTransaction semCentro
-                = criarDespesa(
-                        null,
-                        new BigDecimal("5000.00")
-                );
-
-        when(
-                financialTransactionRepository
-                        .findByClienteIdAndTipoOrderByDataDesc(
-                                CLIENTE_ID,
-                                "DESPESA"
+    void deveExibirLancamentosSemCentroDeCustoSemPerderSeuValor() {
+        when(financialTransactionRepository
+                .findByClienteIdAndTipoOrderByDataDesc(CLIENTE_ID, "DESPESA"))
+                .thenReturn(List.of(
+                        criarDespesa(
+                                "Despesas Financeiras",
+                                new BigDecimal("10000.00")
+                        ),
+                        criarDespesa(
+                                null,
+                                new BigDecimal("5000.00")
                         )
-        ).thenReturn(
-                List.of(
-                        comCentro,
-                        semCentro
-                )
-        );
+                ));
 
-        List<CostCenterResponse> resultado
-                = costCenterService.listar();
+        List<CostCenterResponse> resultado = costCenterService.listar();
 
-        assertEquals(
-                1,
-                resultado.size()
-        );
+        assertEquals(2, resultado.size());
 
         assertEquals(
                 "Despesas Financeiras",
@@ -159,7 +142,26 @@ class CostCenterServiceTest {
                 new BigDecimal("10000.00"),
                 resultado.get(0).valor()
         );
+
+        assertEquals(
+                "Sem centro de custo",
+                resultado.get(1).nome()
+        );
+
+        assertEquals(
+                new BigDecimal("5000.00"),
+                resultado.get(1).valor()
+        );
+
+        assertEquals(
+                new BigDecimal("15000.00"),
+                resultado.stream()
+                        .map(CostCenterResponse::valor)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add)
+        );
     }
+
+    
 
     @Test
     void deveRetornarListaVaziaQuandoNaoExistiremDespesas() {

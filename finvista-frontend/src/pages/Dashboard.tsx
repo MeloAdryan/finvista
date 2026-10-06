@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { getDashboard, type DashboardData } from "../services/dashboardService";
+import FinancialDetailModal from "../components/FinancialDetailModal";
+import type { FinancialDetailKind } from "../services/financialDetailService";
+
+import FinancialChanges from "../components/FinancialChanges";
 
 import {
   listarMetas,
@@ -17,6 +21,10 @@ import "../styles/dashboard.css";
 
 function Dashboard() {
   const [dados, setDados] = useState<DashboardData | null>(null);
+
+  const [detalhamento, setDetalhamento] = useState<FinancialDetailKind | null>(
+    null,
+  );
 
   const [metas, setMetas] = useState<SpendingGoal[]>([]);
 
@@ -159,6 +167,15 @@ function Dashboard() {
             anterior={dados.receitaMesAnterior}
             variacao={dados.variacaoReceita}
           />
+          <button
+            type="button"
+            className="financial-detail-trigger"
+            aria-haspopup="dialog"
+            aria-label="Ver lançamentos de receita"
+            onClick={() => setDetalhamento("RECEITA")}
+          >
+            Ver lançamentos
+          </button>
         </article>
 
         <article className="executive-kpi">
@@ -176,6 +193,15 @@ function Dashboard() {
             variacao={dados.variacaoDespesa}
             despesa
           />
+          <button
+            type="button"
+            className="financial-detail-trigger"
+            aria-haspopup="dialog"
+            aria-label="Ver lançamentos de despesa"
+            onClick={() => setDetalhamento("DESPESA")}
+          >
+            Ver lançamentos
+          </button>
         </article>
 
         <article className="executive-kpi">
@@ -225,21 +251,18 @@ function Dashboard() {
         />
       </section>
 
-      {/*
-        IMPORTANTE:
+      <FinancialChanges />
 
-        As demais seções que já existem no seu
-        Dashboard devem continuar abaixo daqui.
-
-        Não estamos removendo:
-        - projeção;
-        - fluxo de caixa;
-        - distribuição de despesas;
-        - centros de custo;
-        - orçamento;
-        - histórico;
-        - demais módulos existentes.
-      */}
+      {detalhamento !== null && (
+        <FinancialDetailModal
+          key={detalhamento}
+          tipo={detalhamento}
+          valorDoCartao={
+            detalhamento === "RECEITA" ? dados.receita : dados.despesa
+          }
+          onFechar={() => setDetalhamento(null)}
+        />
+      )}
     </div>
   );
 }

@@ -3,13 +3,14 @@ package com.finvista.service;
 import com.finvista.dto.ExpenseDistributionResponse;
 import com.finvista.model.FinancialTransaction;
 import com.finvista.repository.FinancialTransactionRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -17,12 +18,23 @@ public class ExpenseDistributionService {
 
     private static final String TIPO_DESPESA = "DESPESA";
 
-    private static final String SEM_CATEGORIA = "Sem categoria";
-
     private final FinancialTransactionRepository financialTransactionRepository;
-
     private final ClienteContextService clienteContextService;
 
+    private ExpenseAllocationService expenseAllocationService;
+
+    // O Spring usa este construtor para incluir os rateios nos cálculos.
+    @Autowired
+    public ExpenseDistributionService(
+            FinancialTransactionRepository repository,
+            ClienteContextService context,
+            ExpenseAllocationService allocations
+    ) {
+        this(repository, context);
+        this.expenseAllocationService = Objects.requireNonNull(allocations);
+    }
+
+    // Mantém a compatibilidade com os testes anteriores.
     public ExpenseDistributionService(
             FinancialTransactionRepository financialTransactionRepository,
             ClienteContextService clienteContextService
@@ -32,150 +44,118 @@ public class ExpenseDistributionService {
     }
 
     public List<ExpenseDistributionResponse> listar() {
+        Long clienteId = obterClienteIdAtual();
+
+        List<FinancialTransaction> despesas = financialTransactionRepository
+                .findByClienteIdAndTipoOrderByDataDesc(
+                        clienteId,
+                        TIPO_DESPESA
+                );
+
+        return agruparPorCategoria(partes(clienteId, despesas));
+    }
+
+    public List<ExpenseDistributionResponse> listarNoMes(YearMonth mes) {
+        if (mes == null) {
+            throw new IllegalArgumentException(
+                    "Mês de análise é obrigatório."
+            );
+        }
 
         Long clienteId = obterClienteIdAtual();
 
-        List<FinancialTransaction> despesas
-                = financialTransactionRepository
-                        .findByClienteIdAndTipoOrderByDataDesc(
-                                clienteId,
-                                TIPO_DESPESA
-                        );
-
-        Map<String, BigDecimal> totaisPorCategoria
-                = despesas.stream()
-                        .collect(
-                                Collectors.groupingBy(
-                                        this::obterCategoria,
-                                        Collectors.reducing(
-                                                BigDecimal.ZERO,
-                                                this::obterValor,
-                                                BigDecimal::add
-                                        )
-                                )
-                        );
-
-        return totaisPorCategoria
-                .entrySet()
+        List<FinancialTransaction> despesas = financialTransactionRepository
+                .findByClienteIdAndDataBetweenOrderByDataAsc(
+                        clienteId,
+                        mes.atDay(1),
+                        mes.atEndOfMonth()
+                )
                 .stream()
-                .map(
-                        entry -> new ExpenseDistributionResponse(
-                                entry.getKey(),
-                                entry.getValue()
+                .filter(lancamento ->
+                        lancamento.getData() != null
+                        && mes.equals(YearMonth.from(lancamento.getData()))
+                        && lancamento.getValor() != null
+                        && lancamento.getTipo() != null
+                        && TIPO_DESPESA.equalsIgnoreCase(
+                                lancamento.getTipo().trim()
                         )
                 )
-                .sorted(
-                        Comparator.comparing(
-                                ExpenseDistributionResponse::valor
-                        ).reversed()
-                )
                 .toList();
+
+        return agruparPorCategoria(partes(clienteId, despesas));
     }
 
-    public List<String> listarCategoriasPorCentroCusto(
-            String centroCusto
-    ) {
-
-        if (centroCusto == null
-                || centroCusto.isBlank()) {
-
+    public List<String> listarCategoriasPorCentroCusto(String centroCusto) {
+        if (centroCusto == null || centroCusto.isBlank()) {
             return List.of();
         }
 
         Long clienteId = obterClienteIdAtual();
 
-        return financialTransactionRepository
+        List<FinancialTransaction> despesas = financialTransactionRepository
                 .findByClienteIdAndTipoOrderByDataDesc(
                         clienteId,
                         TIPO_DESPESA
-                )
+                );
+
+        // Cada parcela tem sua própria categoria e seu próprio centro.
+        return partes(clienteId, despesas)
                 .stream()
-                .filter(
-                        lancamento
-                        -> lancamento.getCentroCusto() != null
-                        && lancamento
-                                .getCentroCusto()
-                                .trim()
-                                .equalsIgnoreCase(
-                                        centroCusto.trim()
-                                )
+                .filter(parte ->
+                        parte.centroCusto().equalsIgnoreCase(
+                                centroCusto.trim()
+                        )
                 )
-                .map(FinancialTransaction::getCategoria)
-                .filter(
-                        categoria
-                        -> categoria != null
-                        && !categoria.isBlank()
+                .map(ExpenseAllocationService.Parte::categoria)
+                .filter(categoria ->
+                        !ExpenseAllocationService.SEM_CATEGORIA.equals(categoria)
+                        && !ExpenseAllocationService.CATEGORIA_REVISAR.equals(
+                                categoria
+                        )
                 )
-                .map(String::trim)
                 .distinct()
                 .sorted(String.CASE_INSENSITIVE_ORDER)
                 .toList();
     }
 
-    private Long obterClienteIdAtual() {
-        return clienteContextService.getClienteAtualId();
-    }
-
-    private String obterCategoria(
-            FinancialTransaction lancamento
+    private List<ExpenseDistributionResponse> agruparPorCategoria(
+            List<ExpenseAllocationService.Parte> parcelas
     ) {
-
-        String categoria = lancamento.getCategoria();
-
-        if (categoria == null
-                || categoria.isBlank()) {
-
-            return SEM_CATEGORIA;
-        }
-
-        return categoria.trim();
-    }
-
-    private BigDecimal obterValor(
-            FinancialTransaction lancamento
-    ) {
-
-        BigDecimal valor = lancamento.getValor();
-
-        return valor != null
-                ? valor
-                : BigDecimal.ZERO;
-    }
-
-    public List<ExpenseDistributionResponse> listarNoMes(YearMonth mes) {
-        if (mes == null) {
-            throw new IllegalArgumentException("Mês de análise é obrigatório.");
-        }
-
-        Long clienteId = obterClienteIdAtual();
-
-        List<FinancialTransaction> lancamentos = financialTransactionRepository
-                .findByClienteIdAndDataBetweenOrderByDataAsc(
-                        clienteId, mes.atDay(1), mes.atEndOfMonth()
-                );
-
-        Map<String, BigDecimal> totais = lancamentos.stream()
-                .filter(lancamento -> lancamento.getData() != null
-                && mes.equals(YearMonth.from(lancamento.getData()))
-                && lancamento.getValor() != null
-                && lancamento.getTipo() != null
-                && TIPO_DESPESA.equalsIgnoreCase(
-                        lancamento.getTipo().trim()
-                ))
+        Map<String, BigDecimal> totais = parcelas
+                .stream()
                 .collect(Collectors.groupingBy(
-                        this::obterCategoria,
+                        ExpenseAllocationService.Parte::categoria,
                         Collectors.reducing(
                                 BigDecimal.ZERO,
-                                FinancialTransaction::getValor,
+                                ExpenseAllocationService.Parte::valor,
                                 BigDecimal::add
                         )
                 ));
 
-        return totais.entrySet().stream()
-                .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
+        return totais.entrySet()
+                .stream()
+                .sorted(
+                        Map.Entry.<String, BigDecimal>comparingByValue()
+                                .reversed()
+                                .thenComparing(Map.Entry::getKey)
+                )
                 .map(entrada -> new ExpenseDistributionResponse(
-                entrada.getKey(), entrada.getValue()
-        ))
+                        entrada.getKey(),
+                        entrada.getValue()
+                ))
                 .toList();
+    }
+
+    private List<ExpenseAllocationService.Parte> partes(
+            Long clienteId,
+            List<FinancialTransaction> despesas
+    ) {
+        return expenseAllocationService == null
+                ? ExpenseAllocationService.legado(despesas)
+                : expenseAllocationService.dividir(clienteId, despesas);
+    }
+
+    private Long obterClienteIdAtual() {
+        return clienteContextService.getClienteAtualId();
     }
 }

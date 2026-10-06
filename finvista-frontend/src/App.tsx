@@ -892,7 +892,7 @@ function App() {
           onMouseDown={iniciarArrasto}
         >
           {paginaAtiva === "dashboard" ? (
-            <Dashboard />
+            <Dashboard key={clienteAtual?.id ?? "sem-cliente"} />
           ) : paginaAtiva === "metas" ? (
             <SpendingGoals />
           ) : paginaAtiva === "projecao" ? (
@@ -908,7 +908,10 @@ function App() {
           ) : paginaAtiva === "historico" ? (
             <History />
           ) : usuarioAdmin ? (
-            <ImportData />
+            <ImportData
+              key={clienteAtual?.id ?? "sem-cliente"}
+              cliente={clienteAtual}
+            />
           ) : (
             <SpendingGoals />
           )}
