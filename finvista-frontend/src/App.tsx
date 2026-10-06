@@ -895,7 +895,7 @@ function App() {
           ) : paginaAtiva === "orcamentos" ? (
             <Budgets />
           ) : paginaAtiva === "historico" ? (
-            <History />
+            <History key={clienteAtual?.id ?? "sem-cliente"} />
           ) : usuarioAdmin ? (
             <ImportData
               key={clienteAtual?.id ?? "sem-cliente"}
