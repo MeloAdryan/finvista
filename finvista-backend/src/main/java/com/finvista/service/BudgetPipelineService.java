@@ -8,6 +8,8 @@ import com.finvista.model.FinancialTransaction;
 import com.finvista.repository.BudgetRepository;
 import com.finvista.repository.FinancialTransactionRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -21,17 +23,29 @@ public class BudgetPipelineService {
     private final BudgetRepository budgetRepository;
     private final FinancialTransactionRepository financialTransactionRepository;
     private final ClienteContextService clienteContextService;
+    private final ExpenseAllocationService expenseAllocationService;
 
+    @Autowired
+    public BudgetPipelineService(
+            BudgetRepository budgetRepository,
+            FinancialTransactionRepository financialTransactionRepository,
+            ClienteContextService clienteContextService,
+            ExpenseAllocationService expenseAllocationService
+    ) {
+        this.budgetRepository = budgetRepository;
+        this.financialTransactionRepository = financialTransactionRepository;
+        this.clienteContextService = clienteContextService;
+        this.expenseAllocationService = expenseAllocationService;
+    }
+
+    // Compatibilidade com testes existentes que verificam dados legados sem rateios.
+    // O Spring utiliza o construtor de quatro dependências acima.
     public BudgetPipelineService(
             BudgetRepository budgetRepository,
             FinancialTransactionRepository financialTransactionRepository,
             ClienteContextService clienteContextService
     ) {
-        this.budgetRepository = budgetRepository;
-        this.financialTransactionRepository =
-                financialTransactionRepository;
-        this.clienteContextService =
-                clienteContextService;
+        this(budgetRepository, financialTransactionRepository, clienteContextService, null);
     }
 
     /**
@@ -43,6 +57,7 @@ public class BudgetPipelineService {
      * ADMIN:
      * utiliza o cliente selecionado na sessão.
      */
+    @Transactional(readOnly = true)
     public List<BudgetPipelineResponse> listar() {
 
         Long clienteId = obterClienteIdAtual();
@@ -62,6 +77,7 @@ public class BudgetPipelineService {
      * O cliente nunca é aceito diretamente do frontend.
      * Ele é determinado pelo contexto autenticado.
      */
+    @Transactional
     public BudgetPipelineResponse cadastrar(
             BudgetRequest request
     ) {
@@ -122,25 +138,18 @@ public class BudgetPipelineService {
                                 budget.getDataFim()
                         );
 
-        BigDecimal valorUtilizado =
-                despesas.stream()
-                        .filter(
-                                despesa ->
-                                        correspondeAoOrcamento(
-                                                budget,
-                                                despesa
-                                        )
-                        )
-                        .map(
-                                FinancialTransaction::getValor
-                        )
-                        .filter(
-                                valor -> valor != null
-                        )
-                        .reduce(
-                                BigDecimal.ZERO,
-                                BigDecimal::add
-                        );
+        List<ExpenseAllocationService.Parte> partes = expenseAllocationService != null
+                ? expenseAllocationService.dividir(clienteId, despesas)
+                : despesas.stream()
+                    .map(despesa -> new ExpenseAllocationService.Parte(
+                            despesa.getCategoria(), despesa.getCentroCusto(),
+                            despesa.getValor() == null ? BigDecimal.ZERO : despesa.getValor()))
+                    .toList();
+
+        BigDecimal valorUtilizado = partes.stream()
+                .filter(parte -> correspondeAoOrcamento(budget, parte))
+                .map(ExpenseAllocationService.Parte::valor)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal valorDisponivel =
                 budget.getValorPlanejado()
@@ -168,21 +177,21 @@ public class BudgetPipelineService {
 
     private boolean correspondeAoOrcamento(
             Budget budget,
-            FinancialTransaction despesa
+            ExpenseAllocationService.Parte parte
     ) {
 
         boolean centroCustoCorresponde =
-                budget.getCentroCusto() == null
+                normalizarOpcional(budget.getCentroCusto()) == null
                         || iguaisIgnorandoMaiusculas(
                                 budget.getCentroCusto(),
-                                despesa.getCentroCusto()
+                                parte.centroCusto()
                         );
 
         boolean categoriaCorresponde =
-                budget.getCategoria() == null
+                normalizarOpcional(budget.getCategoria()) == null
                         || iguaisIgnorandoMaiusculas(
                                 budget.getCategoria(),
-                                despesa.getCategoria()
+                                parte.categoria()
                         );
 
         return centroCustoCorresponde

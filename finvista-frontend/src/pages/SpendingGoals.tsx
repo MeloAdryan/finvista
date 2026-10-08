@@ -22,6 +22,8 @@ import {
 import { obterUsuarioAtual, type AuthUser } from "../services/authService";
 
 import "../styles/spending-goals.css";
+import GoalProgress from "../components/GoalProgress";
+import { periodoMeta } from "../services/goalPresentation";
 
 const formatarMoeda = (valor: number) =>
   new Intl.NumberFormat("pt-BR", {
@@ -36,8 +38,6 @@ const formatarData = (data: string) => {
 
   return new Intl.DateTimeFormat("pt-BR").format(new Date(`${data}T00:00:00`));
 };
-
-const classeStatus = (status: string) => status.toLowerCase();
 
 function SpendingGoals() {
   const [metas, setMetas] = useState<SpendingGoal[]>([]);
@@ -114,7 +114,7 @@ function SpendingGoals() {
         const resultados = await Promise.allSettled([
           listarMetas(),
           obterUsuarioAtual(),
-         getCostCenters(true),
+          getCostCenters(true),
           getExpenseDistribution(true),
         ]);
 
@@ -242,7 +242,26 @@ function SpendingGoals() {
    * =========================================================
    */
 
-  const metasFiltradas = metas;
+  const metasFiltradas = useMemo(
+    () =>
+      [...metas].sort((a, b) => {
+        const etapa = (m: SpendingGoal) =>
+          m.situacaoTemporal === "EM_ANDAMENTO"
+            ? 0
+            : m.situacaoTemporal === "FUTURA"
+              ? 1
+              : 2;
+        return (
+          etapa(a) - etapa(b) ||
+          (etapa(a) === 0
+            ? Number(b.percentualUtilizado) - Number(a.percentualUtilizado)
+            : etapa(a) === 1
+              ? a.dataInicio.localeCompare(b.dataInicio)
+              : b.dataFim.localeCompare(a.dataFim))
+        );
+      }),
+    [metas],
+  );
 
   const filtrosAtivos = Boolean(filtroCentroCusto) || Boolean(filtroCategoria);
 
@@ -276,7 +295,9 @@ function SpendingGoals() {
     );
 
     const metasAtencao = metasFiltradas.filter(
-      (meta) => meta.status === "ALERTA" || meta.status === "EXCEDIDA",
+      (meta) =>
+        meta.situacaoTemporal === "EM_ANDAMENTO" &&
+        (meta.status === "ALERTA" || meta.status === "EXCEDIDA"),
     ).length;
 
     return {
@@ -653,7 +674,9 @@ function SpendingGoals() {
         </article>
 
         <article>
-          <span>{filtrosAtivos ? "Gastos no filtro" : "Gastos acumulados"}</span>
+          <span>
+            {filtrosAtivos ? "Gastos no filtro" : "Gastos acumulados"}
+          </span>
 
           <strong>{formatarMoeda(resumo.gastoTotal)}</strong>
 
@@ -734,10 +757,6 @@ function SpendingGoals() {
         ) : (
           <div className="metas-lista">
             {metasFiltradas.map((meta) => {
-              const percentual = Number(meta.percentualUtilizado) || 0;
-
-              const larguraBarra = Math.min(Math.max(percentual, 0), 100);
-
               return (
                 <article className="meta-card" key={meta.id}>
                   <div className="meta-card-top">
@@ -753,13 +772,7 @@ function SpendingGoals() {
                       </small>
                     </div>
 
-                    <span
-                      className={`meta-status meta-status-${classeStatus(
-                        meta.status,
-                      )}`}
-                    >
-                      {meta.status}
-                    </span>
+                    <span className="meta-status">{periodoMeta(meta)}</span>
                   </div>
 
                   {(meta.categoria || meta.centroCusto) && (
@@ -814,50 +827,23 @@ function SpendingGoals() {
                       </span>
                       <span>
                         <small>Gastos no filtro</small>
-                        <strong>{formatarMoeda(Number(meta.gastoFiltrado))}</strong>
+                        <strong>
+                          {formatarMoeda(Number(meta.gastoFiltrado))}
+                        </strong>
                       </span>
                       <span>
                         <small>Participação no limite da meta</small>
-                        <strong>{Number(meta.percentualFiltrado).toFixed(1)}%</strong>
+                        <strong>
+                          {Number(meta.percentualFiltrado).toFixed(1)}%
+                        </strong>
                       </span>
                     </div>
                   )}
 
-                  <div className="meta-progresso-header">
-                    <span>Utilização total da meta</span>
-
-                    <strong>{percentual.toFixed(1)}%</strong>
-                  </div>
-
-                  <div className="meta-progresso">
-                    <div
-                      className={`meta-progresso-barra meta-progresso-${classeStatus(
-                        meta.status,
-                      )}`}
-                      style={{
-                        width: `${larguraBarra}%`,
-                      }}
-                    />
-                  </div>
-
-                  <div className="meta-card-footer">
-                    <span>
-                      Alerta configurado em{" "}
-                      <strong>{meta.percentualAlerta}%</strong>
-                    </span>
-
-                    {meta.status === "NORMAL" && (
-                      <span>Dentro do planejamento</span>
-                    )}
-
-                    {meta.status === "ALERTA" && (
-                      <span>Limite próximo de ser atingido</span>
-                    )}
-
-                    {meta.status === "EXCEDIDA" && (
-                      <span>Limite planejado ultrapassado</span>
-                    )}
-                  </div>
+                  <GoalProgress
+                    key={`${meta.id}-${meta.gastoAtual}-${meta.dataReferencia}`}
+                    meta={meta}
+                  />
                 </article>
               );
             })}

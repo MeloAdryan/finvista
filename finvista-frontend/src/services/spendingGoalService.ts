@@ -3,6 +3,8 @@ import { API_URL } from "../config/api";
 export type SpendingGoalStatus = "NORMAL" | "ALERTA" | "EXCEDIDA";
 
 export interface SpendingGoal {
+  situacaoTemporal: "FUTURA" | "EM_ANDAMENTO" | "ENCERRADA";
+  dataReferencia: string;
   id: number;
   tipo: string;
   dataInicio: string;
@@ -89,8 +91,6 @@ export async function criarMeta(
   if (!response.ok) {
     const mensagem = await response.text().catch(() => "");
 
-    throw new Error(
-      mensagem || "Não foi possível criar a meta.",
-    );
+    throw new Error(mensagem || "Não foi possível criar a meta.");
   }
 }

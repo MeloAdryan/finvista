@@ -1,255 +1,311 @@
+import { useState } from "react";
 import {
+  Area,
+  Bar,
   CartesianGrid,
+  ComposedChart,
   Line,
-  LineChart,
+  ReferenceArea,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
-
-import type { ProjectionData } from "../services/projectionService";
-
-interface ProjectionChartProps {
-  dados: ProjectionData[];
-}
-
-function ProjectionChart({ dados }: ProjectionChartProps) {
-  const formatarMoeda = (valor: number) => {
-    return Number(valor).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    });
-  };
-
-  const formatarValorCompacto = (valor: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      notation: "compact",
-      compactDisplay: "short",
-    }).format(valor);
-  };
-
-  const receitaTotal = dados.reduce(
-    (total, item) => total + Number(item.receita),
+import type { ProjectionPlanning } from "../services/projectionPlanningService";
+import {
+  compactoFinanceiro,
+  eixoFinanceiro,
+  exportarFinanceiro,
+  moedaFinanceira,
+} from "../services/financialVisualization";
+import "../styles/financial-evolution.css";
+export default function ProjectionChart({
+  dados,
+}: {
+  dados: ProjectionPlanning;
+}) {
+  const [tabela, setTabela] = useState(false);
+  const ultimo = dados.meses.at(-1);
+  const mensal = eixoFinanceiro(
+    dados.meses.flatMap((m) => [
+      m.receitaSimulada,
+      m.receitaRegistrada,
+      m.receitaComplementar,
+      m.despesaRegistrada,
+      m.resultadoMensal,
+    ]),
+  );
+  const saldo = eixoFinanceiro([
+    dados.saldoInicial,
+    ...dados.meses.flatMap((m) => [
+      m.saldoConservador,
+      m.saldoOtimista,
+      m.saldoBase,
+    ]),
+  ]);
+  const faixa = [
+    {
+      periodo: "Início",
+      saldoBase: dados.saldoInicial,
+      faixa: [dados.saldoInicial, dados.saldoInicial],
+    },
+    ...dados.meses.map((m) => ({
+      ...m,
+      faixa: [m.saldoConservador, m.saldoOtimista],
+    })),
+  ];
+  const receita = dados.meses.reduce((s, m) => s + m.receitaSimulada, 0);
+  const complemento = dados.meses.reduce(
+    (s, m) => s + m.receitaComplementar,
     0,
   );
-
-  const resultadoTotal = dados.reduce(
-    (total, item) => total + Number(item.resultado),
-    0,
-  );
-
-  const saldoFinal =
-    dados.length > 0 ? Number(dados[dados.length - 1].saldo) : 0;
-
+  const exportar = () =>
+    exportarFinanceiro("projecao-cenarios.csv", [
+      [
+        "Período",
+        "Receita registrada",
+        "Receita complementar simulada",
+        "Receita simulada total",
+        "Despesa registrada",
+        "Resultado mensal simulado",
+        "Resultado acumulado simulado",
+        "Saldo base",
+        "Saldo conservador",
+        "Saldo otimista",
+        "Saldo inicial informado",
+        "Variação receita (%)",
+      ],
+      ...dados.meses.map((m) => [
+        m.periodo,
+        m.receitaRegistrada,
+        m.receitaComplementar,
+        m.receitaSimulada,
+        m.despesaRegistrada,
+        m.resultadoMensal,
+        m.resultadoAcumulado,
+        m.saldoBase,
+        m.saldoConservador,
+        m.saldoOtimista,
+        dados.saldoInicial,
+        dados.variacaoPercentual,
+      ]),
+    ]);
   return (
-    <div className="projection-card">
-      <div className="projection-header">
+    <section className="fe-card">
+      <div className="fe-heading">
         <div>
-          <span className="projection-eyebrow">PLANEJAMENTO FINANCEIRO</span>
-
-          <h2>Projeção de 6 meses</h2>
-
+          <h2>Resultados da simulação</h2>
           <p>
-            Evolução prevista de receita, despesa, resultado e saldo acumulado.
+            {dados.inicio.split("-").reverse().join("/")} —{" "}
+            {dados.fim.split("-").reverse().join("/")} · meses completos,
+            incluindo o mês atual.
           </p>
         </div>
-
-        <div className="projection-status">
-          <span className="projection-status-dot" />
-          Projetado
+        <div className="fe-actions">
+          <button type="button" onClick={() => setTabela(!tabela)}>
+            {tabela ? "Ver gráficos" : "Ver como tabela"}
+          </button>
+          <button type="button" onClick={exportar}>
+            Exportar CSV
+          </button>
         </div>
       </div>
-
-      <div className="projection-metrics">
-        <div className="projection-metric">
-          <span>Receita no período</span>
-
-          <strong>{formatarMoeda(receitaTotal)}</strong>
-
-          <small>Soma dos 6 meses</small>
+      <div className="fe-summary">
+        <div>
+          Receita total simulada<strong>{moedaFinanceira(receita)}</strong>
         </div>
-
-        <div className="projection-metric projection-metric-result">
-          <span>Resultado acumulado</span>
-
-          <strong>{formatarMoeda(resultadoTotal)}</strong>
-
-          <small>Receita menos despesas</small>
+        <div>
+          Resultado acumulado simulado
+          <strong>{moedaFinanceira(ultimo?.resultadoAcumulado ?? 0)}</strong>
         </div>
-
-        <div className="projection-metric projection-metric-balance">
-          <span>Saldo projetado</span>
-
-          <strong>{formatarMoeda(saldoFinal)}</strong>
-
-          <small>Ao final do período</small>
+        <div>
+          Saldo final do cenário base
+          <strong>
+            {moedaFinanceira(ultimo?.saldoBase ?? dados.saldoInicial)}
+          </strong>
         </div>
       </div>
-
-      <div className="projection-chart-box">
-        <div className="projection-chart-header">
-          <div>
-            <span>EVOLUÇÃO MENSAL</span>
-
-            <strong>Desempenho projetado</strong>
-          </div>
-
-          <div className="projection-chart-highlight">
-            <span>Saldo final</span>
-
-            <strong>{formatarMoeda(saldoFinal)}</strong>
-          </div>
+      <p className="fe-notice">
+        {complemento > 0
+          ? `Receita complementar hipotética: ${moedaFinanceira(complemento)}. O alvo mensal completa a receita cadastrada até o valor esperado; não é somado integralmente outra vez.`
+          : "Sem receita complementar projetada: os resultados consideram somente receitas e despesas cadastradas."}{" "}
+        Despesas ainda não cadastradas não entram nesta simulação.
+      </p>
+      {tabela ? (
+        <div className="fe-table">
+          <table>
+            <caption>Simulação por mês e por cenário</caption>
+            <thead>
+              <tr>
+                <th>Mês</th>
+                <th>Receita registrada</th>
+                <th>Complemento</th>
+                <th>Despesa registrada</th>
+                <th>Resultado mensal</th>
+                <th>Acumulado no período</th>
+                <th>Saldo base</th>
+                <th>Conservador</th>
+                <th>Otimista</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dados.meses.map((m) => (
+                <tr key={m.periodo}>
+                  <td>{m.periodo}</td>
+                  <td>{moedaFinanceira(m.receitaRegistrada)}</td>
+                  <td>{moedaFinanceira(m.receitaComplementar)}</td>
+                  <td>{moedaFinanceira(m.despesaRegistrada)}</td>
+                  <td>{moedaFinanceira(m.resultadoMensal)}</td>
+                  <td>{moedaFinanceira(m.resultadoAcumulado)}</td>
+                  <td>{moedaFinanceira(m.saldoBase)}</td>
+                  <td>{moedaFinanceira(m.saldoConservador)}</td>
+                  <td>{moedaFinanceira(m.saldoOtimista)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-
-        <div className="projection-custom-legend">
-          <span>
-            <i className="projection-legend-dot projection-legend-revenue" />
-            Receita
-          </span>
-
-          <span>
-            <i className="projection-legend-dot projection-legend-expense" />
-            Despesa
-          </span>
-
-          <span>
-            <i className="projection-legend-dot projection-legend-result" />
-            Resultado
-          </span>
-
-          <span>
-            <i className="projection-legend-dot projection-legend-balance" />
-            Saldo projetado
-          </span>
-        </div>
-
-        {dados.length > 0 ? (
-          <div className="projection-chart-container">
+      ) : (
+        <>
+          <h2>Resultado mensal simulado</h2>
+          <div className="fe-chart">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={dados}
-                margin={{
-                  top: 12,
-                  right: 16,
-                  left: 4,
-                  bottom: 4,
-                }}
+              <ComposedChart
+                data={dados.meses}
+                margin={{ top: 15, right: 15, left: 4, bottom: 5 }}
               >
-                <CartesianGrid
-                  stroke="#e7edf3"
-                  strokeDasharray="4 4"
-                  vertical={false}
-                />
-
-                <XAxis
-                  dataKey="mes"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{
-                    fill: "#64748b",
-                    fontSize: 12,
-                  }}
-                  dy={8}
-                />
-
+                <CartesianGrid stroke="#e4eaf1" />
+                <XAxis dataKey="periodo" minTickGap={30} />
                 <YAxis
-                  tickFormatter={formatarValorCompacto}
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{
-                    fill: "#64748b",
-                    fontSize: 11,
-                  }}
-                  width={62}
+                  width={65}
+                  domain={mensal.domain}
+                  ticks={mensal.ticks}
+                  tickFormatter={compactoFinanceiro}
                 />
-
-                <Tooltip
-                  formatter={(value, name) => [
-                    formatarMoeda(Number(value)),
-                    String(name),
-                  ]}
-                  contentStyle={{
-                    borderRadius: "12px",
-                    border: "1px solid #dfe6ee",
-                    boxShadow: "0 10px 30px rgba(15, 42, 68, 0.12)",
-                  }}
+                <Tooltip formatter={(v) => moedaFinanceira(Number(v))} />
+                <ReferenceLine y={0} stroke="#94a3b8" />
+                <Bar
+                  dataKey="receitaRegistrada"
+                  name="Receita registrada"
+                  stackId="receita"
+                  fill="#3f806d"
+                  maxBarSize={32}
                 />
-
+                <Bar
+                  dataKey="receitaComplementar"
+                  name="Receita complementar simulada"
+                  stackId="receita"
+                  fill="#b1d5c9"
+                  maxBarSize={32}
+                />
+                <Bar
+                  dataKey="despesaRegistrada"
+                  name="Despesa registrada"
+                  fill="#c77d31"
+                  maxBarSize={32}
+                />
                 <Line
-                  type="monotone"
-                  dataKey="receita"
-                  name="Receita"
-                  stroke="#1e4068"
-                  strokeWidth={3}
-                  dot={{
-                    r: 4,
-                    fill: "#ffffff",
-                    strokeWidth: 2,
-                  }}
-                  activeDot={{
-                    r: 6,
-                  }}
+                  type="linear"
+                  dataKey="resultadoMensal"
+                  name="Resultado mensal simulado"
+                  stroke="#2563eb"
+                  strokeDasharray="5 4"
+                  dot={false}
+                  strokeWidth={2}
                 />
-
-                <Line
-                  type="monotone"
-                  dataKey="despesa"
-                  name="Despesa"
-                  stroke="#ef4444"
-                  strokeWidth={2.5}
-                  dot={{
-                    r: 3,
-                    fill: "#ffffff",
-                    strokeWidth: 2,
-                  }}
-                  activeDot={{
-                    r: 5,
-                  }}
-                />
-
-                <Line
-                  type="monotone"
-                  dataKey="resultado"
-                  name="Resultado"
-                  stroke="#2f7ed8"
-                  strokeWidth={2.5}
-                  dot={{
-                    r: 3,
-                    fill: "#ffffff",
-                    strokeWidth: 2,
-                  }}
-                  activeDot={{
-                    r: 5,
-                  }}
-                />
-
-                <Line
-                  type="monotone"
-                  dataKey="saldo"
-                  name="Saldo projetado"
-                  stroke="#b8763d"
-                  strokeWidth={3.5}
-                  dot={{
-                    r: 4,
-                    fill: "#ffffff",
-                    strokeWidth: 2,
-                  }}
-                  activeDot={{
-                    r: 6,
-                  }}
-                />
-              </LineChart>
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
-        ) : (
-          <div className="projection-empty">
-            Nenhuma projeção financeira disponível.
+          <div className="fe-legend">
+            <span>Verde: receita registrada</span>
+            <span>Verde claro: complemento hipotético</span>
+            <span>Laranja: despesa registrada</span>
+            <span>Azul tracejado: resultado simulado</span>
           </div>
-        )}
+          <h2>Saldo simulado e faixa dos cenários</h2>
+          <div className="fe-chart">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={faixa}
+                margin={{ top: 20, right: 15, left: 4, bottom: 5 }}
+              >
+                <CartesianGrid stroke="#e4eaf1" />
+                <XAxis dataKey="periodo" minTickGap={30} />
+                <YAxis
+                  width={65}
+                  domain={saldo.domain}
+                  ticks={saldo.ticks}
+                  tickFormatter={compactoFinanceiro}
+                />
+                <Tooltip
+                  formatter={(v) =>
+                    Array.isArray(v)
+                      ? `${moedaFinanceira(Number(v[0]))} — ${moedaFinanceira(Number(v[1]))}`
+                      : moedaFinanceira(Number(v))
+                  }
+                />
+                <ReferenceArea
+                  x1={dados.meses[0]?.periodo}
+                  x2={ultimo?.periodo}
+                  fill="#f1f5fb"
+                  fillOpacity={0.5}
+                />
+                <ReferenceLine y={0} stroke="#94a3b8" />
+                <Area
+                  type="linear"
+                  dataKey="faixa"
+                  name="Faixa conservador → otimista"
+                  stroke="none"
+                  fill="#bfd5f4"
+                  fillOpacity={0.6}
+                />
+                <Line
+                  type="linear"
+                  dataKey="saldoBase"
+                  name="Saldo simulado base"
+                  stroke="#153856"
+                  strokeDasharray="5 4"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <ReferenceLine
+                  x="Início"
+                  stroke="#94a3b8"
+                  label="Base informada"
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </>
+      )}
+      <div className="fe-bases">
+        <div>
+          Saldo inicial informado
+          <strong>{moedaFinanceira(dados.saldoInicial)}</strong>
+        </div>
+        <div>
+          Final conservador
+          <strong>
+            {moedaFinanceira(ultimo?.saldoConservador ?? dados.saldoInicial)}
+          </strong>
+        </div>
+        <div>
+          Final otimista
+          <strong>
+            {moedaFinanceira(ultimo?.saldoOtimista ?? dados.saldoInicial)}
+          </strong>
+        </div>
       </div>
-    </div>
+      <p className="fe-note">
+        Saldo simulado = saldo inicial informado + resultado acumulado simulado.
+        O histórico anterior não é acrescentado automaticamente. A faixa varia
+        apenas o alvo de receita em ±{dados.variacaoPercentual}%; despesas
+        registradas permanecem iguais. É uma análise de sensibilidade, sem
+        probabilidade associada. Receita já registrada nunca é reduzida pelo
+        cenário. Os registros são pela data de análise; não há separação
+        confirmada entre valores pagos e em aberto.
+      </p>
+    </section>
   );
 }
-
-export default ProjectionChart;

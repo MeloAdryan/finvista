@@ -20,6 +20,8 @@ public class ExpenseAllocationService {
     public record Parte(String categoria, String centroCusto, BigDecimal valor) {
 
     }
+    public record ParteDetalhada(FinancialTransaction lancamento, Parte parte) {}
+
     private final FinancialAllocationRepository repository;
 
     public ExpenseAllocationService(FinancialAllocationRepository repository) {
@@ -28,6 +30,11 @@ public class ExpenseAllocationService {
 
     @Transactional(readOnly = true)
     public List<Parte> dividir(Long clienteId, List<FinancialTransaction> despesas) {
+        return dividirDetalhado(clienteId, despesas).stream().map(ParteDetalhada::parte).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ParteDetalhada> dividirDetalhado(Long clienteId, List<FinancialTransaction> despesas) {
         Objects.requireNonNull(clienteId, "Cliente obrigatório para consultar rateios.");
         List<Long> ids = despesas.stream().map(FinancialTransaction::getId)
                 .filter(Objects::nonNull).distinct().toList();
@@ -37,12 +44,12 @@ public class ExpenseAllocationService {
                         .stream().filter(r -> r.getLancamento() != null
                         && selecionados.contains(r.getLancamento().getId()))
                         .collect(Collectors.groupingBy(r -> r.getLancamento().getId()));
-        List<Parte> resultado = new ArrayList<>();
+        List<ParteDetalhada> resultado = new ArrayList<>();
         for (FinancialTransaction despesa : despesas) {
             List<FinancialAllocation> rateios = despesa.getId() == null ? List.of()
                     : porLancamento.getOrDefault(despesa.getId(), List.of());
             if (rateios.isEmpty()) {
-                resultado.add(parteLegada(despesa));
+                resultado.add(new ParteDetalhada(despesa, parteLegada(despesa)));
                 continue;
             }
             BigDecimal valor = valor(despesa);
@@ -51,11 +58,11 @@ public class ExpenseAllocationService {
                     -> r.getValorCategoria() == null || r.getBloco() < 1 || !blocos.add(r.getBloco()));
             BigDecimal soma = invalido ? BigDecimal.ZERO : rateios.stream()
                     .map(FinancialAllocation::getValorCategoria).reduce(BigDecimal.ZERO, BigDecimal::add);
-            
+
             BigDecimal fator = soma.compareTo(valor) == 0 ? BigDecimal.ONE
                     : soma.negate().compareTo(valor) == 0 ? BigDecimal.ONE.negate() : null;
             if (invalido || fator == null) {
-                resultado.add(new Parte(CATEGORIA_REVISAR, CENTRO_REVISAR, valor));
+                resultado.add(new ParteDetalhada(despesa, new Parte(CATEGORIA_REVISAR, CENTRO_REVISAR, valor)));
                 continue;
             }
             for (FinancialAllocation r : rateios) {
@@ -64,8 +71,8 @@ public class ExpenseAllocationService {
                         || r.getValorCentro().compareTo(r.getValorCategoria()) != 0)) {
                     centro = CENTRO_REVISAR;
                 }
-                resultado.add(new Parte(nome(r.getCategoria(), SEM_CATEGORIA), centro,
-                        r.getValorCategoria().multiply(fator)));
+                resultado.add(new ParteDetalhada(despesa, new Parte(nome(r.getCategoria(), SEM_CATEGORIA), centro,
+                        r.getValorCategoria().multiply(fator))));
             }
         }
         return List.copyOf(resultado);

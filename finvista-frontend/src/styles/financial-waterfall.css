@@ -1,0 +1,83 @@
+.wf-panel {
+  min-width: 0;
+  text-align: left;
+}
+.wf-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.wf-panel h2 {
+  font-size: 19px;
+  margin: 0 0 10px;
+}
+.wf-panel p {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.wf-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+}
+.wf-panel button {
+  padding: 8px 11px;
+  border: 1px solid #c5d6e8;
+  border-radius: 6px;
+  background: #f6f8fc;
+  color: #153856;
+  cursor: pointer;
+  font-size: 12px;
+}
+.wf-panel button:focus-visible,
+.wf-scroll:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+}
+.wf-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  border: 1px solid #e4eaf1;
+  background: #f8fafc;
+  border-radius: 9px;
+  margin: 16px 0;
+}
+.wf-chart {
+  height: 380px;
+  width: 100%;
+}
+.wf-note {
+  color: #64748b;
+}
+.wf-table {
+  overflow: auto;
+  margin-top: 12px;
+}
+.wf-table table {
+  min-width: 650px;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.wf-table td,
+.wf-table th {
+  padding: 10px;
+  border-bottom: 1px solid #e4eaf1;
+  text-align: right;
+  white-space: nowrap;
+}
+.wf-table th:first-child {
+  text-align: left;
+}
+.wf-table thead {
+  background: #f6f8fc;
+}
+@media (max-width: 768px) {
+  .wf-heading {
+    flex-direction: column;
+  }
+  .wf-chart {
+    height: 340px;
+  }
+}

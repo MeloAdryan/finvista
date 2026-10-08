@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   createBudget,
@@ -7,17 +7,31 @@ import {
   type CreateBudgetData,
 } from "../services/budgetPipelineService";
 
-import {
-  obterUsuarioAtual,
-  type AuthUser,
-} from "../services/authService";
+import { obterUsuarioAtual, type AuthUser } from "../services/authService";
 
 import BudgetPipelineChart from "../charts/BudgetPipelineChart";
 
 import "../styles/dashboard.css";
+import "../styles/budget-analysis.css";
+import {
+  chavePeriodo,
+  dataOrcamento,
+  detectarSobreposicoes,
+  filtrarOrcamentos,
+  moedaOrcamento,
+  type FiltroOrcamento,
+} from "../services/budgetAnalysis";
 
 function Budgets() {
   const [orcamentos, setOrcamentos] = useState<BudgetPipelineData[]>([]);
+  const [filtro, setFiltro] = useState<FiltroOrcamento>({
+    modo: "TODOS",
+    inicio: "",
+    fim: "",
+  });
+  const [inicio, setInicio] = useState("");
+  const [fim, setFim] = useState("");
+  const [erroFiltro, setErroFiltro] = useState("");
   const [usuario, setUsuario] = useState<AuthUser | null>(null);
 
   const [carregando, setCarregando] = useState(true);
@@ -27,15 +41,14 @@ function Budgets() {
   const [salvando, setSalvando] = useState(false);
   const [erroCadastro, setErroCadastro] = useState<string | null>(null);
 
-  const [novoOrcamento, setNovoOrcamento] =
-    useState<CreateBudgetData>({
-      nome: "",
-      centroCusto: null,
-      categoria: null,
-      valorPlanejado: 0,
-      dataInicio: "",
-      dataFim: "",
-    });
+  const [novoOrcamento, setNovoOrcamento] = useState<CreateBudgetData>({
+    nome: "",
+    centroCusto: null,
+    categoria: null,
+    valorPlanejado: 0,
+    dataInicio: "",
+    dataFim: "",
+  });
 
   useEffect(() => {
     async function carregarPagina() {
@@ -49,6 +62,20 @@ function Budgets() {
         ]);
 
         setOrcamentos(dadosOrcamentos);
+        const recente = [...dadosOrcamentos].sort(
+          (a, b) =>
+            b.dataInicio.localeCompare(a.dataInicio) ||
+            b.dataFim.localeCompare(a.dataFim),
+        )[0];
+        if (recente) {
+          setFiltro({
+            modo: "EXATO",
+            inicio: recente.dataInicio,
+            fim: recente.dataFim,
+          });
+          setInicio(recente.dataInicio);
+          setFim(recente.dataFim);
+        }
         setUsuario(usuarioAtual);
       } catch (error) {
         console.error("Erro ao carregar orçamentos:", error);
@@ -66,43 +93,70 @@ function Budgets() {
     void carregarPagina();
   }, []);
 
-  const formatarMoeda = (valor: number) => {
-    return Number(valor).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    });
-  };
-
-  const formatarData = (data: string) => {
-    if (!data) {
-      return "—";
+  const visiveis = useMemo(
+    () => filtrarOrcamentos(orcamentos, filtro),
+    [orcamentos, filtro],
+  );
+  const periodos = useMemo(
+    () =>
+      Array.from(
+        new Map(orcamentos.map((item) => [chavePeriodo(item), item])).values(),
+      ).sort(
+        (a, b) =>
+          b.dataInicio.localeCompare(a.dataInicio) ||
+          b.dataFim.localeCompare(a.dataFim),
+      ),
+    [orcamentos],
+  );
+  const sobreposicoes = useMemo(
+    () => detectarSobreposicoes(visiveis),
+    [visiveis],
+  );
+  const totalPlanejado = visiveis.reduce(
+    (s, item) => s + Number(item.valorPlanejado),
+    0,
+  );
+  const totalUtilizado = visiveis.reduce(
+    (s, item) => s + Number(item.valorUtilizado),
+    0,
+  );
+  const totalDisponivel = visiveis.reduce(
+    (s, item) => s + Number(item.valorDisponivel),
+    0,
+  );
+  const estourados = visiveis.filter(
+    (item) => Number(item.valorUtilizado) > Number(item.valorPlanejado),
+  ).length;
+  function selecionarPeriodo(valor: string) {
+    setErroFiltro("");
+    if (valor === "TODOS") {
+      setFiltro({ modo: "TODOS", inicio: "", fim: "" });
+      setInicio("");
+      setFim("");
+      return;
     }
-
-    const [ano, mes, dia] = data.split("-");
-
-    return `${dia}/${mes}/${ano}`;
-  };
-
-  const totalPlanejado = orcamentos.reduce(
-    (total, item) => total + Number(item.valorPlanejado),
-    0,
-  );
-
-  const totalUtilizado = orcamentos.reduce(
-    (total, item) => total + Number(item.valorUtilizado),
-    0,
-  );
-
-  const totalDisponivel = orcamentos.reduce(
-    (total, item) => total + Number(item.valorDisponivel),
-    0,
-  );
-
-  const percentualGeral =
-    totalPlanejado > 0
-      ? (totalUtilizado / totalPlanejado) * 100
-      : 0;
-
+    const [inicioPeriodo, fimPeriodo] = valor.split("|");
+    if (!inicioPeriodo || !fimPeriodo) return;
+    setFiltro({ modo: "EXATO", inicio: inicioPeriodo, fim: fimPeriodo });
+    setInicio(inicioPeriodo);
+    setFim(fimPeriodo);
+  }
+  function aplicarIntervalo() {
+    if (!inicio && !fim) {
+      selecionarPeriodo("TODOS");
+      return;
+    }
+    if (!inicio || !fim) {
+      setErroFiltro("Informe as duas datas para selecionar um intervalo.");
+      return;
+    }
+    if (fim < inicio) {
+      setErroFiltro("A data final não pode ser anterior à inicial.");
+      return;
+    }
+    setErroFiltro("");
+    setFiltro({ modo: "INTERSECAO", inicio, fim });
+  }
   const usuarioAdmin = usuario?.perfil === "ADMIN";
 
   async function handleCadastrarOrcamento() {
@@ -136,19 +190,7 @@ function Budgets() {
     }
 
     if (novoOrcamento.dataFim < novoOrcamento.dataInicio) {
-      setErroCadastro(
-        "A data final não pode ser anterior à data inicial.",
-      );
-      return;
-    }
-
-    if (
-      !novoOrcamento.centroCusto?.trim() &&
-      !novoOrcamento.categoria?.trim()
-    ) {
-      setErroCadastro(
-        "Informe pelo menos um centro de custo ou uma categoria.",
-      );
+      setErroCadastro("A data final não pode ser anterior à data inicial.");
       return;
     }
 
@@ -158,17 +200,20 @@ function Budgets() {
       const cadastrado = await createBudget({
         ...novoOrcamento,
         nome: novoOrcamento.nome.trim(),
-        centroCusto:
-          novoOrcamento.centroCusto?.trim() || null,
-        categoria:
-          novoOrcamento.categoria?.trim() || null,
+        centroCusto: novoOrcamento.centroCusto?.trim() || null,
+        categoria: novoOrcamento.categoria?.trim() || null,
       });
 
-      setOrcamentos((atuais) => [
-        ...atuais,
-        cadastrado,
-      ]);
+      setOrcamentos((atuais) => [...atuais, cadastrado]);
 
+      setFiltro({
+        modo: "EXATO",
+        inicio: cadastrado.dataInicio,
+        fim: cadastrado.dataFim,
+      });
+      setInicio(cadastrado.dataInicio);
+      setFim(cadastrado.dataFim);
+      setErroFiltro("");
       setNovoOrcamento({
         nome: "",
         centroCusto: null,
@@ -185,424 +230,319 @@ function Budgets() {
       if (error instanceof Error) {
         setErroCadastro(error.message);
       } else {
-        setErroCadastro(
-          "Não foi possível cadastrar o orçamento.",
-        );
+        setErroCadastro("Não foi possível cadastrar o orçamento.");
       }
     } finally {
       setSalvando(false);
     }
   }
 
-  if (carregando) {
+  if (carregando)
     return (
       <div className="dashboard">
-        <p>Carregando orçamentos...</p>
+        <p role="status">Carregando orçamentos…</p>
       </div>
     );
-  }
-
-  if (erro) {
+  if (erro)
     return (
       <div className="dashboard">
-        <p>{erro}</p>
+        <p role="alert">{erro}</p>
       </div>
     );
-  }
-
   return (
-    <div className="dashboard">
-      <section
-        id="orcamentos"
-        className="budget-pipeline-section"
-      >
-        <div className="pipeline-summary">
-          <div className="pipeline-summary-card">
-            <span>Orçamento planejado</span>
-
-            <strong>{formatarMoeda(totalPlanejado)}</strong>
-          </div>
-
-          <div className="pipeline-summary-card">
-            <span>Valor utilizado</span>
-
-            <strong>{formatarMoeda(totalUtilizado)}</strong>
-          </div>
-
-          <div className="pipeline-summary-card">
-            <span>Saldo disponível</span>
-
-            <strong>{formatarMoeda(totalDisponivel)}</strong>
-          </div>
-
-          <div className="pipeline-summary-card">
-            <span>Utilização geral</span>
-
-            <strong>
-              {percentualGeral.toLocaleString("pt-BR", {
-                minimumFractionDigits: 1,
-                maximumFractionDigits: 1,
-              })}
-              %
-            </strong>
-          </div>
+    <div className="dashboard budget-analysis-page">
+      <header className="ba-page-heading">
+        <div>
+          <span className="ba-eyebrow">Controle orçamentário</span>
+          <h1>Orçamentos empresariais</h1>
+          <p>Acompanhe cada limite no seu período e identifique os excedentes.</p>
         </div>
+        {usuarioAdmin && (
+          <button
+            type="button"
+            className="budget-new-opportunity-button"
+            disabled={salvando}
+            onClick={() => {
+              setErroCadastro(null);
+              setMostrarFormulario(!mostrarFormulario);
+            }}
+          >
+            {mostrarFormulario ? "Cancelar" : "+ Novo orçamento"}
+          </button>
+        )}
+      </header>
+      {usuarioAdmin && mostrarFormulario && (
+        <div className="budget-opportunity-form">
+          <div className="budget-opportunity-form-header">
+            <div>
+              <span className="budget-pipeline-table-eyebrow">
+                NOVO ORÇAMENTO
+              </span>
 
-        <BudgetPipelineChart dados={orcamentos} />
-      </section>
+              <h3>Cadastrar orçamento financeiro</h3>
 
-      <section className="budget-pipeline-table-card">
-        <div className="budget-pipeline-table-header">
-          <div>
-            <span className="budget-pipeline-table-eyebrow">
-              CONTROLE ORÇAMENTÁRIO
-            </span>
-
-            <h2>Orçamentos empresariais</h2>
-
-            <p>
-              Acompanhe os valores planejados, despesas realizadas
-              e recursos disponíveis por período e centro de custo.
-            </p>
-          </div>
-
-          <div className="budget-pipeline-table-total">
-            <span>Total planejado</span>
-
-            <strong>{formatarMoeda(totalPlanejado)}</strong>
-
-            <small>
-              {orcamentos.length}{" "}
-              {orcamentos.length === 1
-                ? "orçamento"
-                : "orçamentos"}
-            </small>
-
-            {usuarioAdmin && (
-              <button
-                type="button"
-                className="budget-new-opportunity-button"
-                onClick={() => {
-                  setErroCadastro(null);
-                  setMostrarFormulario((atual) => !atual);
-                }}
-              >
-                {mostrarFormulario
-                  ? "Cancelar"
-                  : "+ Novo orçamento"}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {usuarioAdmin && mostrarFormulario && (
-          <div className="budget-opportunity-form">
-            <div className="budget-opportunity-form-header">
-              <div>
-                <span className="budget-pipeline-table-eyebrow">
-                  NOVO ORÇAMENTO
-                </span>
-
-                <h3>Cadastrar orçamento financeiro</h3>
-
-                <p>
-                  Defina o valor planejado e os critérios usados
-                  para acompanhar as despesas realizadas.
-                </p>
-              </div>
-            </div>
-
-            <div className="budget-opportunity-form-grid">
-              <label>
-                <span>Nome do orçamento</span>
-
-                <input
-                  type="text"
-                  value={novoOrcamento.nome}
-                  placeholder="Ex.: Administrativo 2026"
-                  onChange={(event) =>
-                    setNovoOrcamento((atual) => ({
-                      ...atual,
-                      nome: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-
-              <label>
-                <span>Valor planejado</span>
-
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={
-                    novoOrcamento.valorPlanejado === 0
-                      ? ""
-                      : novoOrcamento.valorPlanejado
-                  }
-                  placeholder="0,00"
-                  onChange={(event) =>
-                    setNovoOrcamento((atual) => ({
-                      ...atual,
-                      valorPlanejado:
-                        Number(event.target.value),
-                    }))
-                  }
-                />
-              </label>
-
-              <label>
-                <span>Centro de custo</span>
-
-                <input
-                  type="text"
-                  value={novoOrcamento.centroCusto ?? ""}
-                  placeholder="Ex.: Despesas Administrativas"
-                  onChange={(event) =>
-                    setNovoOrcamento((atual) => ({
-                      ...atual,
-                      centroCusto:
-                        event.target.value || null,
-                    }))
-                  }
-                />
-              </label>
-
-              <label>
-                <span>Categoria</span>
-
-                <input
-                  type="text"
-                  value={novoOrcamento.categoria ?? ""}
-                  placeholder="Ex.: Serviços"
-                  onChange={(event) =>
-                    setNovoOrcamento((atual) => ({
-                      ...atual,
-                      categoria:
-                        event.target.value || null,
-                    }))
-                  }
-                />
-              </label>
-
-              <label>
-                <span>Data inicial</span>
-
-                <input
-                  type="date"
-                  value={novoOrcamento.dataInicio}
-                  onChange={(event) =>
-                    setNovoOrcamento((atual) => ({
-                      ...atual,
-                      dataInicio: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-
-              <label>
-                <span>Data final</span>
-
-                <input
-                  type="date"
-                  value={novoOrcamento.dataFim}
-                  min={novoOrcamento.dataInicio || undefined}
-                  onChange={(event) =>
-                    setNovoOrcamento((atual) => ({
-                      ...atual,
-                      dataFim: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-            </div>
-
-            {erroCadastro && (
-              <p className="budget-opportunity-form-error">
-                {erroCadastro}
+              <p>
+                Defina o valor planejado e os critérios usados para acompanhar
+                as despesas realizadas.
               </p>
-            )}
-
-            <div className="budget-opportunity-form-actions">
-              <button
-                type="button"
-                onClick={() => {
-                  setMostrarFormulario(false);
-                  setErroCadastro(null);
-                }}
-                disabled={salvando}
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  void handleCadastrarOrcamento()
-                }
-                disabled={salvando}
-              >
-                {salvando
-                  ? "Salvando..."
-                  : "Cadastrar orçamento"}
-              </button>
             </div>
           </div>
-        )}
 
-        {orcamentos.length > 0 ? (
-          <div className="table-wrapper">
-            <table className="budget-pipeline-table">
-              <thead>
-                <tr>
-                  <th className="budget-rank-column">#</th>
-                  <th>Orçamento</th>
-                  <th>Planejado</th>
-                  <th>Utilizado</th>
-                  <th>Disponível</th>
-                  <th>Utilização</th>
-                  <th>Período</th>
-                </tr>
-              </thead>
+          <div className="budget-opportunity-form-grid">
+            <label>
+              <span>Nome do orçamento</span>
 
-              <tbody>
-                {orcamentos.map((item, index) => {
-                  const percentual = Number(
-                    item.percentualUtilizado,
-                  );
+              <input
+                type="text"
+                value={novoOrcamento.nome}
+                placeholder="Ex.: Administrativo 2026"
+                onChange={(event) =>
+                  setNovoOrcamento((atual) => ({
+                    ...atual,
+                    nome: event.target.value,
+                  }))
+                }
+              />
+            </label>
 
-                  const percentualLimitado = Math.min(
-                    Math.max(percentual, 0),
-                    100,
-                  );
+            <label>
+              <span>Valor planejado</span>
 
-                  return (
-                    <tr key={item.id}>
-                      <td className="budget-rank-column">
-                        <span
-                          className={
-                            index === 0
-                              ? "budget-rank budget-rank-first"
-                              : "budget-rank"
-                          }
-                        >
-                          {index + 1}
-                        </span>
-                      </td>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={
+                  novoOrcamento.valorPlanejado === 0
+                    ? ""
+                    : novoOrcamento.valorPlanejado
+                }
+                placeholder="0,00"
+                onChange={(event) =>
+                  setNovoOrcamento((atual) => ({
+                    ...atual,
+                    valorPlanejado: Number(event.target.value),
+                  }))
+                }
+              />
+            </label>
 
-                      <td>
-                        <div className="budget-client">
-                          <span className="budget-client-icon">
-                            {item.nome
-                              .charAt(0)
-                              .toUpperCase()}
-                          </span>
+            <label>
+              <span>Centro de custo</span>
 
-                          <div>
-                            <strong>{item.nome}</strong>
+              <input
+                type="text"
+                value={novoOrcamento.centroCusto ?? ""}
+                placeholder="Ex.: Despesas Administrativas"
+                onChange={(event) =>
+                  setNovoOrcamento((atual) => ({
+                    ...atual,
+                    centroCusto: event.target.value || null,
+                  }))
+                }
+              />
+            </label>
 
-                            <small>
-                              {item.centroCusto ||
-                                item.categoria ||
-                                "Orçamento geral"}
-                            </small>
-                          </div>
-                        </div>
-                      </td>
+            <label>
+              <span>Categoria</span>
 
-                      <td>
-                        <strong className="budget-value">
-                          {formatarMoeda(
-                            Number(item.valorPlanejado),
-                          )}
-                        </strong>
-                      </td>
+              <input
+                type="text"
+                value={novoOrcamento.categoria ?? ""}
+                placeholder="Ex.: Serviços"
+                onChange={(event) =>
+                  setNovoOrcamento((atual) => ({
+                    ...atual,
+                    categoria: event.target.value || null,
+                  }))
+                }
+              />
+            </label>
 
-                      <td>
-                        <strong className="budget-value">
-                          {formatarMoeda(
-                            Number(item.valorUtilizado),
-                          )}
-                        </strong>
-                      </td>
+            <label>
+              <span>Data inicial</span>
 
-                      <td>
-                        <div className="budget-weighted-value">
-                          <strong>
-                            {formatarMoeda(
-                              Number(item.valorDisponivel),
-                            )}
-                          </strong>
+              <input
+                type="date"
+                value={novoOrcamento.dataInicio}
+                onChange={(event) =>
+                  setNovoOrcamento((atual) => ({
+                    ...atual,
+                    dataInicio: event.target.value,
+                  }))
+                }
+              />
+            </label>
 
-                          <small>Saldo do orçamento</small>
-                        </div>
-                      </td>
+            <label>
+              <span>Data final</span>
 
-                      <td>
-                        <div className="budget-probability">
-                          <div className="budget-probability-top">
-                            <strong>
-                              {percentual.toLocaleString(
-                                "pt-BR",
-                                {
-                                  minimumFractionDigits: 1,
-                                  maximumFractionDigits: 1,
-                                },
-                              )}
-                              %
-                            </strong>
-
-                            {percentual >= 100 && (
-                              <span className="budget-high-chance">
-                                Limite atingido
-                              </span>
-                            )}
-                          </div>
-
-                          <div
-                            className="budget-progress"
-                            role="progressbar"
-                            aria-label={`Utilização do orçamento ${item.nome}`}
-                            aria-valuenow={percentual}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                          >
-                            <div
-                              className="budget-progress-fill"
-                              style={{
-                                width: `${percentualLimitado}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-
-                      <td>
-                        <div className="budget-weighted-value">
-                          <strong>
-                            {formatarData(item.dataInicio)}
-                          </strong>
-
-                          <small>
-                            até {formatarData(item.dataFim)}
-                          </small>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+              <input
+                type="date"
+                value={novoOrcamento.dataFim}
+                min={novoOrcamento.dataInicio || undefined}
+                onChange={(event) =>
+                  setNovoOrcamento((atual) => ({
+                    ...atual,
+                    dataFim: event.target.value,
+                  }))
+                }
+              />
+            </label>
           </div>
-        ) : (
-          <div className="budget-pipeline-table-empty">
-            Nenhum orçamento financeiro cadastrado.
+
+          {erroCadastro && (
+            <p className="budget-opportunity-form-error">{erroCadastro}</p>
+          )}
+
+          <div className="budget-opportunity-form-actions">
+            <button
+              type="button"
+              onClick={() => {
+                setMostrarFormulario(false);
+                setErroCadastro(null);
+              }}
+              disabled={salvando}
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void handleCadastrarOrcamento()}
+              disabled={salvando}
+            >
+              {salvando ? "Salvando..." : "Cadastrar orçamento"}
+            </button>
           </div>
+        </div>
+      )}
+
+      <section
+        className="ba-filter"
+        aria-label="Selecionar período dos orçamentos"
+      >
+        <div className="ba-filter-grid">
+          <label>
+            Período cadastrado
+            <select
+              value={
+                filtro.modo === "TODOS"
+                  ? "TODOS"
+                  : filtro.modo === "EXATO"
+                    ? `${filtro.inicio}|${filtro.fim}`
+                    : "PERSONALIZADO"
+              }
+              onChange={(e) => selecionarPeriodo(e.target.value)}
+            >
+              <option value="TODOS">Todos os períodos</option>
+              <option value="PERSONALIZADO" disabled>
+                Intervalo personalizado
+              </option>
+              {periodos.map((item) => (
+                <option key={chavePeriodo(item)} value={chavePeriodo(item)}>
+                  {dataOrcamento(item.dataInicio)} —{" "}
+                  {dataOrcamento(item.dataFim)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Data inicial
+            <input
+              type="date"
+              value={inicio}
+              onChange={(e) => setInicio(e.target.value)}
+            />
+          </label>
+          <label>
+            Data final
+            <input
+              type="date"
+              value={fim}
+              min={inicio || undefined}
+              onChange={(e) => setFim(e.target.value)}
+            />
+          </label>
+          <button type="button" onClick={aplicarIntervalo}>
+            Aplicar intervalo
+          </button>
+        </div>
+        <p>
+          Exibido:{" "}
+          {filtro.modo === "TODOS"
+            ? "todos os períodos cadastrados"
+            : `${dataOrcamento(filtro.inicio)} — ${dataOrcamento(filtro.fim)}`}
+          {filtro.modo === "INTERSECAO"
+            ? " · orçamentos cujo período cruza o intervalo"
+            : filtro.modo === "EXATO"
+              ? " · período exato cadastrado"
+              : ""}
+          . {visiveis.length} orçamento(s).
+        </p>
+        <p className="ba-note">
+          O filtro seleciona orçamentos. Valores planejados e utilizados
+          permanecem calculados no período completo de cada um, sem ratear o
+          limite por dias.
+        </p>
+        {erroFiltro && (
+          <p role="alert" className="ba-error">
+            {erroFiltro}
+          </p>
         )}
       </section>
+      <section
+        className="ba-summary"
+        aria-label="Resumo dos orçamentos exibidos"
+      >
+        <div>
+          <span>Planejado somado</span>
+          <strong>{moedaOrcamento(totalPlanejado)}</strong>
+        </div>
+        <div>
+          <span>Consumo somado dos orçamentos</span>
+          <strong>{moedaOrcamento(totalUtilizado)}</strong>
+        </div>
+        <div>
+          <span>Disponível somado</span>
+          <strong>{moedaOrcamento(totalDisponivel)}</strong>
+        </div>
+        <div>
+          <span>Orçamentos estourados</span>
+          <strong>
+            {estourados} de {visiveis.length}
+          </strong>
+        </div>
+      </section>
+      {sobreposicoes.length > 0 && (
+        <aside className="ba-overlap">
+          <strong>Os critérios de alguns orçamentos se sobrepõem.</strong>
+          <p>
+            Uma mesma despesa pode entrar em mais de um orçamento. A soma acima
+            não representa despesas únicas da empresa.
+          </p>
+          <details>
+            <summary>
+              Ver possíveis sobreposições ({sobreposicoes.length})
+            </summary>
+            <ul>
+              {sobreposicoes.map(({ primeiro, segundo }) => (
+                <li key={`${primeiro.id}-${segundo.id}`}>
+                  {primeiro.nome} ↔ {segundo.nome}
+                </li>
+              ))}
+            </ul>
+          </details>
+        </aside>
+      )}
+      {filtro.modo === "TODOS" && periodos.length > 1 && (
+        <p className="ba-note">
+          Você está somando limites de períodos diferentes. Confira a utilização
+          individual nas barras.
+        </p>
+      )}
+      <BudgetPipelineChart dados={visiveis} />
     </div>
   );
 }
-
 export default Budgets;

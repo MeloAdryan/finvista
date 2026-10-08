@@ -1,4 +1,5 @@
 interface KpiComparisonProps {
+  rotulo?: string;
   atual: number;
   anterior?: number | null;
   variacao?: number | null;
@@ -20,6 +21,7 @@ const numero = (valor: number) =>
   });
 
 function KpiComparison({
+  rotulo = "mês anterior",
   atual,
   anterior,
   variacao,
@@ -79,10 +81,10 @@ function KpiComparison({
 
   return (
     <div className={`kpi-comparison kpi-comparison-${classe}`}>
-      <span>{texto} em relação ao mês anterior</span>
+      <span>{texto} em relação ao {rotulo}</span>
 
       <small>
-        Mês anterior:{" "}
+        {rotulo}: {" "}
         {margem ? `${numero(anterior)}%` : moeda(anterior)}
       </small>
     </div>

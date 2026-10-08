@@ -1,0 +1,192 @@
+.goal-progress-new {
+  min-width: 0;
+  text-align: left;
+  color: #153856;
+}
+.gp-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.gp-heading span,
+.gp-legend,
+.gp-evolution p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.gp-risk {
+  font-size: 13px;
+  font-weight: 600;
+}
+.gp-risk-normal {
+  color: #28745c;
+}
+.gp-risk-alerta {
+  color: #a35d08;
+}
+.gp-risk-excedida {
+  color: #b42318;
+}
+.gp-track {
+  position: relative;
+  height: 16px;
+  background: #edf1f6;
+  border-radius: 5px;
+  margin: 24px 2px 16px;
+}
+.gp-fill,
+.gp-over {
+  position: absolute;
+  height: 100%;
+  background: #153856;
+  border-radius: 4px;
+}
+.gp-over {
+  background: #b42318;
+}
+.gp-mark {
+  position: absolute;
+  top: -7px;
+  height: 30px;
+  border-left: 2px solid;
+  transform: translateX(-1px);
+}
+.gp-alert {
+  color: #b45309;
+}
+.gp-limit {
+  color: #64748b;
+}
+.gp-rhythm {
+  color: #94a3b8;
+  border-left-style: dashed;
+}
+.gp-estimate {
+  color: #2563eb;
+  border-left-style: dashed;
+}
+.gp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 16px;
+}
+.gp-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin: 16px 0;
+}
+.gp-stats > div {
+  background: #f6f8fb;
+  border: 1px solid #e5ebf2;
+  padding: 12px;
+  border-radius: 7px;
+  font-size: 12px;
+}
+.gp-stats strong {
+  display: block;
+  margin-top: 7px;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.goal-progress-new button {
+  padding: 8px 12px;
+  border: 1px solid #c5d6e8;
+  border-radius: 6px;
+  background: #f6f8fc;
+  color: #153856;
+  cursor: pointer;
+  font-size: 12px;
+}
+.goal-progress-new button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+}
+.gp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin: 10px 0;
+}
+.gp-chart {
+  height: 290px;
+  min-width: 0;
+  width: 100%;
+  font-size: 11px;
+}
+.gp-table {
+  max-height: 320px;
+  overflow: auto;
+}
+.gp-table table {
+  border-collapse: collapse;
+  min-width: 520px;
+  width: 100%;
+  font-size: 12px;
+}
+.gp-table th,
+.gp-table td {
+  padding: 9px;
+  border-bottom: 1px solid #e4eaf1;
+  text-align: right;
+  white-space: nowrap;
+}
+.gp-table th:first-child,
+.gp-table td:first-child {
+  text-align: left;
+}
+.gp-table th {
+  background: #f6f8fb;
+  position: sticky;
+  top: 0;
+}
+.gp-evolution details {
+  font-size: 12px;
+}
+.gp-evolution ul {
+  padding: 0;
+  list-style: none;
+}
+.gp-evolution li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid #e4eaf1;
+  padding: 8px 0;
+}
+.goal-panel select {
+  width: 100%;
+  max-width: 280px;
+  margin-top: 6px;
+  padding: 7px;
+  border: 1px solid #c5d6e8;
+  border-radius: 6px;
+  color: #153856;
+}
+.meta-status {
+  background: #edf1f6 !important;
+  color: #153856 !important;
+}
+.metas-lista .meta-card {
+  min-width: 0;
+}
+@media (max-width: 768px) {
+  .gp-chart {
+    height: 260px;
+  }
+  .gp-heading {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .gp-stats {
+    grid-template-columns: 1fr;
+  }
+  .goal-panel select {
+    max-width: 100%;
+  }
+}
