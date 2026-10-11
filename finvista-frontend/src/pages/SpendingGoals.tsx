@@ -22,6 +22,8 @@ import {
 import { obterUsuarioAtual, type AuthUser } from "../services/authService";
 
 import "../styles/spending-goals.css";
+import "../styles/phase3-goal-cards.css";
+import "../styles/goal-expanded.css";
 import GoalProgress from "../components/GoalProgress";
 import { periodoMeta } from "../services/goalPresentation";
 
@@ -431,18 +433,23 @@ function SpendingGoals() {
       {usuarioAdmin && mostrarFormulario && (
         <form className="metas-formulario" onSubmit={salvarMeta}>
           <div className="metas-form-grid">
-            <label>
-              Tipo da meta
-              <select
-                value={formulario.tipo}
-                onChange={(event) =>
-                  atualizarFormulario("tipo", event.target.value)
-                }
-              >
-                <option value="MENSAL">Mensal</option>
-                <option value="SEMESTRAL">Semestral</option>
-              </select>
-            </label>
+            <fieldset className="meta-type-segment">
+              <legend>Tipo da meta</legend>
+              <div>
+                {(["MENSAL", "SEMESTRAL"] as const).map((tipo) => (
+                  <label key={tipo}>
+                    <input
+                      type="radio"
+                      name="tipo-meta"
+                      value={tipo}
+                      checked={formulario.tipo === tipo}
+                      onChange={() => atualizarFormulario("tipo", tipo)}
+                    />
+                    <span>{tipo === "MENSAL" ? "Mensal" : "Semestral"}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
 
             <label>
               Valor limite
@@ -758,21 +765,31 @@ function SpendingGoals() {
           <div className="metas-lista">
             {metasFiltradas.map((meta) => {
               return (
-                <article className="meta-card" key={meta.id}>
+                <article
+                  className={`meta-card meta-risk-${meta.status.toLowerCase()}`}
+                  key={meta.id}
+                >
                   <div className="meta-card-top">
                     <div>
-                      <span className="meta-tipo">{meta.tipo}</span>
-
                       <h3>Meta de gastos #{meta.id}</h3>
 
                       <small>
+                        <span aria-hidden="true">▦ </span>
+                        {meta.tipo === "MENSAL" ? "Mensal" : "Semestral"} ·{" "}
                         {formatarData(meta.dataInicio)}
                         {" — "}
                         {formatarData(meta.dataFim)}
                       </small>
                     </div>
 
-                    <span className="meta-status">{periodoMeta(meta)}</span>
+                    <span
+                      className={`meta-status meta-temporal-${meta.situacaoTemporal.toLowerCase()}`}
+                    >
+                      {meta.situacaoTemporal === "ENCERRADA" && (
+                        <span aria-hidden="true">▣ </span>
+                      )}
+                      {periodoMeta(meta)}
+                    </span>
                   </div>
 
                   {(meta.categoria || meta.centroCusto) && (

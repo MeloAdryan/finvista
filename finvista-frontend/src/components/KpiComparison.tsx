@@ -1,3 +1,5 @@
+import { descreverRegistros } from "../services/comparisonCoverage";
+
 interface KpiComparisonProps {
   rotulo?: string;
   atual: number;
@@ -6,6 +8,8 @@ interface KpiComparisonProps {
   despesa?: boolean;
   margem?: boolean;
   margemComparavel?: boolean;
+  registrosAtual?: number;
+  registrosAnterior?: number;
 }
 
 const moeda = (valor: number) =>
@@ -28,7 +32,28 @@ function KpiComparison({
   despesa = false,
   margem = false,
   margemComparavel = true,
+  registrosAtual,
+  registrosAnterior,
 }: KpiComparisonProps) {
+  if (registrosAtual === 0 || registrosAnterior === 0) {
+    return (
+      <div className="kpi-comparison kpi-comparison-neutral">
+        <span>Comparação sem base de registros</span>
+        <small>{descreverRegistros(registrosAtual, registrosAnterior)}</small>
+      </div>
+    );
+  }
+  if (
+    (registrosAtual == null || registrosAnterior == null) &&
+    (atual === 0 || anterior === 0)
+  ) {
+    return (
+      <div className="kpi-comparison kpi-comparison-neutral">
+        <span>Comparação não confirmada</span>
+        <small>Presença de registros não informada pela API.</small>
+      </div>
+    );
+  }
   if (
     anterior == null ||
     !Number.isFinite(anterior) ||
@@ -53,15 +78,9 @@ function KpiComparison({
   const diferenca = Math.round((atual - anterior) * 100) / 100;
   const semVariacao = diferenca === 0;
 
-  const favoravel = despesa
-    ? diferenca < 0
-    : diferenca > 0;
+  const favoravel = despesa ? diferenca < 0 : diferenca > 0;
 
-  const classe = semVariacao
-    ? "neutral"
-    : favoravel
-      ? "positive"
-      : "negative";
+  const classe = semVariacao ? "neutral" : favoravel ? "positive" : "negative";
 
   const direcao = diferenca > 0 ? "↑" : "↓";
 
@@ -81,11 +100,12 @@ function KpiComparison({
 
   return (
     <div className={`kpi-comparison kpi-comparison-${classe}`}>
-      <span>{texto} em relação ao {rotulo}</span>
+      <span>
+        {texto} em relação ao {rotulo}
+      </span>
 
       <small>
-        {rotulo}: {" "}
-        {margem ? `${numero(anterior)}%` : moeda(anterior)}
+        {rotulo}: {margem ? `${numero(anterior)}%` : moeda(anterior)}
       </small>
     </div>
   );

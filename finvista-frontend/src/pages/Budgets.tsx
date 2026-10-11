@@ -124,7 +124,7 @@ function Budgets() {
     (s, item) => s + Number(item.valorDisponivel),
     0,
   );
-  const estourados = visiveis.filter(
+  const comExcedente = visiveis.filter(
     (item) => Number(item.valorUtilizado) > Number(item.valorPlanejado),
   ).length;
   function selecionarPeriodo(valor: string) {
@@ -255,7 +255,9 @@ function Budgets() {
         <div>
           <span className="ba-eyebrow">Controle orçamentário</span>
           <h1>Orçamentos empresariais</h1>
-          <p>Acompanhe cada limite no seu período e identifique os excedentes.</p>
+          <p>
+            Acompanhe cada limite no seu período e identifique os excedentes.
+          </p>
         </div>
         {usuarioAdmin && (
           <button
@@ -508,9 +510,9 @@ function Budgets() {
           <strong>{moedaOrcamento(totalDisponivel)}</strong>
         </div>
         <div>
-          <span>Orçamentos estourados</span>
+          <span>Orçamentos com excedente</span>
           <strong>
-            {estourados} de {visiveis.length}
+            {comExcedente} de {visiveis.length}
           </strong>
         </div>
       </section>

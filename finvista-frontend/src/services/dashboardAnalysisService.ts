@@ -1,6 +1,12 @@
 import { API_URL } from "../config/api";
 import type { DashboardData } from "./dashboardService";
 export interface DashboardAnalysis {
+  registros?: {
+    receitasAtual: number;
+    despesasAtual: number;
+    receitasAnterior: number;
+    despesasAnterior: number;
+  };
   clienteId: number;
   inicio: string;
   fim: string;

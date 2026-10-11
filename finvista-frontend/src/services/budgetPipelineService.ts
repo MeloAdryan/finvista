@@ -1,3 +1,4 @@
+import { apiFetch } from "../config/http";
 import { API_URL } from "../config/api";
 
 export interface BudgetPipelineData {
@@ -23,7 +24,7 @@ export interface CreateBudgetData {
 }
 
 export async function getBudgetPipeline(): Promise<BudgetPipelineData[]> {
-  const response = await fetch(`${API_URL}/api/orcamentos`, {
+  const response = await apiFetch(`${API_URL}/api/orcamentos`, {
     method: "GET",
     credentials: "include",
   });
@@ -38,7 +39,7 @@ export async function getBudgetPipeline(): Promise<BudgetPipelineData[]> {
 export async function createBudget(
   dados: CreateBudgetData,
 ): Promise<BudgetPipelineData> {
-  const response = await fetch(`${API_URL}/api/orcamentos`, {
+  const response = await apiFetch(`${API_URL}/api/orcamentos`, {
     method: "POST",
     credentials: "include",
     headers: {

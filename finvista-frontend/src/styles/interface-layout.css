@@ -1,0 +1,411 @@
+.finvista-main {
+  container-type: inline-size;
+  overflow: visible;
+  padding: 24px 32px 32px;
+}
+.finvista-main > * {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+.finvista-main .dashboard {
+  padding: 0;
+  margin: 0;
+  max-width: 100%;
+}
+.finvista-main :is(section, article, form, fieldset, header) {
+  min-width: 0;
+}
+
+.finvista-main :is(p, label, small) {
+  line-height: 1.6;
+}
+.finvista-main
+  :is(
+    .fe-note,
+    .df-note,
+    .ax-note,
+    .ba-note,
+    .fv-history-note,
+    .metas-filtros-descricao,
+    .metas-filtros-nota
+  ) {
+  color: #5b6779;
+  font-size: 13px;
+}
+.finvista-main
+  :is(
+    .fe-card h2,
+    .ax-panel h2,
+    .ba-heading h2,
+    .fv-history-panel h2,
+    .executive-panel-header h2
+  ) {
+  font-size: 20px;
+  line-height: 1.3;
+}
+.finvista-main
+  :is(
+    .fe-card,
+    .ax-panel,
+    .fv-history-panel,
+    .ba-filter,
+    .ba-comparison,
+    .executive-panel,
+    .df-filter-panel
+  ) {
+  padding: 24px;
+}
+.finvista-main
+  :is(
+    .executive-kpi,
+    .metas-resumo article,
+    .ba-summary article,
+    .fe-summary > div,
+    .fe-bases > div,
+    .fv-history-kpis article
+  ) {
+  overflow: visible;
+  font-variant-numeric: tabular-nums;
+}
+.finvista-main
+  :is(
+    .executive-kpi > strong,
+    .metas-resumo article strong,
+    .fe-summary strong,
+    .fe-bases strong,
+    .ba-summary strong,
+    .fv-history-kpis strong,
+    .ax-summary strong,
+    .bc-summary strong
+  ) {
+  font-size: clamp(19px, 2.1vw, 26px);
+  white-space: nowrap;
+  overflow-wrap: normal;
+  text-overflow: clip;
+  font-variant-numeric: tabular-nums;
+}
+.finvista-main :is(.executive-kpi-grid, .metas-resumo, .ba-summary) {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+.finvista-main
+  :is(
+    .executive-kpi > p,
+    .metas-resumo article p,
+    .executive-kpi-comparison,
+    .executive-kpi-comparison small
+  ) {
+  font-size: 12px;
+}
+
+@container (max-width: 1120px) {
+  .finvista-main :is(.executive-kpi-grid, .metas-resumo, .ba-summary) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container (max-width: 800px) {
+  .finvista-main :is(.executive-overview-grid, .df-toolbar) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@container (max-width: 560px) {
+  .finvista-main
+    :is(
+      .executive-kpi-grid,
+      .metas-resumo,
+      .ba-summary,
+      .fe-summary,
+      .fe-bases,
+      .fv-history-kpis,
+      .ax-summary
+    ) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.finvista-main
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+    select
+  ) {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 40px;
+  font-size: 14px;
+  border-radius: 8px;
+}
+.finvista-main button {
+  min-height: 40px;
+  font-size: 13px;
+}
+.finvista-main
+  :is(.ax-actions, .ba-actions, .fe-actions, .fv-history-shortcuts) {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.finvista-main
+  :is(
+    .ba-page-heading,
+    .ba-heading,
+    .ax-heading,
+    .fv-history-panel-heading,
+    .executive-panel-header
+  ) {
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.finvista-main
+  :is(
+    .table-wrapper,
+    .import-table-wrapper,
+    .ax-table,
+    .ba-table-scroll,
+    .fe-table,
+    .df-table-scroll,
+    .financial-detail-table-scroll,
+    .bc-scroll
+  ) {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.finvista-main table {
+  font-variant-numeric: tabular-nums;
+}
+
+.finvista-main .recharts-cartesian-axis-tick text {
+  fill: #5b6779;
+  font-size: 12px;
+}
+.finvista-main .recharts-cartesian-grid line {
+  stroke: #e6e9ee;
+}
+.finvista-main :is(.fe-legend, .gp-legend, .bc-legend, .fv-history-legend) {
+  font-size: 12px;
+  line-height: 1.6;
+  gap: 8px 16px;
+}
+
+.finvista-login-message h1 {
+  color: #eaf0f7;
+  font-size: clamp(38px, 4vw, 48px);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+.finvista-login
+  :is(
+    .finvista-login-logo small,
+    .finvista-login-message p,
+    .finvista-login-features small
+  ) {
+  color: #c3d0e0;
+}
+.finvista-login-card-header p,
+.finvista-login-security small,
+.finvista-login-footer,
+.finvista-login-input input::placeholder {
+  color: #5b6779;
+}
+.finvista-login-card-header > span {
+  color: #96531d;
+}
+.finvista-login-submit {
+  background: #d98a3c;
+  color: #0e2038;
+}
+.finvista-login-submit:hover:not(:disabled) {
+  background: #e49951;
+}
+.finvista-login-input {
+  background: #fff;
+}
+.finvista-login-input:focus-within {
+  border-color: #b46621;
+  box-shadow: 0 0 0 2px #d98a3c;
+}
+.finvista-login-input input {
+  background: #fff;
+}
+.finvista-login-security strong,
+.finvista-login-security small {
+  font-size: 12px;
+}
+.finvista-login-features {
+  gap: 16px;
+}
+.finvista-login-features > div {
+  min-width: 0;
+}
+
+.finvista-client-selector-card > button {
+  min-height: 40px;
+  margin-top: 20px;
+  padding: 8px 16px;
+  border: 1px solid #b9c7d7;
+  border-radius: 8px;
+  background: #fff;
+  color: #14202e;
+  font-size: 14px;
+  cursor: pointer;
+}
+.finvista-client-selector
+  :is(
+    .finvista-client-selector-info small,
+    .finvista-client-selector-list-header p,
+    .finvista-client-selector-footer
+  ) {
+  color: #5b6779;
+  font-size: 12px;
+}
+.ar-page {
+  width: min(100%, 1100px);
+}
+.ar-page :is(section, .ar-grid > *) {
+  min-width: 0;
+}
+.finvista-navigation-label {
+  color: #b2c3d6;
+  font-size: 11px;
+}
+.finvista-nav-item {
+  color: #d0dbea;
+  font-size: 13px;
+}
+.finvista-brand-text small,
+.finvista-system-status small,
+.finvista-sidebar-version,
+.finvista-sidebar-version span {
+  color: #b2c3d6;
+  font-size: 11px;
+}
+.finvista-sidebar {
+  padding: 0;
+}
+.finvista-sidebar-inner {
+  height: 100dvh;
+  min-height: 0;
+  overflow-y: auto;
+}
+.finvista-topbar-actions {
+  flex-wrap: wrap;
+}
+.finvista-topbar-user-info small,
+.finvista-topbar-eyebrow {
+  color: #96531d;
+  font-size: 10px;
+}
+.finvista-topbar-user-info strong {
+  font-size: 13px;
+}
+.finvista-topbar-status small,
+.finvista-topbar-period small {
+  color: #5b6779;
+  font-size: 10px;
+}
+.finvista-footer :is(small, .finvista-footer-copyright) {
+  color: #c3d0e0;
+  font-size: 11px;
+}
+
+:is(
+    .finvista-app,
+    .finvista-login,
+    .finvista-client-selector,
+    .ar-page,
+    .goal-detail-dialog
+  )
+  :is(button, a, input, select, textarea, summary):focus-visible {
+  outline: 3px solid #b46621;
+  outline-offset: 3px;
+}
+.finvista-sidebar :is(a, button):focus-visible {
+  outline-color: #e49951;
+}
+@media (max-width: 900px) {
+  .finvista-main {
+    padding: 20px 18px 28px;
+  }
+  .finvista-topbar {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 600px) {
+  .finvista-main {
+    padding: 16px;
+  }
+  .finvista-main
+    :is(
+      .fe-card,
+      .ax-panel,
+      .fv-history-panel,
+      .ba-filter,
+      .ba-comparison,
+      .executive-panel,
+      .df-filter-panel
+    ) {
+    padding: 16px;
+  }
+  .finvista-main :is(.executive-header, .metas-header, .fe-heading) {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .finvista-main
+    :is(
+      input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+      select
+    ) {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .finvista-main button,
+  .ar-page button {
+    min-height: 44px;
+  }
+  .finvista-login-message h1 {
+    font-size: 36px;
+  }
+  .finvista-login-input input {
+    font-size: 16px;
+  }
+  .finvista-topbar-left {
+    min-width: 0;
+  }
+  .finvista-topbar h1 {
+    font-size: 16px;
+    line-height: 1.35;
+  }
+  .finvista-topbar-actions {
+    flex: 0 0 auto;
+  }
+  .finvista-main .df-detail header {
+    flex-wrap: wrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.finvista-main .executive-overview-grid {
+  align-items: start;
+}
+.finvista-nav-item-active {
+  color: #fff;
+}
+
+.finvista-sidebar-inner {
+  scrollbar-width: none;
+}
+.finvista-sidebar-inner::-webkit-scrollbar {
+  display: none;
+}

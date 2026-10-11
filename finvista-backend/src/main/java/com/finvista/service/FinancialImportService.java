@@ -14,6 +14,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.HashSet;
+import java.util.Set;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 public class FinancialImportService {
@@ -24,12 +30,23 @@ public class FinancialImportService {
     private final FinancialTransactionRepository repository;
     private final ClienteContextService clienteContextService;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Autowired
     public FinancialImportService(
             FinancialTransactionRepository repository,
             ClienteContextService clienteContextService
     ) {
         this.repository = repository;
         this.clienteContextService = clienteContextService;
+    }
+
+    // Construtor explícito para testar o bloqueio sem banco real.
+    public FinancialImportService(FinancialTransactionRepository repository,
+            ClienteContextService context, EntityManager entityManager) {
+        this(repository, context);
+        this.entityManager = entityManager;
     }
 
     @Transactional
@@ -46,10 +63,13 @@ public class FinancialImportService {
         Cliente cliente
                 = clienteContextService.getClienteAtual();
 
-        prepararLancamentosParaCliente(
-                lancamentos,
-                cliente
-        );
+        // Mesmo bloqueio usado pela aplicação do plano Conta Azul.
+        // A segunda importação aguarda o commit da primeira antes de conferir duplicidade.
+        Cliente bloqueado = entityManager.find(Cliente.class, cliente.getId(), LockModeType.PESSIMISTIC_WRITE);
+        if (bloqueado == null || !Boolean.TRUE.equals(bloqueado.getAtivo())) {
+            throw new IllegalStateException("A empresa não existe ou está inativa; nenhum lançamento foi importado.");
+        }
+        prepararLancamentosParaCliente(lancamentos, bloqueado);
 
         if (ehImportacaoContaAzul(lancamentos)) {
             return salvarContaAzul(
@@ -137,36 +157,37 @@ public class FinancialImportService {
         return repository.saveAll(novosLancamentos);
     }
 
+    private record ChaveLegada(LocalDate data, String descricao, String tipo,
+            BigDecimal valor, String documento, String categoria, String centro, String origem) {}
+
+    private ChaveLegada chaveLegada(FinancialTransaction t) {
+        return new ChaveLegada(t.getData(), normalizarTexto(t.getDescricao()),
+                normalizarTexto(t.getTipo()), normalizarValor(t.getValor()),
+                normalizarTexto(t.getDocumentoReferencia()), normalizarTexto(t.getCategoria()),
+                normalizarTexto(t.getCentroCusto()), normalizarTexto(t.getOrigem()));
+    }
+
     private List<FinancialTransaction> salvarFormatoLegado(
-            List<FinancialTransaction> lancamentos,
-            Long clienteId
-    ) {
-
-        List<FinancialTransaction> novosLancamentos
-                = new ArrayList<>();
-
+            List<FinancialTransaction> lancamentos, Long clienteId) {
+        Set<ChaveLegada> arquivo = new HashSet<>();
         for (FinancialTransaction lancamento : lancamentos) {
-
-            boolean duplicadoNoBanco
-                    = repository
-                            .existsByClienteIdAndDataAndDescricaoAndTipoAndValorAndDocumentoReferencia(
-                                    clienteId,
-                                    lancamento.getData(),
-                                    lancamento.getDescricao(),
-                                    lancamento.getTipo(),
-                                    lancamento.getValor(),
-                                    lancamento.getDocumentoReferencia()
-                            );
-            if (!duplicadoNoBanco) {
-                novosLancamentos.add(lancamento);
+            if (!arquivo.add(chaveLegada(lancamento))) {
+                throw new IllegalArgumentException("O arquivo contém lançamentos completamente idênticos. "
+                        + "Confira as linhas repetidas. Se forem operações diferentes, informe documentos "
+                        + "de referência distintos. Nenhum lançamento deste arquivo foi gravado.");
             }
         }
-
-        if (novosLancamentos.isEmpty()) {
-            return List.of();
+        Set<ChaveLegada> existentes = new HashSet<>();
+        for (FinancialTransaction existente : repository.findAllByClienteIdOrderByDataDesc(clienteId)) {
+            existentes.add(chaveLegada(existente));
         }
-
-        return repository.saveAll(novosLancamentos);
+        List<FinancialTransaction> novos = new ArrayList<>();
+        for (FinancialTransaction lancamento : lancamentos) {
+            if (!existentes.contains(chaveLegada(lancamento))) {
+                novos.add(lancamento);
+            }
+        }
+        return novos.isEmpty() ? List.of() : repository.saveAll(novos);
     }
 
     private void prepararLancamentosParaCliente(
@@ -199,10 +220,10 @@ public class FinancialImportService {
         return lancamentos.stream()
                 .allMatch(lancamento
                         -> ORIGEM_CONTA_AZUL.equalsIgnoreCase(
-                        normalizarTexto(
-                                lancamento.getOrigem()
+                                normalizarTexto(
+                                        lancamento.getOrigem()
+                                )
                         )
-                )
                 );
     }
 

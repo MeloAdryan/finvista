@@ -1,3 +1,4 @@
+import { apiFetch } from "../config/http";
 import { API_URL } from "../config/api";
 
 export type Money = number | string | null;
@@ -124,7 +125,7 @@ export async function conferContaAzul(
   signal: AbortSignal,
 ) {
   return read<Conference>(
-    await fetch(`${API_URL}/api/importacoes/conta-azul/conferencia`, {
+    await apiFetch(`${API_URL}/api/importacoes/conta-azul/conferencia`, {
       method: "POST",
       credentials: "include",
       body: body(file, cut),
@@ -138,7 +139,7 @@ export async function planContaAzul(
   signal: AbortSignal,
 ) {
   return read<SyncPlan>(
-    await fetch(
+    await apiFetch(
       `${API_URL}/api/importacoes/conta-azul/sincronizacao/planejar`,
       {
         method: "POST",
@@ -151,7 +152,7 @@ export async function planContaAzul(
 }
 export async function getCandidate(id: number, signal: AbortSignal) {
   return read<Candidate>(
-    await fetch(
+    await apiFetch(
       `${API_URL}/api/importacoes/conta-azul/sincronizacao/candidatos/${id}`,
       {
         credentials: "include",
@@ -169,10 +170,13 @@ export async function applyContaAzul(
   form.append("token", plan.token);
   form.append("decisoes", JSON.stringify(decisions));
   return read<SyncResult>(
-    await fetch(`${API_URL}/api/importacoes/conta-azul/sincronizacao/aplicar`, {
-      method: "POST",
-      credentials: "include",
-      body: form,
-    }),
+    await apiFetch(
+      `${API_URL}/api/importacoes/conta-azul/sincronizacao/aplicar`,
+      {
+        method: "POST",
+        credentials: "include",
+        body: form,
+      },
+    ),
   );
 }

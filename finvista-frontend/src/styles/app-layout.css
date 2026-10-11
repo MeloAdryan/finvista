@@ -1762,122 +1762,15 @@ html {
     display: none;
   }
 }
-/* =========================================================
-   FINVISTA — ÁREA FINANCEIRA PANORÂMICA
-   Rolagem horizontal real do conteúdo
-   ========================================================= */
-
-/*
- * Segurança: a antiga navegação horizontal não faz mais
- * parte da interface. A navegação oficial permanece na sidebar.
- */
+/* B1: a página acompanha a área útil. Tabelas rolam em contêineres próprios. */
 .finvista-horizontal-nav {
   display: none !important;
 }
-
-/*
- * O workspace fica preso à largura disponível da janela.
- * Somente a área financeira poderá se deslocar lateralmente.
- */
 .finvista-workspace {
   min-width: 0;
-  overflow-x: hidden;
 }
-
-/*
- * Viewport das informações financeiras.
- * A barra aparece quando o conteúdo interno ultrapassa
- * a largura disponível do workspace.
- */
-.finvista-main {
+.finvista-main > * {
   width: 100%;
   min-width: 0;
-
-  padding: 22px 24px 34px;
-
-  overflow-x: auto;
-  overflow-y: visible;
-
-  scrollbar-width: auto;
-  scrollbar-color: #b8763d #e7edf2;
-}
-
-/*
- * No desktop, o conteúdo preserva uma largura confortável.
- * Em telas menores que 1440px úteis, ele não é espremido:
- * o usuário pode mover a área para a esquerda e para a direita.
- */
-@media (min-width: 901px) {
-  .finvista-main > * {
-    width: max(100%, 1440px);
-    min-width: 1440px;
-  }
-}
-
-/* Chrome / Edge */
-.finvista-main::-webkit-scrollbar {
-  height: 13px;
-}
-
-.finvista-main::-webkit-scrollbar-track {
-  margin: 0 12px;
-
-  border: 1px solid #d9e2e9;
-  border-radius: 999px;
-
-  background: #e7edf2;
-}
-
-.finvista-main::-webkit-scrollbar-thumb {
-  min-width: 100px;
-
-  border: 3px solid #e7edf2;
-  border-radius: 999px;
-
-  background: linear-gradient(90deg, #b8763d, #e89b3d);
-}
-
-.finvista-main::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(90deg, #a86732, #d98a39);
-}
-
-/*
- * Destinos acessados pela sidebar mantêm uma margem visual
- * confortável quando a página rola até cada seção.
- */
-#dashboard,
-#projecao,
-#fluxo-caixa,
-#centros-custo,
-#despesas,
-#orcamentos,
-#historico {
-  scroll-margin-top: 24px;
-}
-
-/*
- * Em monitores grandes o conteúdo volta a acompanhar 100%
- * da área disponível, sem largura artificial desnecessária.
- */
-@media (min-width: 1720px) {
-  .finvista-main > * {
-    width: 100%;
-    min-width: 0;
-  }
-}
-
-/*
- * Celulares continuam com o layout responsivo próprio.
- * Não forçamos uma interface desktop de 1440px no mobile.
- */
-@media (max-width: 900px) {
-  .finvista-main {
-    padding: 18px 14px 28px;
-    overflow-x: visible;
-  }
-
-  .finvista-main > * {
-    width: 100%;
-    min-width: 0;
-  }
+  max-width: 100%;
 }

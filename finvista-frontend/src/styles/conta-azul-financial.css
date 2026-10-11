@@ -1,0 +1,100 @@
+.ca-financial {
+  background: #fff;
+  border: 1px solid #d7e2ef;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 18px 0;
+  color: #163550;
+}
+.ca-financial h2 {
+  font-size: 18px;
+  margin: 0;
+}
+.ca-financial p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.ca-financial-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+}
+.ca-financial label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+.ca-financial select,
+.ca-financial input,
+.ca-financial button {
+  min-height: 36px;
+  border: 1px solid #bdcfe2;
+  border-radius: 6px;
+  background: #f7f9fc;
+  color: #163550;
+  padding: 7px 10px;
+}
+.ca-financial button {
+  cursor: pointer;
+}
+.ca-financial button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.ca-financial :is(button, input, select):focus-visible {
+  outline: 2px solid #d98525;
+  outline-offset: 3px;
+}
+.ca-financial-table {
+  overflow: auto;
+}
+.ca-financial table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.ca-financial th,
+.ca-financial td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #e0e7f0;
+  vertical-align: top;
+}
+.ca-financial th {
+  background: #f3f6fa;
+}
+.ca-financial caption {
+  text-align: left;
+  padding: 8px;
+}
+.ca-financial small {
+  display: block;
+  color: #60758b;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+.ca-financial-money {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ca-financial-pages {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  font-size: 13px;
+}
+.ca-financial-error {
+  color: #a32424;
+}
+@media (max-width: 700px) {
+  .ca-financial-filters {
+    grid-template-columns: 1fr;
+  }
+  .ca-financial {
+    padding: 16px;
+  }
+}

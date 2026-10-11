@@ -1,6 +1,7 @@
 package com.finvista.controller;
 
 import com.finvista.dto.SpendingGoalResponse;
+import com.finvista.dto.SpendingGoalCreateRequest;
 import com.finvista.model.SpendingGoal;
 import com.finvista.service.SpendingGoalService;
 
@@ -25,16 +26,16 @@ public class SpendingGoalController {
     public SpendingGoalController(
             SpendingGoalService spendingGoalService
     ) {
-        this.spendingGoalService =
-                spendingGoalService;
+        this.spendingGoalService
+                = spendingGoalService;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public SpendingGoal criar(
-            @RequestBody SpendingGoal meta
+            @RequestBody SpendingGoalCreateRequest pedido
     ) {
-        return spendingGoalService.salvar(meta);
+        return spendingGoalService.salvar(pedido.novaMeta());
     }
 
     @GetMapping
@@ -42,7 +43,6 @@ public class SpendingGoalController {
             @RequestParam(
                     required = false
             ) String centroCusto,
-
             @RequestParam(
                     required = false
             ) String categoria

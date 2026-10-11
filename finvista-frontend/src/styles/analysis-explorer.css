@@ -259,3 +259,44 @@
     margin-top: 5px;
   }
 }
+
+.ax-secondary {
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  background: #fff;
+  margin-bottom: 18px;
+  min-width: 0;
+}
+.ax-secondary > summary {
+  padding: 16px 20px;
+  cursor: pointer;
+  color: #153856;
+  font-size: 14px;
+  font-weight: 600;
+}
+.ax-secondary > summary:focus-visible {
+  outline: 2px solid #d98a3c;
+  outline-offset: 2px;
+}
+.ax-secondary > .ax-panel {
+  border: 0;
+  border-top: 1px solid #e6e9ee;
+  border-radius: 0 0 12px 12px;
+  margin: 0;
+}
+.ax-explorer > .ax-actions button {
+  padding: 9px 12px;
+  border: 1px solid #c5d6e8;
+  border-radius: 6px;
+  background: #f6f8fc;
+  color: #153856;
+  cursor: pointer;
+}
+.ax-explorer > .ax-actions button:focus-visible {
+  outline: 2px solid #d98a3c;
+  outline-offset: 2px;
+}
+.ax-actions button[aria-pressed="true"] {
+  background: #1b3350;
+  color: #fff;
+}

@@ -7,7 +7,9 @@ import java.util.List;
 public record DashboardAnalysisResponse(
         Long clienteId, LocalDate inicio, LocalDate fim, LocalDate inicioAnterior, LocalDate fimAnterior,
         LocalDate hoje, String categoria, DashboardResponse indicadores, List<String> categorias,
-        List<Mes> meses, List<Variacao> variacoes, List<Item> itens) {
+        List<Mes> meses, List<Variacao> variacoes, List<Item> itens, Registros registros) {
+
+    public record Registros(int receitasAtual, int despesasAtual, int receitasAnterior, int despesasAnterior) {}
 
     public record Mes(String periodo, BigDecimal receita, BigDecimal despesa, BigDecimal resultado, boolean emAndamento) {}
 

@@ -1,0 +1,121 @@
+.ar-page {
+  max-width: 1100px;
+  margin: 24px auto;
+  padding: 20px;
+  color: #173955;
+}
+.ar-page header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.ar-page header span {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+.ar-page section {
+  background: white;
+  border: 1px solid #d9e3ed;
+  border-radius: 14px;
+  padding: 22px;
+  margin-bottom: 20px;
+}
+.ar-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.ar-page h1 {
+  font-size: 28px;
+}
+.ar-page h2 {
+  font-size: 20px;
+}
+.ar-page form {
+  display: grid;
+  gap: 16px;
+}
+.ar-page label {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+}
+.ar-page input,
+.ar-page select {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px;
+  border: 1px solid #b5c8da;
+  border-radius: 7px;
+  background: white;
+  color: #173955;
+}
+.ar-page button {
+  padding: 11px 15px;
+  border-radius: 7px;
+  border: 1px solid #b5c8da;
+  background: #edf3f8;
+  color: #173955;
+  cursor: pointer;
+}
+.ar-page button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.ar-page form:has(button:disabled) input,
+.ar-page form:has(button:disabled) select {
+  pointer-events: none;
+}
+.ar-error,
+.ar-success,
+.ar-admin-note {
+  padding: 12px;
+  border-radius: 8px;
+}
+.ar-error {
+  background: #fff0ef;
+  color: #9c2222;
+}
+.ar-success {
+  background: #edf8f3;
+  color: #215d46;
+}
+.ar-admin-note {
+  background: #fff5e8;
+}
+.ar-table {
+  overflow-x: auto;
+}
+.ar-table table {
+  width: 100%;
+  min-width: 650px;
+  border-collapse: collapse;
+}
+.ar-table th,
+.ar-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e1e8ef;
+}
+.ar-page p {
+  line-height: 1.5;
+}
+@media (max-width: 700px) {
+  .ar-page {
+    margin: 0;
+    padding: 14px;
+  }
+  .ar-page header {
+    display: block;
+  }
+  .ar-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .ar-page header button {
+    margin: 12px 0;
+  }
+}
