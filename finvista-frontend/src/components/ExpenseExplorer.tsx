@@ -9,6 +9,8 @@ import {
   exportarFinanceiro,
   moedaFinanceira,
 } from "../services/financialVisualization";
+import { useAnalysisPeriod } from "../contexts/analysisPeriodContext";
+import { descreverRegistros } from "../services/comparisonCoverage";
 import DistributionBars from "./DistributionBars";
 import "../styles/analysis-explorer.css";
 export default function ExpenseExplorer({
@@ -18,14 +20,21 @@ export default function ExpenseExplorer({
   prioridade?: "centros" | "categorias";
   revision?: number;
 }) {
-  const [filtros, setFiltros] = useState<ExpenseFilters>({});
-  const [draft, setDraft] = useState<ExpenseFilters>({});
+  const { periodo, atualizarPeriodo } = useAnalysisPeriod();
+  const [filtros, setFiltros] = useState<ExpenseFilters>(() => ({
+    ...periodo,
+  }));
+  const [draft, setDraft] = useState<ExpenseFilters>(() => ({ ...periodo }));
   const [dados, setDados] = useState<ExpenseAnalysis | null>(null);
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(true);
   const [tentativa, setTentativa] = useState(0);
   const [tabela, setTabela] = useState(false);
   const [todas, setTodas] = useState(false);
+  const [todosCentros, setTodosCentros] = useState(false);
+  const [tipoTabela, setTipoTabela] = useState<"categorias" | "centros">(
+    prioridade,
+  );
   const [hierarquia, setHierarquia] = useState(false);
   const [pagina, setPagina] = useState(0);
   useEffect(() => {
@@ -37,6 +46,11 @@ export default function ExpenseExplorer({
         const d = await getExpenseAnalysis(filtros, c.signal);
         if (ativo) {
           setDados(d);
+          atualizarPeriodo({
+            inicio: d.inicio,
+            fim: d.fim,
+            categoria: d.categoria ?? undefined,
+          });
           setDraft({ ...filtros, inicio: d.inicio, fim: d.fim });
           setErro("");
           setPagina(0);
@@ -55,7 +69,7 @@ export default function ExpenseExplorer({
       ativo = false;
       c.abort();
     };
-  }, [filtros, revision, tentativa]);
+  }, [filtros, revision, tentativa, atualizarPeriodo]);
   function aplicar(e: FormEvent) {
     e.preventDefault();
     if (!draft.inicio || !draft.fim || draft.fim < draft.inicio) {
@@ -75,8 +89,17 @@ export default function ExpenseExplorer({
   }
   const datas = (de: string, ate: string) =>
     `${de.split("-").reverse().join("/")} — ${ate.split("-").reverse().join("/")}`;
-  const categorias =
-    dados?.categorias.filter((m) => m.atual !== 0 || m.anterior !== 0) ?? [];
+  const ordenar = (linhas: ExpenseAnalysis["categorias"]) =>
+    [...linhas].sort(
+      (a, b) => b.atual - a.atual || a.nome.localeCompare(b.nome, "pt-BR"),
+    );
+  const categorias = ordenar(
+    dados?.categorias.filter((m) => m.atual !== 0 || m.anterior !== 0) ?? [],
+  );
+  const centros = ordenar(
+    dados?.centros.filter((m) => m.atual !== 0 || m.anterior !== 0) ?? [],
+  );
+  const linhasTabela = tipoTabela === "centros" ? centros : categorias;
   const topCinco = categorias.slice(0, 5).reduce((s, m) => s + m.atual, 0);
   const exportar = () => {
     if (dados)
@@ -90,7 +113,7 @@ export default function ExpenseExplorer({
           "Início",
           "Fim",
         ],
-        ...dados.categorias.map((m) => [
+        ...ordenar(dados.categorias).map((m) => [
           m.nome,
           m.atual,
           m.anterior,
@@ -103,19 +126,41 @@ export default function ExpenseExplorer({
   };
   const painelCentros = dados && (
     <section className="ax-panel">
-      <h2>Centros de custo</h2>
+      <div className="ax-heading">
+        <div>
+          <h2>Gastos por centro de custo</h2>
+          <p className="ax-note">Onde os gastos estão concentrados?</p>
+        </div>
+        {centros.length > 10 && (
+          <button
+            type="button"
+            aria-pressed={todosCentros}
+            onClick={() => setTodosCentros(!todosCentros)}
+          >
+            {todosCentros ? "Mostrar menos centros" : "Ver todos os centros"}
+          </button>
+        )}
+      </div>
       <p className="ax-note">
         Barras ordenadas por valor. Clique para filtrar categorias e
         lançamentos; clique novamente para remover.
       </p>
       <DistributionBars
-        dados={dados.centros}
+        dados={todosCentros ? centros : centros.slice(0, 10)}
         total={dados.total}
         selecionado={dados.centroCusto ?? ""}
         onSelecionar={(nome) => selecionar("centroCusto", nome)}
       />
+      {centros.length === 0 && (
+        <p className="ax-note">
+          Nenhum centro com valores no período atual ou anterior.
+        </p>
+      )}
       <p className="ax-note">
-        Laranja: maior valor atual · azul: demais centros · traço: valor no
+        {todosCentros
+          ? `${centros.length} centros`
+          : `Top ${Math.min(10, centros.length)} de ${centros.length} centros`}
+        . Laranja: maior valor atual · azul: demais centros · traço: valor no
         período anterior. Escala em reais.
       </p>
     </section>
@@ -124,7 +169,11 @@ export default function ExpenseExplorer({
     <section className="ax-panel">
       <div className="ax-heading">
         <div>
-          <h2>Despesas por categoria</h2>
+          <h2>
+            {prioridade === "centros" && dados.centroCusto
+              ? `Categorias de ${dados.centroCusto}`
+              : "Despesas por categoria"}
+          </h2>
           <p className="ax-note">
             {dados.total > 0
               ? `As cinco maiores somam ${((topCinco / dados.total) * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% do total.`
@@ -139,9 +188,15 @@ export default function ExpenseExplorer({
           >
             {hierarquia ? "Ver categorias" : "Agrupar por código"}
           </button>
-          <button type="button" onClick={() => setTodas(!todas)}>
-            {todas ? "Mostrar menos" : "Ver todas"}
-          </button>
+          {!hierarquia && categorias.length > 10 && (
+            <button
+              type="button"
+              aria-pressed={todas}
+              onClick={() => setTodas(!todas)}
+            >
+              {todas ? "Mostrar menos" : "Ver todas"}
+            </button>
+          )}
         </div>
       </div>
       {hierarquia ? (
@@ -171,6 +226,11 @@ export default function ExpenseExplorer({
           destaques={3}
         />
       )}
+      {categorias.length === 0 && (
+        <p className="ax-note">
+          Nenhuma categoria com valores no período atual ou anterior.
+        </p>
+      )}
       <p className="ax-note">
         {todas || hierarquia
           ? `${categorias.length} categorias`
@@ -188,6 +248,11 @@ export default function ExpenseExplorer({
             ? "Análise dos centros de custo"
             : "Análise das despesas"}
         </h1>
+        <p className="ax-note">
+          {prioridade === "centros"
+            ? "Compare os centros e selecione um para consultar suas categorias e lançamentos."
+            : "Explore as categorias de despesas e os lançamentos que compõem cada valor."}
+        </p>
         <form onSubmit={aplicar} className="ax-filter-grid">
           <label>
             Data inicial
@@ -303,7 +368,9 @@ export default function ExpenseExplorer({
             {datas(dados.inicioAnterior, dados.fimAnterior)} ·{" "}
             {dados.centroCusto || "Todos os centros"} ·{" "}
             {dados.categoria || "Todas as categorias"}. Os gráficos usam os
-            filtros aplicados.
+            filtros aplicados. Datas e categoria são compartilhadas com o
+            painel. Centro, comportamento e natureza se aplicam somente a esta
+            análise.
           </p>
         )}
       </section>
@@ -319,6 +386,13 @@ export default function ExpenseExplorer({
       ) : (
         dados && (
           <>
+            <p className="ax-note" role="status">
+              {descreverRegistros(
+                dados.registros?.atual,
+                dados.registros?.anterior,
+              )}{" "}
+              A existência de registros não confirma importação completa.
+            </p>
             <div className="ax-summary">
               <div>
                 Despesa na seleção
@@ -329,7 +403,7 @@ export default function ExpenseExplorer({
                 <strong>{moedaFinanceira(dados.totalAnterior)}</strong>
               </div>
               <div>
-                Diferença
+                Diferença entre totais registrados
                 <strong>
                   {moedaFinanceira(dados.total - dados.totalAnterior)}
                 </strong>
@@ -350,18 +424,46 @@ export default function ExpenseExplorer({
             {prioridade === "centros" ? (
               <>
                 {painelCentros}
-                {painelCategorias}
+                {dados.centroCusto ? (
+                  painelCategorias
+                ) : (
+                  <details className="ax-secondary">
+                    <summary>Consultar categorias dos centros</summary>
+                    {painelCategorias}
+                  </details>
+                )}
               </>
             ) : (
               <>
                 {painelCategorias}
-                {painelCentros}
+                <details className="ax-secondary">
+                  <summary>Consultar distribuição por centro de custo</summary>
+                  {painelCentros}
+                </details>
               </>
             )}
             <section className="ax-panel">
               <div className="ax-heading">
-                <h2>Valores exatos</h2>
+                <h2>
+                  {tipoTabela === "centros"
+                    ? "Valores por centro de custo"
+                    : "Valores por categoria"}
+                </h2>
                 <div className="ax-actions">
+                  <button
+                    type="button"
+                    aria-pressed={tipoTabela === "categorias"}
+                    onClick={() => setTipoTabela("categorias")}
+                  >
+                    Categorias
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={tipoTabela === "centros"}
+                    onClick={() => setTipoTabela("centros")}
+                  >
+                    Centros
+                  </button>
                   <button type="button" onClick={() => setTabela(!tabela)}>
                     {tabela ? "Ocultar tabela" : "Ver como tabela"}
                   </button>
@@ -372,12 +474,25 @@ export default function ExpenseExplorer({
                     type="button"
                     onClick={() =>
                       exportarFinanceiro("despesas-por-centro.csv", [
-                        ["Centro", "Atual", "Anterior", "Diferença"],
-                        ...dados.centros.map((m) => [
+                        [
+                          "Centro",
+                          "Atual",
+                          "Anterior",
+                          "Diferença",
+                          "Participação (%)",
+                          "Início",
+                          "Fim",
+                        ],
+                        ...ordenar(dados.centros).map((m) => [
                           m.nome,
                           m.atual,
                           m.anterior,
                           m.diferenca,
+                          dados.total > 0
+                            ? (m.atual / dados.total) * 100
+                            : null,
+                          dados.inicio,
+                          dados.fim,
                         ]),
                       ])
                     }
@@ -391,14 +506,18 @@ export default function ExpenseExplorer({
                   <table>
                     <thead>
                       <tr>
-                        <th>Categoria</th>
+                        <th>
+                          {tipoTabela === "centros"
+                            ? "Centro de custo"
+                            : "Categoria"}
+                        </th>
                         <th>Atual</th>
                         <th>Anterior</th>
                         <th>Diferença</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {dados.categorias.map((m) => (
+                      {linhasTabela.map((m) => (
                         <tr key={m.nome}>
                           <th>{m.nome}</th>
                           <td>{moedaFinanceira(m.atual)}</td>

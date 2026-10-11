@@ -1,3 +1,5 @@
+import ContaAzulConnectionPanel from "../components/ContaAzulConnectionPanel";
+import ContaAzulFinancialPanel from "../components/ContaAzulFinancialPanel";
 import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
 
 import {
@@ -200,243 +202,261 @@ function ImportData({ cliente }: { cliente: Cliente | null }) {
           </div>
         </div>
       </header>
-       <div className="ca-mode" aria-label="Tipo de importação">
-        <button type="button" aria-pressed={modo === "conta-azul"} onClick={() => setModo("conta-azul")}>Contas Conta Azul</button>
-        <button type="button" aria-pressed={modo === "padrao"} onClick={() => setModo("padrao")}>CSV e Excel padrão</button>
+      <ContaAzulConnectionPanel
+        key={cliente?.id ?? "sem-empresa"}
+        cliente={cliente}
+      />
+      <ContaAzulFinancialPanel
+        key={cliente?.id ?? "sem-empresa-consulta"}
+        cliente={cliente}
+      />
+      <div className="ca-mode" aria-label="Tipo de importação">
+        <button
+          type="button"
+          aria-pressed={modo === "conta-azul"}
+          onClick={() => setModo("conta-azul")}
+        >
+          Contas Conta Azul
+        </button>
+        <button
+          type="button"
+          aria-pressed={modo === "padrao"}
+          onClick={() => setModo("padrao")}
+        >
+          CSV e Excel padrão
+        </button>
       </div>
       <div style={{ display: modo === "conta-azul" ? "block" : "none" }}>
         <ContaAzulImport cliente={cliente} />
       </div>
       <div style={{ display: modo === "padrao" ? "block" : "none" }}>
-
-      <section className="import-card">
-        <div
-          className={`import-dropzone ${
-            arrastando ? "import-dropzone-active" : ""
-          }`}
-          onDragOver={(event) => {
-            event.preventDefault();
-            setArrastando(true);
-          }}
-          onDragLeave={() => setArrastando(false)}
-          onDrop={handleDrop}
-        >
-          <div className="import-upload-icon">↑</div>
-
-          <h2>Arraste seu arquivo aqui</h2>
-
-          <p>ou selecione um arquivo do computador</p>
-
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".csv,.xlsx,.xls"
-            onChange={handleInputChange}
-            className="import-file-input"
-          />
-
-          <button
-            type="button"
-            className="import-select-button"
-            onClick={() => inputRef.current?.click()}
+        <section className="import-card">
+          <div
+            className={`import-dropzone ${
+              arrastando ? "import-dropzone-active" : ""
+            }`}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setArrastando(true);
+            }}
+            onDragLeave={() => setArrastando(false)}
+            onDrop={handleDrop}
           >
-            Selecionar arquivo
-          </button>
+            <div className="import-upload-icon">↑</div>
 
-          <span className="import-formats">CSV • Excel (.xlsx / .xls)</span>
-        </div>
+            <h2>Arraste seu arquivo aqui</h2>
 
-        {erro && (
-          <div className="import-message import-message-error">
-            <strong>Não foi possível continuar</strong>
+            <p>ou selecione um arquivo do computador</p>
 
-            <span>{erro}</span>
-          </div>
-        )}
-
-        {arquivo && (
-          <div className="import-selected-file">
-            <div className="import-file-icon">
-              {extensaoArquivo(arquivo)?.toUpperCase()}
-            </div>
-
-            <div className="import-file-info">
-              <strong>{arquivo.name}</strong>
-
-              <span>{formatarTamanho(arquivo.size)}</span>
-            </div>
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              onChange={handleInputChange}
+              className="import-file-input"
+            />
 
             <button
               type="button"
-              className="import-remove-button"
-              onClick={limparImportacao}
-              disabled={estado === "analisando" || estado === "importando"}
+              className="import-select-button"
+              onClick={() => inputRef.current?.click()}
             >
-              Remover
+              Selecionar arquivo
             </button>
+
+            <span className="import-formats">CSV • Excel (.xlsx / .xls)</span>
           </div>
-        )}
 
-        {arquivo && estado === "arquivo-selecionado" && (
-          <div className="import-actions">
-            <button
-              type="button"
-              className="import-primary-button"
-              onClick={analisarArquivo}
-            >
-              Analisar arquivo
-            </button>
-          </div>
-        )}
+          {erro && (
+            <div className="import-message import-message-error">
+              <strong>Não foi possível continuar</strong>
 
-        {estado === "analisando" && (
-          <div className="import-processing">
-            <span className="import-spinner" />
-
-            <div>
-              <strong>Analisando arquivo</strong>
-
-              <p>Validando os lançamentos financeiros...</p>
+              <span>{erro}</span>
             </div>
-          </div>
-        )}
-      </section>
-
-      {(estado === "preview" || estado === "importando") && (
-        <section className="import-preview-card">
-          <div className="import-preview-header">
-            <div>
-              <span className="import-data-eyebrow">PRÉ-VISUALIZAÇÃO</span>
-
-              <h2>Lançamentos encontrados</h2>
-
-              <p>Confira os dados antes de confirmar a importação.</p>
-            </div>
-
-            <div className="import-preview-count">
-              <strong>{lancamentos.length}</strong>
-
-              <span>registros</span>
-            </div>
-          </div>
-
-          <div className="import-table-wrapper">
-            <table className="import-table">
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Descrição</th>
-                  <th>Tipo</th>
-                  <th>Categoria</th>
-                  <th>Centro de custo</th>
-                  <th>Valor</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {lancamentos.slice(0, 20).map((lancamento, index) => (
-                  <tr key={`${lancamento.descricao}-${index}`}>
-                    <td>{lancamento.data}</td>
-
-                    <td>{lancamento.descricao}</td>
-
-                    <td>
-                      <span
-                        className={`import-type-badge ${
-                          lancamento.tipo === "RECEITA"
-                            ? "import-type-revenue"
-                            : "import-type-expense"
-                        }`}
-                      >
-                        {lancamento.tipo}
-                      </span>
-                    </td>
-
-                    <td>{lancamento.categoria ?? "—"}</td>
-
-                    <td>{lancamento.centroCusto ?? "—"}</td>
-
-                    <td className="import-value">
-                      {formatarMoeda(lancamento.valor)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {lancamentos.length > 20 && (
-            <p className="import-table-note">
-              Exibindo os primeiros 20 de {lancamentos.length} registros.
-            </p>
           )}
 
-          <div className="import-actions">
-            <button
-              type="button"
-              className="import-secondary-button"
-              onClick={limparImportacao}
-              disabled={estado === "importando"}
-            >
-              Cancelar
-            </button>
+          {arquivo && (
+            <div className="import-selected-file">
+              <div className="import-file-icon">
+                {extensaoArquivo(arquivo)?.toUpperCase()}
+              </div>
 
-            <button
-              type="button"
-              className="import-primary-button"
-              onClick={confirmarImportacao}
-              disabled={estado === "importando"}
-            >
-              {estado === "importando"
-                ? "Importando..."
-                : "Confirmar importação"}
-            </button>
-          </div>
+              <div className="import-file-info">
+                <strong>{arquivo.name}</strong>
+
+                <span>{formatarTamanho(arquivo.size)}</span>
+              </div>
+
+              <button
+                type="button"
+                className="import-remove-button"
+                onClick={limparImportacao}
+                disabled={estado === "analisando" || estado === "importando"}
+              >
+                Remover
+              </button>
+            </div>
+          )}
+
+          {arquivo && estado === "arquivo-selecionado" && (
+            <div className="import-actions">
+              <button
+                type="button"
+                className="import-primary-button"
+                onClick={analisarArquivo}
+              >
+                Analisar arquivo
+              </button>
+            </div>
+          )}
+
+          {estado === "analisando" && (
+            <div className="import-processing">
+              <span className="import-spinner" />
+
+              <div>
+                <strong>Analisando arquivo</strong>
+
+                <p>Validando os lançamentos financeiros...</p>
+              </div>
+            </div>
+          )}
         </section>
-      )}
 
-      {estado === "concluido" && resultado && (
-        <section className="import-result-card">
-          <div className="import-success-icon">✓</div>
-
-          <div className="import-result-content">
-            <span className="import-data-eyebrow">IMPORTAÇÃO CONCLUÍDA</span>
-
-            <h2>Dados importados com sucesso</h2>
-
-            <p>
-              O arquivo <strong>{resultado.arquivo}</strong> foi processado pelo
-              FinVista.
-            </p>
-
-            <div className="import-result-grid">
+        {(estado === "preview" || estado === "importando") && (
+          <section className="import-preview-card">
+            <div className="import-preview-header">
               <div>
-                <span>Processados</span>
-                <strong>{resultado.processados}</strong>
+                <span className="import-data-eyebrow">PRÉ-VISUALIZAÇÃO</span>
+
+                <h2>Lançamentos encontrados</h2>
+
+                <p>Confira os dados antes de confirmar a importação.</p>
               </div>
 
-              <div>
-                <span>Importados</span>
-                <strong>{resultado.importados}</strong>
-              </div>
+              <div className="import-preview-count">
+                <strong>{lancamentos.length}</strong>
 
-              <div>
-                <span>Duplicidades ignoradas</span>
-                <strong>{resultado.ignoradosDuplicidade}</strong>
+                <span>registros</span>
               </div>
             </div>
 
-            <button
-              type="button"
-              className="import-primary-button"
-              onClick={limparImportacao}
-            >
-              Importar outro arquivo
-            </button>
-          </div>
-        </section>
- 
-      )}
+            <div className="import-table-wrapper">
+              <table className="import-table">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Descrição</th>
+                    <th>Tipo</th>
+                    <th>Categoria</th>
+                    <th>Centro de custo</th>
+                    <th>Valor</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {lancamentos.slice(0, 20).map((lancamento, index) => (
+                    <tr key={`${lancamento.descricao}-${index}`}>
+                      <td>{lancamento.data}</td>
+
+                      <td>{lancamento.descricao}</td>
+
+                      <td>
+                        <span
+                          className={`import-type-badge ${
+                            lancamento.tipo === "RECEITA"
+                              ? "import-type-revenue"
+                              : "import-type-expense"
+                          }`}
+                        >
+                          {lancamento.tipo}
+                        </span>
+                      </td>
+
+                      <td>{lancamento.categoria ?? "—"}</td>
+
+                      <td>{lancamento.centroCusto ?? "—"}</td>
+
+                      <td className="import-value">
+                        {formatarMoeda(lancamento.valor)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {lancamentos.length > 20 && (
+              <p className="import-table-note">
+                Exibindo os primeiros 20 de {lancamentos.length} registros.
+              </p>
+            )}
+
+            <div className="import-actions">
+              <button
+                type="button"
+                className="import-secondary-button"
+                onClick={limparImportacao}
+                disabled={estado === "importando"}
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                className="import-primary-button"
+                onClick={confirmarImportacao}
+                disabled={estado === "importando"}
+              >
+                {estado === "importando"
+                  ? "Importando..."
+                  : "Confirmar importação"}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {estado === "concluido" && resultado && (
+          <section className="import-result-card">
+            <div className="import-success-icon">✓</div>
+
+            <div className="import-result-content">
+              <span className="import-data-eyebrow">IMPORTAÇÃO CONCLUÍDA</span>
+
+              <h2>Dados importados com sucesso</h2>
+
+              <p>
+                O arquivo <strong>{resultado.arquivo}</strong> foi processado
+                pelo FinVista.
+              </p>
+
+              <div className="import-result-grid">
+                <div>
+                  <span>Processados</span>
+                  <strong>{resultado.processados}</strong>
+                </div>
+
+                <div>
+                  <span>Importados</span>
+                  <strong>{resultado.importados}</strong>
+                </div>
+
+                <div>
+                  <span>Duplicidades ignoradas</span>
+                  <strong>{resultado.ignoradosDuplicidade}</strong>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="import-primary-button"
+                onClick={limparImportacao}
+              >
+                Importar outro arquivo
+              </button>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

@@ -54,6 +54,10 @@ public class SpendingGoalService {
     }
 
     public SpendingGoal salvar(SpendingGoal meta) {
+        // Defesa adicional para chamadas internas: criação nunca aceita uma entidade existente.
+        if (meta != null && meta.getId() != null) {
+            throw new IllegalArgumentException("A criação de meta não permite informar um ID existente.");
+        }
         validarMeta(meta);
 
         meta.setTipo(meta.getTipo().trim().toUpperCase());
@@ -143,8 +147,8 @@ public class SpendingGoalService {
                 );
 
         // Divide as despesas e aplica os critérios cadastrados na meta.
-        List<ExpenseAllocationService.Parte> despesasDaMeta =
-                partes(clienteId, despesas)
+        List<ExpenseAllocationService.Parte> despesasDaMeta
+                = partes(clienteId, despesas)
                         .stream()
                         .filter(parte -> correspondeCentroCusto(
                                 parte,
@@ -159,8 +163,8 @@ public class SpendingGoalService {
         BigDecimal gastoAtual = somarDespesas(despesasDaMeta);
 
         // Combina os critérios da meta com os filtros escolhidos na tela.
-        List<ExpenseAllocationService.Parte> despesasNoFiltro =
-                despesasDaMeta.stream()
+        List<ExpenseAllocationService.Parte> despesasNoFiltro
+                = despesasDaMeta.stream()
                         .filter(parte -> correspondeCentroCusto(
                                 parte,
                                 filtroCentroCusto
@@ -173,14 +177,14 @@ public class SpendingGoalService {
 
         BigDecimal gastoFiltrado = somarDespesas(despesasNoFiltro);
 
-        BigDecimal percentualFiltrado =
-                calculationService.calcularPercentualUtilizado(
+        BigDecimal percentualFiltrado
+                = calculationService.calcularPercentualUtilizado(
                         gastoFiltrado,
                         meta.getValorLimite()
                 );
 
-        BigDecimal percentualUtilizado =
-                calculationService.calcularPercentualUtilizado(
+        BigDecimal percentualUtilizado
+                = calculationService.calcularPercentualUtilizado(
                         gastoAtual,
                         meta.getValorLimite()
                 );
@@ -386,3 +390,4 @@ public class SpendingGoalService {
         }
     }
 }
+

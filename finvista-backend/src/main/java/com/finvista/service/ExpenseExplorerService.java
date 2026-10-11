@@ -1,15 +1,34 @@
 package com.finvista.service;
 
-import com.finvista.dto.ExpenseExplorerResponse;
-import com.finvista.dto.ExpenseExplorerResponse.*;
-import com.finvista.model.*;
-import com.finvista.repository.*;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.math.BigDecimal;
-import java.time.*;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
+
+import com.finvista.dto.ExpenseExplorerResponse;
+import com.finvista.dto.ExpenseExplorerResponse.Item;
+import com.finvista.dto.ExpenseExplorerResponse.Linha;
+import com.finvista.dto.ExpenseExplorerResponse.Registros;
+import com.finvista.model.CostBehavior;
+import com.finvista.model.CostCategoryClassification;
+import com.finvista.model.CostNature;
+import com.finvista.model.FinancialTransaction;
+import com.finvista.repository.CostCategoryClassificationRepository;
+import com.finvista.repository.FinancialTransactionRepository;
 
 @Service
 public class ExpenseExplorerService {
@@ -47,7 +66,7 @@ public class ExpenseExplorerService {
         LocalDate anteriorInicio, anteriorFim = inicio.minusDays(1);
         if (inicio.getDayOfMonth() == 1 && fim.equals(YearMonth.from(fim).atEndOfMonth())) {
             anteriorInicio = inicio.minusMonths(ChronoUnit.MONTHS.between(YearMonth.from(inicio), YearMonth.from(fim)) + 1);
-        }else {
+        } else {
             anteriorInicio = inicio.minusDays(ChronoUnit.DAYS.between(inicio, fim) + 1);
         }
         Long cliente = context.getClienteAtualId();
@@ -62,6 +81,7 @@ public class ExpenseExplorerService {
         SortedSet<String> catalogoCentros = new TreeSet<>(String.CASE_INSENSITIVE_ORDER), catalogoCategorias = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         Map<FinancialTransaction, BigDecimal> selecionados = new LinkedHashMap<>();
         BigDecimal total = BigDecimal.ZERO, totalAnterior = BigDecimal.ZERO;
+        Set<FinancialTransaction> registrosAtuais = new HashSet<>(), registrosAnteriores = new HashSet<>();
         for (var detalhe : allocations.dividirDetalhado(cliente, registros)) {
             var p = detalhe.parte();
             var t = detalhe.lancamento();
@@ -77,6 +97,7 @@ public class ExpenseExplorerService {
                 continue;
             }
             int indice = t.getData().isBefore(de) ? 0 : 1;
+            (indice == 1 ? registrosAtuais : registrosAnteriores).add(t);
             centros.computeIfAbsent(p.centroCusto(), k -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO})[indice] = centros.get(p.centroCusto())[indice].add(p.valor());
             categorias.computeIfAbsent(p.categoria(), k -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO})[indice] = categorias.get(p.categoria())[indice].add(p.valor());
             if (indice == 1) {
@@ -89,12 +110,13 @@ public class ExpenseExplorerService {
         if (centro != null) {
             catalogoCentros.add(centro);
 
-        }if (categoria != null) {
+        }
+        if (categoria != null) {
             catalogoCategorias.add(categoria);
         }
         var itens = selecionados.entrySet().stream().sorted(Comparator.comparing(e -> e.getKey().getData()))
                 .map(e -> new Item(e.getKey().getId(), e.getKey().getData(), e.getKey().getDescricao(), e.getValue(), e.getKey().getValor())).toList();
-        return new ExpenseExplorerResponse(inicio, fim, anteriorInicio, anteriorFim, centro, categoria, comportamento == null ? null : comportamento.name(), natureza == null ? null : natureza.name(), total, totalAnterior, List.copyOf(catalogoCentros), List.copyOf(catalogoCategorias), linhas(centros), linhas(categorias), itens);
+        return new ExpenseExplorerResponse(inicio, fim, anteriorInicio, anteriorFim, centro, categoria, comportamento == null ? null : comportamento.name(), natureza == null ? null : natureza.name(), total, totalAnterior, List.copyOf(catalogoCentros), List.copyOf(catalogoCategorias), linhas(centros), linhas(categorias), itens, new Registros(registrosAtuais.size(), registrosAnteriores.size()));
     }
 
     private List<Linha> linhas(Map<String, BigDecimal[]> mapa) {

@@ -9,8 +9,10 @@ public record ExpenseExplorerResponse(
         String centroCusto, String categoria, String comportamento, String natureza,
         BigDecimal total, BigDecimal totalAnterior, List<String> centrosDisponiveis,
         List<String> categoriasDisponiveis, List<Linha> centros, List<Linha> categorias,
-        List<Item> itens
+        List<Item> itens, Registros registros
         ) {
+
+    public record Registros(int atual, int anterior) {}
 
     public record Linha(String nome, BigDecimal atual, BigDecimal anterior, BigDecimal diferenca) {}
 

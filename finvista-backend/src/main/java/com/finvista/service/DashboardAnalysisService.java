@@ -78,6 +78,7 @@ public class DashboardAnalysisService {
         }
         Map<String, BigDecimal[]> variacoes = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         List<Item> itens = new ArrayList<>();
+        int receitasAtual = 0, despesasAtual = 0, receitasAntes = 0, despesasAntes = 0;
         for (FinancialTransaction t : registros) {
             List<ExpenseAllocationService.Parte> selecionadas = partes.getOrDefault(t, List.of()).stream()
                     .filter(p -> filtro == null || p.categoria().equalsIgnoreCase(filtro)).toList();
@@ -87,6 +88,19 @@ public class DashboardAnalysisService {
             BigDecimal valor = selecionadas.stream().map(ExpenseAllocationService.Parte::valor).reduce(BigDecimal.ZERO, BigDecimal::add);
             boolean atual = !t.getData().isBefore(primeiro);
             boolean income = "RECEITA".equals(tipo(t));
+            if (atual) {
+                if (income) {
+                    receitasAtual++;
+                } else {
+                    despesasAtual++;
+                }
+            } else {
+                if (income) {
+                    receitasAntes++;
+                } else {
+                    despesasAntes++;
+                }
+            }
             if (atual) {
                 if (income) {
                     receita = receita.add(valor);
@@ -101,7 +115,8 @@ public class DashboardAnalysisService {
                 } else {
                     despesaAnterior = despesaAnterior.add(valor);
 
-                }}
+                }
+            }
             if (!income) {
                 for (var parte : selecionadas) {
                     BigDecimal[] par = variacoes.computeIfAbsent(parte.categoria(), k -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
@@ -117,7 +132,7 @@ public class DashboardAnalysisService {
         List<Mes> meses = mensal.entrySet().stream().map(e -> new Mes(e.getKey().toString(), e.getValue()[0], e.getValue()[1], e.getValue()[0].subtract(e.getValue()[1]), e.getKey().equals(YearMonth.from(hoje)))).toList();
         List<Variacao> mudancas = variacoes.entrySet().stream().map(e -> new Variacao(e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[1].subtract(e.getValue()[0])))
                 .filter(v -> v.diferenca().signum() != 0).sorted(Comparator.comparing((Variacao v) -> v.diferenca().abs()).reversed()).toList();
-        return new DashboardAnalysisResponse(clienteId, inicio, fim, inicioAnterior, fimAnterior, hoje, filtro, indicadores, List.copyOf(categorias), meses, mudancas, List.copyOf(itens));
+        return new DashboardAnalysisResponse(clienteId, inicio, fim, inicioAnterior, fimAnterior, hoje, filtro, indicadores, List.copyOf(categorias), meses, mudancas, List.copyOf(itens), new Registros(receitasAtual, despesasAtual, receitasAntes, despesasAntes));
     }
 
     private String tipo(FinancialTransaction t) {

@@ -15,6 +15,7 @@ export interface ExpenseRow {
   diferenca: number;
 }
 export interface ExpenseAnalysis {
+  registros?: { atual: number; anterior: number };
   inicio: string;
   fim: string;
   inicioAnterior: string;

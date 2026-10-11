@@ -1,0 +1,248 @@
+/* Metas ocupa a área disponível, mesmo quando o layout geral força 1440px. */
+.finvista-main > .metas-page {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+/* Inclui borda e padding na largura: evita cortes por estilos gerais de section. */
+.metas-page,
+.metas-page * {
+  box-sizing: border-box;
+}
+/* Regras específicas prevalecem sobre o CSS geral, sem mudar outras páginas. */
+.metas-page .metas-lista {
+  grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr));
+  align-items: start;
+}
+.metas-page .meta-card {
+  container-type: inline-size;
+  container-name: goal-card;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+}
+.metas-page .meta-card .meta-valores strong {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+}
+.metas-page .meta-card .meta-valores {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.metas-page .meta-card .meta-card-top {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.metas-page .meta-card p,
+.metas-page .meta-card small {
+  line-height: 1.6;
+}
+@container goal-card (max-width: 460px) {
+  .metas-page .meta-card .meta-valores {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .metas-page .meta-card .meta-valores > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 12px;
+  }
+  .metas-page .meta-card .meta-valores span {
+    margin: 0;
+  }
+}
+.goal-progress-new .goal-dial {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  margin: 12px auto;
+  padding: 8px;
+  box-sizing: border-box;
+  text-align: center;
+}
+.goal-progress-new button.goal-dial-trigger {
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  cursor: zoom-in;
+}
+.goal-progress-new button.goal-dial-trigger:hover {
+  background: #f6f8fb;
+}
+.goal-dial svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.goal-dial svg text {
+  fill: #5b6779;
+  font-size: 12px;
+  font-weight: 500;
+}
+.goal-dial-caption {
+  display: grid;
+  gap: 5px;
+}
+.goal-dial-caption > span {
+  font-size: 13px;
+  color: #5b6779;
+}
+.goal-dial-caption strong {
+  font-size: 26px;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+.goal-dial-caption small {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #5b6779;
+}
+.gp-evolution-title {
+  font-size: 18px;
+  line-height: 1.4;
+  margin: 20px 0 12px;
+  color: #173955;
+}
+.goal-progress-new .gp-chart {
+  height: 320px;
+  font-size: 12px;
+  cursor: zoom-in;
+}
+.goal-progress-new .gp-stats strong {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+.goal-detail-dialog {
+  width: calc(100vw - 32px);
+  height: calc(100dvh - 32px);
+  max-width: 1400px;
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  border: 1px solid #d9e3ed;
+  border-radius: 16px;
+  background: white;
+  color: #173955;
+  box-shadow: 0 24px 64px rgba(15, 32, 51, 0.18);
+  overflow: auto;
+}
+.goal-detail-dialog::backdrop {
+  background: rgba(14, 32, 56, 0.64);
+}
+.goal-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: white;
+  border-bottom: 1px solid #e6e9ee;
+  padding: 20px 24px;
+}
+.goal-detail-header > div {
+  min-width: 0;
+}
+.goal-detail-header span {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: #5b6779;
+}
+.goal-detail-header h2 {
+  margin: 8px 0;
+  font-size: 26px;
+  line-height: 1.3;
+  color: #173955;
+  text-align: left;
+}
+.goal-detail-header p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.goal-detail-header button {
+  flex-shrink: 0;
+}
+.goal-detail-body {
+  padding: 24px;
+}
+.goal-detail-summary {
+  display: grid;
+  grid-template-columns: minmax(240px, 340px) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+}
+.goal-detail-dialog .gp-chart {
+  height: clamp(340px, 52vh, 620px);
+  cursor: default;
+}
+.goal-detail-dialog .gp-table {
+  max-height: 65vh;
+}
+.goal-detail-dialog .gp-stats {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+.goal-detail-dialog .gp-stats strong {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.goal-detail-dialog .gp-evolution p,
+.goal-detail-dialog .gp-legend,
+.goal-detail-dialog .gp-evolution details {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.goal-detail-dialog .gp-evolution li {
+  gap: 16px;
+  padding: 12px 0;
+}
+@media (max-width: 768px) {
+  .goal-detail-dialog {
+    width: 100vw;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+  .goal-detail-header {
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    position: static;
+  }
+  .goal-detail-header h2 {
+    font-size: 22px;
+  }
+  .goal-detail-header button {
+    align-self: stretch;
+  }
+  .goal-detail-body {
+    padding: 16px;
+  }
+  .goal-detail-summary {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .goal-detail-dialog .gp-stats {
+    grid-template-columns: 1fr;
+  }
+  .metas-page .meta-card {
+    padding: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .metas-page .meta-card,
+  .goal-progress-new button {
+    transition: none;
+  }
+  .metas-page .meta-card:hover {
+    transform: none;
+  }
+}

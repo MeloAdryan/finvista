@@ -5,6 +5,7 @@ import {
   dataBR,
   type DashboardAnalysis,
 } from "../services/dashboardAnalysisService";
+import { useAnalysisPeriod } from "../contexts/analysisPeriodContext";
 import DashboardMonthlyChart from "../charts/DashboardMonthlyChart";
 import FinancialWaterfall from "../charts/FinancialWaterfall";
 import DashboardFilteredDetail from "../components/DashboardFilteredDetail";
@@ -17,6 +18,7 @@ import {
   type SpendingGoal,
 } from "../services/spendingGoalService";
 
+import { descreverRegistros } from "../services/comparisonCoverage";
 import KpiComparison from "../components/KpiComparison";
 
 import SpendingGoalGauge from "../components/SpendingGoalGauge";
@@ -24,10 +26,12 @@ import SpendingGoalGauge from "../components/SpendingGoalGauge";
 import "../styles/dashboard.css";
 
 function Dashboard() {
+  const { periodo, atualizarPeriodo } = useAnalysisPeriod();
+  const [periodoInicial] = useState(() => ({ ...periodo }));
   const [analise, setAnalise] = useState<DashboardAnalysis | null>(null);
-  const [inicio, setInicio] = useState("");
-  const [fim, setFim] = useState("");
-  const [categoria, setCategoria] = useState("");
+  const [inicio, setInicio] = useState(periodoInicial.inicio ?? "");
+  const [fim, setFim] = useState(periodoInicial.fim ?? "");
+  const [categoria, setCategoria] = useState(periodoInicial.categoria ?? "");
   const [metas, setMetas] = useState<SpendingGoal[]>([]);
   const [metaSelecionadaId, setMetaSelecionadaId] = useState<number | null>(
     null,
@@ -45,9 +49,9 @@ function Dashboard() {
       try {
         const [resultado, goals] = await Promise.all([
           getDashboardAnalysis(
-            undefined,
-            undefined,
-            undefined,
+            periodoInicial.inicio,
+            periodoInicial.fim,
+            periodoInicial.categoria,
             controller.signal,
           ),
           listarMetas(),
@@ -56,6 +60,12 @@ function Dashboard() {
           setAnalise(resultado);
           setInicio(resultado.inicio);
           setFim(resultado.fim);
+          setCategoria(resultado.categoria ?? "");
+          atualizarPeriodo({
+            inicio: resultado.inicio,
+            fim: resultado.fim,
+            categoria: resultado.categoria ?? undefined,
+          });
           setMetas(goals);
         }
       } catch (error) {
@@ -74,7 +84,7 @@ function Dashboard() {
       controller.abort();
       consulta.current?.abort();
     };
-  }, []);
+  }, [periodoInicial, atualizarPeriodo]);
   async function aplicar(
     event?: FormEvent<HTMLFormElement>,
     seisMeses = false,
@@ -120,6 +130,11 @@ function Dashboard() {
       );
       if (!controller.signal.aborted) {
         setAnalise(result);
+        atualizarPeriodo({
+          inicio: result.inicio,
+          fim: result.fim,
+          categoria: result.categoria ?? undefined,
+        });
         setMetaSelecionadaId(null);
       }
     } catch (error) {
@@ -267,21 +282,24 @@ function Dashboard() {
         {dataBR(analise.inicioAnterior)} até {dataBR(analise.fimAnterior)}.
       </p>
       <p className="df-note">
-        Base: valores contabilizados pela data de análise, incluindo valores em
-        aberto. Com categoria, apenas os rateios correspondentes entram no
-        total.
+        Receitas:{" "}
+        {descreverRegistros(
+          analise.registros?.receitasAtual,
+          analise.registros?.receitasAnterior,
+        )}{" "}
+        Despesas:{" "}
+        {descreverRegistros(
+          analise.registros?.despesasAtual,
+          analise.registros?.despesasAnterior,
+        )}{" "}
+        A existência de registros não confirma importação completa.
       </p>
       {erro && (
         <p role="alert" className="df-error">
-          {erro} Os últimos filtros aplicados permanecem nos valores abaixo.
+          {erro}
         </p>
       )}
-      {carregando && (
-        <p role="status">
-          Atualizando; os valores abaixo ainda correspondem aos últimos filtros
-          aplicados.
-        </p>
-      )}
+      {carregando && <p role="status"></p>}
 
       <section className="executive-kpi-grid">
         <article className="executive-kpi">
@@ -295,6 +313,8 @@ function Dashboard() {
 
           <KpiComparison
             rotulo="período anterior"
+            registrosAtual={analise.registros?.receitasAtual}
+            registrosAnterior={analise.registros?.receitasAnterior}
             atual={dados.receita}
             anterior={dados.receitaMesAnterior}
             variacao={dados.variacaoReceita}
@@ -321,6 +341,8 @@ function Dashboard() {
 
           <KpiComparison
             rotulo="período anterior"
+            registrosAtual={analise.registros?.despesasAtual}
+            registrosAnterior={analise.registros?.despesasAnterior}
             atual={dados.despesa}
             anterior={dados.despesaMesAnterior}
             variacao={dados.variacaoDespesa}
@@ -348,6 +370,18 @@ function Dashboard() {
 
           <KpiComparison
             rotulo="período anterior"
+            registrosAtual={
+              analise.registros
+                ? analise.registros.receitasAtual +
+                  analise.registros.despesasAtual
+                : undefined
+            }
+            registrosAnterior={
+              analise.registros
+                ? analise.registros.receitasAnterior +
+                  analise.registros.despesasAnterior
+                : undefined
+            }
             atual={dados.resultado}
             anterior={dados.resultadoMesAnterior}
             variacao={dados.variacaoResultado}
@@ -369,6 +403,8 @@ function Dashboard() {
 
           <KpiComparison
             rotulo="período anterior"
+            registrosAtual={analise.registros?.receitasAtual}
+            registrosAnterior={analise.registros?.receitasAnterior}
             atual={dados.margem}
             anterior={dados.margemMesAnterior}
             margem
@@ -395,9 +431,7 @@ function Dashboard() {
           Meta selecionada: {dataBR(metaSelecionada.dataInicio)} até{" "}
           {dataBR(metaSelecionada.dataFim)} ·{" "}
           {metaSelecionada.categoria ?? "Todas as categorias"} ·{" "}
-          {metaSelecionada.centroCusto ?? "Todos os centros"}. O medidor
-          considera o período completo e os critérios salvos da meta, não o
-          filtro de categoria do painel.
+          {metaSelecionada.centroCusto ?? "Todos os centros"}.
           {metaSelecionada.dataFim < analise.hoje
             ? " Meta encerrada: consumo final."
             : metaSelecionada.dataInicio > analise.hoje

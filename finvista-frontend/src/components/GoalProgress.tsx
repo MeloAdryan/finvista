@@ -1,17 +1,9 @@
 import { useEffect, useState } from "react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import GoalEvolution from "./GoalEvolution";
+import GoalUsageGauge from "./GoalUsageGauge";
+import GoalDetailDialog from "./GoalDetailDialog";
 import type { SpendingGoal } from "../services/spendingGoalService";
 import {
-  exportarMeta,
   obterAcompanhamento,
   type GoalTimeline,
 } from "../services/spendingGoalTimelineService";
@@ -45,6 +37,11 @@ export default function GoalProgress({
   resumo?: boolean;
 }) {
   const [aberto, setAberto] = useState(automatico);
+  const [expandido, setExpandido] = useState(false);
+  const ampliar = () => {
+    setAberto(true);
+    setExpandido(true);
+  };
   const [dados, setDados] = useState<GoalTimeline | null>(null);
   const [erro, setErro] = useState("");
   const [tabela, setTabela] = useState(false);
@@ -79,9 +76,6 @@ export default function GoalProgress({
     estimativa != null && meta.valorLimite > 0
       ? (estimativa / meta.valorLimite) * 100
       : null;
-  const escala = Math.max(100, uso, projecao ?? 0);
-  const posicao = (v: number) =>
-    `${Math.max(0, Math.min(100, (v / escala) * 100))}%`;
   const risco =
     meta.status === "EXCEDIDA"
       ? "⚠ Limite ultrapassado"
@@ -89,13 +83,15 @@ export default function GoalProgress({
         ? "⚠ Faixa de alerta"
         : "✓ Dentro do limite";
   return (
-    <div className="goal-progress-new">
-      <div className="gp-heading">
-        <strong>{periodoMeta(meta)}</strong>
-        <span>
-          {dataBR(meta.dataInicio)} — {dataBR(meta.dataFim)}
-        </span>
-      </div>
+    <div className={`goal-progress-new gp-state-${meta.status.toLowerCase()}`}>
+      {resumo && (
+        <div className="gp-heading">
+          <strong>{periodoMeta(meta)}</strong>
+          <span>
+            {dataBR(meta.dataInicio)} — {dataBR(meta.dataFim)}
+          </span>
+        </div>
+      )}
       <p className={`gp-risk gp-risk-${meta.status.toLowerCase()}`}>
         {meta.situacaoTemporal === "FUTURA"
           ? "Planejamento futuro · "
@@ -117,50 +113,12 @@ export default function GoalProgress({
           </div>
         </div>
       )}
-      <div className="gp-heading">
-        <span>Registrado no período completo da meta</span>
-        <strong>{percentual(uso)}%</strong>
-      </div>
-      <div
-        className="gp-track"
-        role="img"
-        aria-label={`Registrado ${percentual(uso)} por cento; alerta ${alerta} por cento; ritmo ideal ${percentual(ritmo)} por cento`}
-      >
-        <div
-          className="gp-fill"
-          style={{ width: posicao(Math.min(uso, 100)) }}
-        />
-        {uso > 100 && (
-          <div
-            className="gp-over"
-            style={{ left: posicao(100), width: posicao(uso - 100) }}
-          />
-        )}
-        <i
-          className="gp-mark gp-alert"
-          style={{ left: posicao(alerta) }}
-          title={`Alerta ${alerta}%`}
-        />
-        <i
-          className="gp-mark gp-limit"
-          style={{ left: posicao(100) }}
-          title="Limite 100%"
-        />
-        {meta.situacaoTemporal === "EM_ANDAMENTO" && (
-          <i
-            className="gp-mark gp-rhythm"
-            style={{ left: posicao(ritmo) }}
-            title={`Ritmo ideal hoje ${percentual(ritmo)}%`}
-          />
-        )}
-        {projecao != null && (
-          <i
-            className="gp-mark gp-estimate"
-            style={{ left: posicao(projecao) }}
-            title={`Estimativa final ${percentual(projecao)}%`}
-          />
-        )}
-      </div>
+      <GoalUsageGauge
+        meta={meta}
+        ritmo={meta.situacaoTemporal === "EM_ANDAMENTO" ? ritmo : null}
+        projecao={projecao}
+        aoAmpliar={ampliar}
+      />
       <div className="gp-legend">
         <span>Alerta: {alerta}%</span>
         <span>Limite: 100%</span>
@@ -171,19 +129,23 @@ export default function GoalProgress({
           <span>Estimativa final: {percentual(projecao)}%</span>
         )}
       </div>
-      {uso > 100 && (
-        <strong className="gp-risk-excedida">
-          Excedente de{" "}
-          {moedaMeta(Math.max(0, meta.gastoAtual - meta.valorLimite))}
-        </strong>
-      )}
-      <button
-        type="button"
-        onClick={() => setAberto(!aberto)}
-        aria-expanded={aberto}
+      <div
+        className={`gp-bottom-actions ${uso > 100 ? "gp-excess-banner" : ""}`}
       >
-        {aberto ? "Ocultar evolução diária" : "Ver evolução diária"}
-      </button>
+        {uso > 100 && (
+          <strong className="gp-risk-excedida">
+            Excedente de{" "}
+            {moedaMeta(Math.max(0, meta.gastoAtual - meta.valorLimite))}
+          </strong>
+        )}
+        <button
+          type="button"
+          onClick={() => setAberto(!aberto)}
+          aria-expanded={aberto}
+        >
+          {aberto ? "Ocultar evolução diária" : "Ver evolução diária"}
+        </button>
+      </div>
       {aberto && (
         <div className="gp-evolution">
           {erro ? (
@@ -197,153 +159,73 @@ export default function GoalProgress({
             <p role="status">Carregando evolução…</p>
           ) : (
             <>
-              <div className="gp-stats">
-                <div>
-                  Registrado até {dataBR(dados.hoje)}
-                  <strong>{moedaMeta(dados.registradoAteHoje)}</strong>
-                </div>
-                <div>
-                  Registrado depois de hoje
-                  <strong>{moedaMeta(dados.registradoDepoisHoje)}</strong>
-                </div>
-                {estimativa != null && (
-                  <div>
-                    Estimativa ao fim<strong>{moedaMeta(estimativa)}</strong>
-                  </div>
-                )}
-              </div>
-              <p>
-                Valores contabilizados pela data de análise, incluindo
-                lançamentos em aberto. A estimativa linear usa o ritmo até hoje;
-                não soma novamente os registros futuros e não representa
-                previsão de pagamento.
-              </p>
-              <div className="gp-actions">
-                <button type="button" onClick={() => setTabela(!tabela)}>
-                  {tabela ? "Ver gráfico" : "Ver como tabela"}
-                </button>
-                <button type="button" onClick={() => exportarMeta(dados)}>
-                  CSV
-                </button>
-              </div>
-              {tabela ? (
-                <div className="gp-table">
-                  <table>
-                    <caption>Consumo diário da meta</caption>
-                    <thead>
-                      <tr>
-                        <th>Data</th>
-                        <th>Acumulado registrado</th>
-                        <th>Ritmo ideal</th>
-                        <th>Estimativa</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dados.pontos.map((p) => (
-                        <tr key={p.data}>
-                          <td>{dataBR(p.data)}</td>
-                          <td>
-                            {p.acumuladoRegistrado == null
-                              ? "—"
-                              : moedaMeta(p.acumuladoRegistrado)}
-                          </td>
-                          <td>{moedaMeta(p.ritmoIdeal)}</td>
-                          <td>
-                            {p.estimativa == null
-                              ? "—"
-                              : moedaMeta(p.estimativa)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="gp-chart">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={dados.pontos}
-                      margin={{ top: 15, right: 16, left: 4, bottom: 5 }}
-                    >
-                      <CartesianGrid stroke="#e4eaf1" />
-                      <XAxis
-                        dataKey="data"
-                        tickFormatter={(s) =>
-                          String(s).slice(8) + "/" + String(s).slice(5, 7)
-                        }
-                        minTickGap={35}
-                      />
-                      <YAxis
-                        width={65}
-                        domain={["auto", "auto"]}
-                        tickFormatter={(v) =>
-                          Number(v).toLocaleString("pt-BR", {
-                            notation: "compact",
-                          })
-                        }
-                      />
-                      <Tooltip
-                        labelFormatter={(s) => dataBR(String(s))}
-                        formatter={(v) => moedaMeta(Number(v))}
-                      />
-                      <ReferenceLine y={0} stroke="#94a3b8" />
-                      <ReferenceLine
-                        y={dados.limite}
-                        stroke="#b45309"
-                        label="Limite"
-                      />
-                      <Line
-                        type="linear"
-                        dataKey="acumuladoRegistrado"
-                        name="Registrado"
-                        stroke="#153856"
-                        dot={false}
-                        strokeWidth={2}
-                      />
-                      <Line
-                        type="linear"
-                        dataKey="ritmoIdeal"
-                        name="Ritmo ideal"
-                        stroke="#94a3b8"
-                        dot={false}
-                      />
-                      <Line
-                        type="linear"
-                        dataKey="estimativa"
-                        name="Estimativa"
-                        stroke="#2563eb"
-                        strokeDasharray="5 4"
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-              <div className="gp-legend">
-                <span>Azul escuro: registrado</span>
-                <span>Cinza: ritmo ideal</span>
-                <span>Azul tracejado: estimativa</span>
-                <span>Âmbar: limite</span>
-              </div>
-              <details>
-                <summary>Consumo por categoria</summary>
-                <ul>
-                  {dados.categorias.map((c) => (
-                    <li key={c.categoria}>
-                      <span>{c.categoria}</span>
-                      <strong>
-                        {moedaMeta(c.valor)}
-                        {dados.totalRegistrado > 0
-                          ? ` · ${percentual((c.valor / dados.totalRegistrado) * 100)}%`
-                          : ""}
-                      </strong>
-                    </li>
-                  ))}
-                </ul>
-              </details>
+              <GoalEvolution
+                dados={dados}
+                tabela={tabela}
+                aoAlternarTabela={() => setTabela((v) => !v)}
+                aoAmpliar={ampliar}
+              />
             </>
           )}
         </div>
+      )}
+      {expandido && (
+        <GoalDetailDialog meta={meta} aoFechar={() => setExpandido(false)}>
+          <div className="goal-detail-summary">
+            <GoalUsageGauge
+              meta={meta}
+              ritmo={meta.situacaoTemporal === "EM_ANDAMENTO" ? ritmo : null}
+              projecao={projecao}
+            />
+            <div>
+              <p className={`gp-risk gp-risk-${meta.status.toLowerCase()}`}>
+                {risco}
+              </p>
+              <div className="gp-stats">
+                <div>
+                  Limite<strong>{moedaMeta(meta.valorLimite)}</strong>
+                </div>
+                <div>
+                  Utilizado total<strong>{moedaMeta(meta.gastoAtual)}</strong>
+                </div>
+                <div>
+                  Saldo total<strong>{moedaMeta(meta.saldoMeta)}</strong>
+                </div>
+              </div>
+              <p>
+                Alerta: {alerta}% · Limite: 100%. O medidor considera o consumo
+                total da meta, sem alteração pelos filtros.
+              </p>
+              {uso > 100 && (
+                <p className="gp-risk-excedida">
+                  Excedente de{" "}
+                  {moedaMeta(Math.max(0, meta.gastoAtual - meta.valorLimite))}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="gp-evolution">
+            {erro ? (
+              <p role="alert">
+                {erro}{" "}
+                <button
+                  type="button"
+                  onClick={() => setTentativa((v) => v + 1)}
+                >
+                  Tentar novamente
+                </button>
+              </p>
+            ) : !dados ? (
+              <p role="status">Carregando evolução…</p>
+            ) : (
+              <GoalEvolution
+                dados={dados}
+                tabela={tabela}
+                aoAlternarTabela={() => setTabela((v) => !v)}
+              />
+            )}
+          </div>
+        </GoalDetailDialog>
       )}
     </div>
   );

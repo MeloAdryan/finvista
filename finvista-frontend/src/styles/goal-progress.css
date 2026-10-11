@@ -190,3 +190,61 @@
     max-width: 100%;
   }
 }
+
+/* Fase 3: contraste, valores alinhados e excedente separado da ação. */
+.goal-progress-new strong {
+  font-variant-numeric: tabular-nums;
+}
+.gp-bottom-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+}
+.gp-excess-banner {
+  padding: 12px;
+  background: #fff0ef;
+  border: 1px solid #f3c7c3;
+  border-radius: 9px;
+}
+.gp-bottom-actions button {
+  background: transparent;
+  border: 0;
+  min-height: 36px;
+  padding: 8px;
+  color: #173955;
+  font-weight: 600;
+}
+.goal-progress-new button {
+  transition: background 150ms ease;
+  min-height: 36px;
+}
+.goal-progress-new button:focus-visible {
+  outline: 2px solid #db8a27;
+  outline-offset: 3px;
+}
+.gp-state-normal .gp-fill {
+  background: #348369;
+}
+.gp-state-alerta .gp-fill {
+  background: #b57c21;
+}
+.gp-state-excedida .gp-fill,
+.gp-state-excedida .gp-over {
+  background: #ab3030;
+}
+.gp-state-excedida .gp-stats > div:nth-child(n + 2) {
+  background: #fff0ef;
+  color: #9f2828;
+}
+.gp-limit {
+  pointer-events: none;
+}
+.gp-legend {
+  margin-top: 14px;
+}
+.gp-risk {
+  margin-bottom: 10px;
+}

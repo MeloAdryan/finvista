@@ -20,6 +20,7 @@ import {
   compactoFinanceiro,
 } from "../services/financialVisualization";
 import "../styles/financial-waterfall.css";
+import { descreverRegistros } from "../services/comparisonCoverage";
 export default function FinancialWaterfall({
   analise,
   onCategoria,
@@ -43,6 +44,14 @@ export default function FinancialWaterfall({
       className="executive-panel wf-panel"
       aria-labelledby={`wf-title-${id}`}
     >
+      <p className="ax-note">
+        {descreverRegistros(
+          analise.registros?.despesasAtual,
+          analise.registros?.despesasAnterior,
+        )}{" "}
+        As diferenças refletem os registros disponíveis; não confirmam
+        importação completa.
+      </p>
       <div className="wf-heading">
         <div>
           <h2 id={`wf-title-${id}`}>O que mudou nas despesas?</h2>

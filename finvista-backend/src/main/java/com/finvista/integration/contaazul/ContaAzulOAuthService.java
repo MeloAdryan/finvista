@@ -2,56 +2,25 @@ package com.finvista.integration.contaazul;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriUtils;
-
 import java.nio.charset.StandardCharsets;
 
 @Service
 public class ContaAzulOAuthService {
 
-    private static final String SCOPE =
-            "openid profile aws.cognito.signin.user.admin";
+    private final ContaAzulProperties p;
 
-    private final ContaAzulProperties properties;
+    public ContaAzulOAuthService(ContaAzulProperties p) {
+        this.p = p;
+    }
 
-    public ContaAzulOAuthService(ContaAzulProperties properties) {
-        this.properties = properties;
+    private String enc(String v) {
+        return UriUtils.encodeQueryParam(v, StandardCharsets.UTF_8);
     }
 
     public String gerarUrlAutorizacao(String redirectUri, String state) {
-
-        if (redirectUri == null || redirectUri.isBlank()) {
-            throw new IllegalArgumentException("redirectUri é obrigatório.");
-        }
-
-        if (state == null || state.isBlank()) {
-            throw new IllegalArgumentException("state é obrigatório.");
-        }
-
-        String clientId = UriUtils.encodeQueryParam(
-                properties.getClientId(),
-                StandardCharsets.UTF_8
-        );
-
-        String redirectUriEncoded = UriUtils.encodeQueryParam(
-                redirectUri,
-                StandardCharsets.UTF_8
-        );
-
-        String stateEncoded = UriUtils.encodeQueryParam(
-                state,
-                StandardCharsets.UTF_8
-        );
-
-        String scopeEncoded = UriUtils.encodeQueryParam(
-                SCOPE,
-                StandardCharsets.UTF_8
-        );
-
-        return properties.getAuthorizationUrl()
-                + "?response_type=code"
-                + "&client_id=" + clientId
-                + "&redirect_uri=" + redirectUriEncoded
-                + "&state=" + stateEncoded
-                + "&scope=" + scopeEncoded;
+        if (redirectUri == null || redirectUri.isBlank() || state == null || state.isBlank()) {
+            throw new IllegalArgumentException("Callback e state são obrigatórios.");
+        
+        }return "https://login.contaazul.com/#/oauth/authorize?response_type=code&client_id=" + enc(p.getClientId()) + "&redirect_uri=" + enc(redirectUri) + "&state=" + enc(state) + "&scope=" + enc("openid profile aws.cognito.signin.user.admin");
     }
 }

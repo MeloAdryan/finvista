@@ -1,3 +1,4 @@
+import { apiFetch } from "../config/http";
 import { API_URL } from "../config/api";
 
 export type SpendingGoalStatus = "NORMAL" | "ALERTA" | "EXCEDIDA";
@@ -62,7 +63,7 @@ export async function listarMetas(
     ? `${API_URL}/api/metas-gastos?${queryString}`
     : `${API_URL}/api/metas-gastos`;
 
-  const response = await fetch(url, {
+  const response = await apiFetch(url, {
     method: "GET",
     credentials: "include",
   });
@@ -77,7 +78,7 @@ export async function listarMetas(
 export async function criarMeta(
   dados: CreateSpendingGoalRequest,
 ): Promise<void> {
-  const response = await fetch(`${API_URL}/api/metas-gastos`, {
+  const response = await apiFetch(`${API_URL}/api/metas-gastos`, {
     method: "POST",
     credentials: "include",
 

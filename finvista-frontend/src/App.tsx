@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import Dashboard from "./pages/Dashboard";
-import useDragScroll from "./hooks/useDragScroll";
+import AnalysisPeriodProvider from "./contexts/AnalysisPeriodProvider";
 import SpendingGoals from "./pages/SpendingGoals";
 
 import ImportData from "./pages/ImportData";
@@ -26,6 +26,7 @@ import Budgets from "./pages/Budgets";
 import History from "./pages/History";
 
 import ClientSelector from "./components/ClientSelector";
+import AdminRegistration from "./components/AdminRegistration";
 
 import {
   obterClienteAtual,
@@ -55,7 +56,8 @@ type PaginaAtiva =
   | "orcamentos"
   | "fluxo-caixa"
   | "historico"
-  | "importacao";
+  | "importacao"
+  | "cadastros";
 
 function DashboardIcon() {
   return (
@@ -183,6 +185,16 @@ function ImportIcon() {
   );
 }
 
+function ClientsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="9" cy="7" r="3" />
+      <path d="M3 21v-3a6 6 0 0 1 12 0v3" />
+      <path d="M16 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v3" />
+    </svg>
+  );
+}
+
 function LogoutIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -199,11 +211,6 @@ function App() {
   const location = useLocation();
 
   const navigate = useNavigate();
-  const {
-    ref: dragScrollRef,
-    arrastando,
-    iniciarArrasto,
-  } = useDragScroll<HTMLElement>();
 
   const [usuario, setUsuario] = useState<AuthUser | null>(null);
 
@@ -217,23 +224,25 @@ function App() {
     useState<FinancialReference | null>(null);
 
   const paginaAtiva: PaginaAtiva =
-    location.pathname === "/dashboard"
-      ? "dashboard"
-      : location.pathname === "/projecao"
-        ? "projecao"
-        : location.pathname === "/fluxo-caixa"
-          ? "fluxo-caixa"
-          : location.pathname === "/centros-custo"
-            ? "centros-custo"
-            : location.pathname === "/despesas"
-              ? "despesas"
-              : location.pathname === "/orcamentos"
-                ? "orcamentos"
-                : location.pathname === "/historico"
-                  ? "historico"
-                  : location.pathname === "/importar"
-                    ? "importacao"
-                    : "metas";
+    location.pathname === "/admin/cadastros" && usuario?.perfil === "ADMIN"
+      ? "cadastros"
+      : location.pathname === "/dashboard"
+        ? "dashboard"
+        : location.pathname === "/projecao"
+          ? "projecao"
+          : location.pathname === "/fluxo-caixa"
+            ? "fluxo-caixa"
+            : location.pathname === "/centros-custo"
+              ? "centros-custo"
+              : location.pathname === "/despesas"
+                ? "despesas"
+                : location.pathname === "/orcamentos"
+                  ? "orcamentos"
+                  : location.pathname === "/historico"
+                    ? "historico"
+                    : location.pathname === "/importar"
+                      ? "importacao"
+                      : "metas";
 
   const [sidebarRecolhida, setSidebarRecolhida] = useState(false);
 
@@ -468,7 +477,11 @@ function App() {
     );
   }
 
-  if (usuario.perfil === "ADMIN" && !clienteAtual) {
+  if (
+    usuario.perfil === "ADMIN" &&
+    !clienteAtual &&
+    paginaAtiva !== "cadastros"
+  ) {
     return <ClientSelector onSelecionar={selecionarClienteAdmin} />;
   }
   const usuarioAdmin = usuario.perfil === "ADMIN";
@@ -503,7 +516,18 @@ function App() {
             </svg>
           </button>
 
-<div className="finvista-brand"><img className="finvista-brand-image" src={logoEscuro} alt="FinVista — Financial Intelligence" /><img className="finvista-brand-icon" src={marcaIcone} alt="FinVista" /></div>
+          <div className="finvista-brand">
+            <img
+              className="finvista-brand-image"
+              src={logoEscuro}
+              alt="FinVista — Financial Intelligence"
+            />
+            <img
+              className="finvista-brand-icon"
+              src={marcaIcone}
+              alt="FinVista"
+            />
+          </div>
 
           <div className="finvista-sidebar-divider" />
 
@@ -715,6 +739,26 @@ function App() {
                 </span>
 
                 <a
+                  className={`finvista-nav-item ${paginaAtiva === "cadastros" ? "finvista-nav-item-active" : ""}`}
+                  href="/admin/cadastros"
+                  title="Cadastrar clientes e usuários"
+                  aria-current={
+                    paginaAtiva === "cadastros" ? "page" : undefined
+                  }
+                  onClick={(event) => {
+                    event.preventDefault();
+                    fecharMenuMobile();
+                    navigate("/admin/cadastros");
+                    window.scrollTo({ top: 0 });
+                  }}
+                >
+                  <span className="finvista-nav-icon">
+                    <ClientsIcon />
+                  </span>
+                  <span>Cadastrar clientes e usuários</span>
+                </a>
+
+                <a
                   className={`finvista-nav-item ${
                     paginaAtiva === "importacao"
                       ? "finvista-nav-item-active"
@@ -786,23 +830,25 @@ function App() {
               <span className="finvista-topbar-eyebrow">FINVISTA</span>
 
               <h1>
-                {paginaAtiva === "dashboard"
-                  ? "Painel executivo"
-                  : paginaAtiva === "metas"
-                    ? "Metas financeiras"
-                    : paginaAtiva === "projecao"
-                      ? "Projeção financeira"
-                      : paginaAtiva === "fluxo-caixa"
-                        ? "Fluxo de caixa"
-                        : paginaAtiva === "centros-custo"
-                          ? "Centros de custo"
-                          : paginaAtiva === "despesas"
-                            ? "Despesas"
-                            : paginaAtiva === "orcamentos"
-                              ? "Orçamentos"
-                              : paginaAtiva === "historico"
-                                ? "Histórico"
-                                : "Importação de dados"}
+                {paginaAtiva === "cadastros"
+                  ? "Clientes e usuários"
+                  : paginaAtiva === "dashboard"
+                    ? "Painel executivo"
+                    : paginaAtiva === "metas"
+                      ? "Metas financeiras"
+                      : paginaAtiva === "projecao"
+                        ? "Projeção financeira"
+                        : paginaAtiva === "fluxo-caixa"
+                          ? "Fluxo de caixa"
+                          : paginaAtiva === "centros-custo"
+                            ? "Centros de custo"
+                            : paginaAtiva === "despesas"
+                              ? "Despesas"
+                              : paginaAtiva === "orcamentos"
+                                ? "Orçamentos"
+                                : paginaAtiva === "historico"
+                                  ? "Histórico"
+                                  : "Importação de dados"}
               </h1>
             </div>
           </div>
@@ -873,41 +919,50 @@ function App() {
           </div>
         </header>
 
-        <main
-          ref={dragScrollRef}
-          className={`finvista-main finvista-drag-scroll ${
-            arrastando ? "finvista-drag-scroll-active" : ""
-          }`}
-          onMouseDown={iniciarArrasto}
+        <AnalysisPeriodProvider
+          key={`${usuario.id}:${clienteAtual?.id ?? "cliente-sessao"}`}
         >
-          {paginaAtiva === "dashboard" ? (
-            <Dashboard key={clienteAtual?.id ?? "sem-cliente"} />
-          ) : paginaAtiva === "metas" ? (
-            <SpendingGoals />
-          ) : paginaAtiva === "projecao" ? (
-            <Projection />
-          ) : paginaAtiva === "fluxo-caixa" ? (
-            <CashFlow />
-          ) : paginaAtiva === "centros-custo" ? (
-            <CostCenters />
-          ) : paginaAtiva === "despesas" ? (
-            <Expenses />
-          ) : paginaAtiva === "orcamentos" ? (
-            <Budgets />
-          ) : paginaAtiva === "historico" ? (
-            <History key={clienteAtual?.id ?? "sem-cliente"} />
-          ) : usuarioAdmin ? (
-            <ImportData
-              key={clienteAtual?.id ?? "sem-cliente"}
-              cliente={clienteAtual}
-            />
-          ) : (
-            <SpendingGoals />
-          )}
-        </main>
+          <main className="finvista-main">
+            {paginaAtiva === "cadastros" && usuarioAdmin ? (
+              <AdminRegistration
+                onVoltar={() => navigate("/metas")}
+                textoVoltar="Voltar às metas"
+              />
+            ) : paginaAtiva === "dashboard" ? (
+              <Dashboard key={clienteAtual?.id ?? "sem-cliente"} />
+            ) : paginaAtiva === "metas" ? (
+              <SpendingGoals />
+            ) : paginaAtiva === "projecao" ? (
+              <Projection />
+            ) : paginaAtiva === "fluxo-caixa" ? (
+              <CashFlow />
+            ) : paginaAtiva === "centros-custo" ? (
+              <CostCenters />
+            ) : paginaAtiva === "despesas" ? (
+              <Expenses />
+            ) : paginaAtiva === "orcamentos" ? (
+              <Budgets />
+            ) : paginaAtiva === "historico" ? (
+              <History key={clienteAtual?.id ?? "sem-cliente"} />
+            ) : usuarioAdmin ? (
+              <ImportData
+                key={clienteAtual?.id ?? "sem-cliente"}
+                cliente={clienteAtual}
+              />
+            ) : (
+              <SpendingGoals />
+            )}
+          </main>
+        </AnalysisPeriodProvider>
 
         <footer className="finvista-footer">
-<div className="finvista-footer-brand"><img className="finvista-brand-image" src={logoEscuro} alt="FinVista — Financial Intelligence" /></div>
+          <div className="finvista-footer-brand">
+            <img
+              className="finvista-brand-image"
+              src={logoEscuro}
+              alt="FinVista — Financial Intelligence"
+            />
+          </div>
 
           <div className="finvista-footer-info">
             <div className="finvista-footer-item">
