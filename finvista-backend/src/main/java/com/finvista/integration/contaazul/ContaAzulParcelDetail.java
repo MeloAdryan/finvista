@@ -21,7 +21,58 @@ public record ContaAzulParcelDetail(
         BigDecimal pendente,
         @JsonProperty("valor_composicao")
         Composicao composicao,
-        Evento evento) {
+        Evento evento,
+        @JsonProperty(value = "perda", access = JsonProperty.Access.WRITE_ONLY)
+        Ajuste perda,
+        @JsonProperty(value = "renegociacao", access = JsonProperty.Access.WRITE_ONLY)
+        Ajuste renegociacao) {
+
+    public ContaAzulParcelDetail(String id, String descricao, String status, LocalDate vencimento,
+            BigDecimal liquido, BigDecimal pago, BigDecimal pendente, Composicao composicao, Evento evento) {
+        this(id, descricao, status, vencimento, liquido, pago, pendente, composicao, evento, null, null);
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Ajuste(BigDecimal valor) {}
+
+    @JsonProperty("valor_liquido_conferido")
+    public BigDecimal liquidoConferido() {
+        if (liquido != null) {
+            return liquido;
+        }
+        if (perda != null || renegociacao != null || composicao == null || evento == null || evento.condicao() == null
+                || !Integer.valueOf(1).equals(evento.condicao().quantidade())
+                || !("RECEITA".equals(evento.tipo()) || "DESPESA".equals(evento.tipo()))
+                || !dinheiro(composicao.bruto()) || !dinheiro(composicao.liquido())
+                || !dinheiro(pago) || !dinheiro(pendente)
+                || !zero(composicao.juros()) || !zero(composicao.multa())
+                || !zero(composicao.desconto()) || !zero(composicao.taxa())
+                || composicao.bruto().compareTo(composicao.liquido()) != 0
+                || pago.add(pendente).compareTo(composicao.liquido()) != 0) {
+            return null;
+        }
+        boolean emAberto = "PENDENTE".equals(status) || "EM_ABERTO".equals(status) || "ATRASADO".equals(status);
+        boolean quitado = "QUITADO".equals(status) || "RECEBIDO".equals(status);
+        if (!(emAberto && pago.signum() == 0) && !(quitado && pendente.signum() == 0)) {
+            return null;
+        }
+        return composicao.liquido();
+    }
+
+    @JsonProperty("origem_valor_liquido")
+    public String origemValorLiquido() {
+        return liquido != null ? "VALOR_TOTAL_LIQUIDO"
+                : liquidoConferido() != null ? "COMPOSICAO_CONFERIDA" : "NAO_CONFERIDO";
+    }
+
+    private static boolean dinheiro(BigDecimal valor) {
+        return valor != null && valor.signum() >= 0 && valor.stripTrailingZeros().scale() <= 2
+                && valor.compareTo(new BigDecimal("9999999999999.99")) <= 0;
+    }
+
+    private static boolean zero(BigDecimal valor) {
+        return valor != null && valor.signum() == 0;
+    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Composicao(

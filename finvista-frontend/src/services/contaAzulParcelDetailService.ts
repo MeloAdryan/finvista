@@ -20,6 +20,11 @@ export interface ParcelaDetalhe {
   status: string | null;
   data_vencimento: string | null;
   valor_total_liquido: number | null;
+  valor_liquido_conferido?: number | null;
+  origem_valor_liquido?:
+    | "VALOR_TOTAL_LIQUIDO"
+    | "COMPOSICAO_CONFERIDA"
+    | "NAO_CONFERIDO";
   valor_pago: number | null;
   nao_pago: number | null;
   valor_composicao: {
