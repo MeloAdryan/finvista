@@ -8,9 +8,9 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
-/**
- * Cliente HTTP: consulta a API externa e devolve somente o DTO permitido.
- */
+
+
+
 @Component
 public class ContaAzulParcelDetailClient {
 
@@ -21,13 +21,14 @@ public class ContaAzulParcelDetailClient {
         this(criarHttp());
     }
 
-    // Este construtor permite fornecer um HTTP simulado nos testes.
     public ContaAzulParcelDetailClient(RestClient http) {
         this.http = http;
     }
 
     private static RestClient criarHttp() {
         var factory = new SimpleClientHttpRequestFactory();
+    
+
         factory.setConnectTimeout(5000);
         factory.setReadTimeout(20000);
         return RestClient.builder().requestFactory(factory).build();
@@ -61,11 +62,10 @@ public class ContaAzulParcelDetailClient {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     "A Conta Azul não concluiu a consulta dos detalhes.");
         } catch (Exception erro) {
-            // Não encaminhar a resposta externa nem a causa: elas podem conter dados sensíveis.
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+               throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     "Os detalhes retornados não são válidos. Nenhum lançamento foi importado.");
         }
-    }
+    } 
 
     private void validarRateios(ContaAzulParcelDetail detalhe) {
         if (detalhe.evento() == null || detalhe.evento().rateio() == null) {

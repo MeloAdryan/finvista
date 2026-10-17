@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 import {
   createBudget,
@@ -23,6 +24,10 @@ import {
 } from "../services/budgetAnalysis";
 
 function Budgets() {
+  const { search } = useLocation();
+  const [orcamentoAlvo] = useState(
+    () => Number(new URLSearchParams(search).get("orcamento")) || null,
+  );
   const [orcamentos, setOrcamentos] = useState<BudgetPipelineData[]>([]);
   const [filtro, setFiltro] = useState<FiltroOrcamento>({
     modo: "TODOS",
@@ -62,11 +67,13 @@ function Budgets() {
         ]);
 
         setOrcamentos(dadosOrcamentos);
-        const recente = [...dadosOrcamentos].sort(
-          (a, b) =>
-            b.dataInicio.localeCompare(a.dataInicio) ||
-            b.dataFim.localeCompare(a.dataFim),
-        )[0];
+        const recente =
+          dadosOrcamentos.find((item) => item.id === orcamentoAlvo) ??
+          [...dadosOrcamentos].sort(
+            (a, b) =>
+              b.dataInicio.localeCompare(a.dataInicio) ||
+              b.dataFim.localeCompare(a.dataFim),
+          )[0];
         if (recente) {
           setFiltro({
             modo: "EXATO",
@@ -91,7 +98,7 @@ function Budgets() {
     }
 
     void carregarPagina();
-  }, []);
+  }, [orcamentoAlvo]);
 
   const visiveis = useMemo(
     () => filtrarOrcamentos(orcamentos, filtro),

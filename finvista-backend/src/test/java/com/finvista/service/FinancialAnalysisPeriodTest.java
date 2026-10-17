@@ -36,10 +36,10 @@ class FinancialAnalysisPeriodTest {
                 7L, mes.atDay(1), mes.atEndOfMonth()
         )).thenReturn(List.of(classificada, semClassificacao, receita, foraDoMes, semValor, semData));
 
-        List<ExpenseDistributionResponse> categorias =
-                new ExpenseDistributionService(repository, contexto).listarNoMes(mes);
-        List<CostCenterResponse> centros =
-                new CostCenterService(repository, contexto).listarNoMes(mes);
+        List<ExpenseDistributionResponse> categorias
+                = new ExpenseDistributionService(repository, contexto).listarNoMes(mes);
+        List<CostCenterResponse> centros
+                = new CostCenterService(repository, contexto).listarNoMes(mes);
 
         assertEquals(2, categorias.size());
         assertEquals(2, centros.size());

@@ -34,7 +34,7 @@ public class SpendingGoalTimelineService {
         SpendingGoal meta = goals.buscarPorId(id); // busca por id E cliente autenticado.
         LocalDate inicio = meta.getDataInicio(), fim = meta.getDataFim();
         long quantidade = ChronoUnit.DAYS.between(inicio, fim) + 1;
-        if (quantidade < 1 || quantidade > 366) {
+        if (quantidade < 1 || quantidade > 3660) {
             throw new IllegalArgumentException("Período da meta inválido para o acompanhamento diário.");
         }
         int dias = (int) quantidade;

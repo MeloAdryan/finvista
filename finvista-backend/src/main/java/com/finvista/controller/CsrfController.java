@@ -13,7 +13,6 @@ public class CsrfController {
 
     @GetMapping("/csrf")
     public ResponseEntity<TokenResponse> token(CsrfToken token) {
-        // Materializa o token fornecido pelo filtro, sem criar um token paralelo.
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
                 .body(new TokenResponse(token.getHeaderName(), token.getToken()));
     }

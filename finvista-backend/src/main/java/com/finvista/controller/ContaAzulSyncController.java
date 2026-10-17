@@ -27,8 +27,8 @@ import java.util.List;
 @RequestMapping("/api/importacoes/conta-azul/sincronizacao")
 public class ContaAzulSyncController {
 
-    private static final ZoneId FUSO_HORARIO =
-            ZoneId.of("America/Sao_Paulo");
+    private static final ZoneId FUSO_HORARIO
+            = ZoneId.of("America/Sao_Paulo");
 
     private final ContaAzulSyncService service;
     private final ObjectMapper json;
@@ -45,8 +45,7 @@ public class ContaAzulSyncController {
     public Plano planejar(
             @RequestParam("arquivo") MultipartFile arquivo,
             @RequestParam(value = "dataCorte", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate dataCorte
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataCorte
     ) {
         try {
             return service.planejar(
@@ -64,13 +63,13 @@ public class ContaAzulSyncController {
             @RequestParam("token") String token,
             @RequestParam("decisoes") String decisoes,
             @RequestParam("dataCorte")
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate dataCorte
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataCorte
     ) {
         try {
             List<Decisao> escolhas = json.readValue(
                     decisoes,
-                    new TypeReference<List<Decisao>>() {}
+                    new TypeReference<List<Decisao>>() {
+            }
             );
 
             return service.aplicar(

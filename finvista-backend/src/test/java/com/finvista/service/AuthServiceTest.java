@@ -79,8 +79,8 @@ class AuthServiceTest {
                 )
         ).thenReturn(Optional.empty());
 
-        IllegalArgumentException exception =
-                assertThrows(
+        IllegalArgumentException exception
+                = assertThrows(
                         IllegalArgumentException.class,
                         () -> authService.login(
                                 new LoginRequest(
@@ -112,8 +112,8 @@ class AuthServiceTest {
                 )
         ).thenReturn(Optional.of(usuario));
 
-        IllegalArgumentException exception =
-                assertThrows(
+        IllegalArgumentException exception
+                = assertThrows(
                         IllegalArgumentException.class,
                         () -> authService.login(
                                 new LoginRequest(
@@ -147,8 +147,8 @@ class AuthServiceTest {
                 )
         ).thenReturn(Optional.of(usuario));
 
-        IllegalArgumentException exception =
-                assertThrows(
+        IllegalArgumentException exception
+                = assertThrows(
                         IllegalArgumentException.class,
                         () -> authService.login(
                                 new LoginRequest(
@@ -166,8 +166,8 @@ class AuthServiceTest {
 
     @Test
     void deveRecusarEmailVazio() {
-        IllegalArgumentException exception =
-                assertThrows(
+        IllegalArgumentException exception
+                = assertThrows(
                         IllegalArgumentException.class,
                         () -> authService.login(
                                 new LoginRequest(
@@ -187,8 +187,8 @@ class AuthServiceTest {
 
     @Test
     void deveRecusarSenhaVazia() {
-        IllegalArgumentException exception =
-                assertThrows(
+        IllegalArgumentException exception
+                = assertThrows(
                         IllegalArgumentException.class,
                         () -> authService.login(
                                 new LoginRequest(

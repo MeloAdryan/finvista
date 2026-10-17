@@ -12,6 +12,7 @@ import DashboardFilteredDetail from "../components/DashboardFilteredDetail";
 import "../styles/dashboard-filters.css";
 import FinancialHelp from "../components/FinancialHelp";
 import DashboardQuickActions from "../components/DashboardQuickActions";
+import FinancialAlertsPanel from "../components/FinancialAlertsPanel";
 
 import {
   listarMetas,
@@ -414,6 +415,14 @@ function Dashboard() {
           />
         </article>
       </section>
+
+      <FinancialAlertsPanel
+        key={`${analise.clienteId}:${analise.inicio}:${analise.fim}:${analise.categoria ?? ""}`}
+        clienteId={analise.clienteId}
+        inicio={analise.inicio}
+        fim={analise.fim}
+        categoria={analise.categoria}
+      />
 
       <section className="executive-overview-grid">
         <DashboardMonthlyChart analise={analise} />

@@ -13,11 +13,12 @@ public record FinancialChangesResponse(
         int lancamentosAtual,
         int lancamentosAnterior,
         List<CategoryChange> categorias
-) {
+        ) {
+
     public record CategoryChange(
             String categoria,
             BigDecimal valorAtual,
             BigDecimal valorAnterior,
             BigDecimal diferenca
-    ) {}
+            ) {}
 }

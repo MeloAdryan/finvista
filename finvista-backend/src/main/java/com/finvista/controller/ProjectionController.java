@@ -18,8 +18,8 @@ public class ProjectionController {
     public ProjectionController(
             ProjectionService projectionService
     ) {
-        this.projectionService =
-                projectionService;
+        this.projectionService
+                = projectionService;
     }
 
     @GetMapping

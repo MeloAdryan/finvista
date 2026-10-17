@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import Dashboard from "./pages/Dashboard";
+import AlertCenter from "./pages/AlertCenter";
 import AnalysisPeriodProvider from "./contexts/AnalysisPeriodProvider";
 import SpendingGoals from "./pages/SpendingGoals";
 
@@ -49,6 +50,7 @@ import "./styles/app-layout.css";
 
 type PaginaAtiva =
   | "dashboard"
+  | "alertas"
   | "centros-custo"
   | "metas"
   | "projecao"
@@ -228,21 +230,23 @@ function App() {
       ? "cadastros"
       : location.pathname === "/dashboard"
         ? "dashboard"
-        : location.pathname === "/projecao"
-          ? "projecao"
-          : location.pathname === "/fluxo-caixa"
-            ? "fluxo-caixa"
-            : location.pathname === "/centros-custo"
-              ? "centros-custo"
-              : location.pathname === "/despesas"
-                ? "despesas"
-                : location.pathname === "/orcamentos"
-                  ? "orcamentos"
-                  : location.pathname === "/historico"
-                    ? "historico"
-                    : location.pathname === "/importar"
-                      ? "importacao"
-                      : "metas";
+        : location.pathname === "/alertas"
+          ? "alertas"
+          : location.pathname === "/projecao"
+            ? "projecao"
+            : location.pathname === "/fluxo-caixa"
+              ? "fluxo-caixa"
+              : location.pathname === "/centros-custo"
+                ? "centros-custo"
+                : location.pathname === "/despesas"
+                  ? "despesas"
+                  : location.pathname === "/orcamentos"
+                    ? "orcamentos"
+                    : location.pathname === "/historico"
+                      ? "historico"
+                      : location.pathname === "/importar"
+                        ? "importacao"
+                        : "metas";
 
   const [sidebarRecolhida, setSidebarRecolhida] = useState(false);
 
@@ -570,6 +574,24 @@ function App() {
               <span>Painel executivo</span>
             </a>
 
+            <a
+              className={`finvista-nav-item ${paginaAtiva === "alertas" ? "finvista-nav-item-active" : ""}`}
+              href="/alertas"
+              onClick={(event) => {
+                event.preventDefault();
+                setMenuMobileAberto(false);
+                navigate("/alertas");
+              }}
+              aria-current={paginaAtiva === "alertas" ? "page" : undefined}
+            >
+              <span className="finvista-nav-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3a6 6 0 0 0-6 6v5l-2 3h16l-2-3V9a6 6 0 0 0-6-6Z" />
+                  <path d="M9 20h6" />
+                </svg>
+              </span>
+              <span>Central de alertas</span>
+            </a>
             <span className="finvista-navigation-label finvista-navigation-group">
               FINANCEIRO
             </span>
@@ -834,21 +856,23 @@ function App() {
                   ? "Clientes e usuários"
                   : paginaAtiva === "dashboard"
                     ? "Painel executivo"
-                    : paginaAtiva === "metas"
-                      ? "Metas financeiras"
-                      : paginaAtiva === "projecao"
-                        ? "Projeção financeira"
-                        : paginaAtiva === "fluxo-caixa"
-                          ? "Fluxo de caixa"
-                          : paginaAtiva === "centros-custo"
-                            ? "Centros de custo"
-                            : paginaAtiva === "despesas"
-                              ? "Despesas"
-                              : paginaAtiva === "orcamentos"
-                                ? "Orçamentos"
-                                : paginaAtiva === "historico"
-                                  ? "Histórico"
-                                  : "Importação de dados"}
+                    : paginaAtiva === "alertas"
+                      ? "Central de Alertas"
+                      : paginaAtiva === "metas"
+                        ? "Metas financeiras"
+                        : paginaAtiva === "projecao"
+                          ? "Projeção financeira"
+                          : paginaAtiva === "fluxo-caixa"
+                            ? "Fluxo de caixa"
+                            : paginaAtiva === "centros-custo"
+                              ? "Centros de custo"
+                              : paginaAtiva === "despesas"
+                                ? "Despesas"
+                                : paginaAtiva === "orcamentos"
+                                  ? "Orçamentos"
+                                  : paginaAtiva === "historico"
+                                    ? "Histórico"
+                                    : "Importação de dados"}
               </h1>
             </div>
           </div>
@@ -930,6 +954,8 @@ function App() {
               />
             ) : paginaAtiva === "dashboard" ? (
               <Dashboard key={clienteAtual?.id ?? "sem-cliente"} />
+            ) : paginaAtiva === "alertas" ? (
+              <AlertCenter />
             ) : paginaAtiva === "metas" ? (
               <SpendingGoals />
             ) : paginaAtiva === "projecao" ? (

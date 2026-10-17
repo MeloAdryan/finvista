@@ -9,14 +9,17 @@ import java.util.Optional;
 public interface SpendingGoalRepository
         extends JpaRepository<SpendingGoal, Long> {
 
+    List<SpendingGoal> findBySerieIdAndClienteIdOrderByDataInicioAsc(String serieId, Long clienteId);
+
     List<SpendingGoal>
-    findByClienteIdOrderByDataInicioDesc(
-            Long clienteId
-    );
+            findByClienteIdOrderByDataInicioDesc(
+                    Long clienteId
+            );
 
     Optional<SpendingGoal>
-    findByIdAndClienteId(
-            Long id,
-            Long clienteId
-    );
+            findByIdAndClienteId(
+                    Long id,
+                    Long clienteId
+            );
 }
+

@@ -161,8 +161,6 @@ class CostCenterServiceTest {
         );
     }
 
-    
-
     @Test
     void deveRetornarListaVaziaQuandoNaoExistiremDespesas() {
 

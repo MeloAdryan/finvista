@@ -15,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-
 class CashFlowServiceTest {
 
     private static final Long CLIENTE_ID = 1L;
@@ -25,7 +24,6 @@ class CashFlowServiceTest {
     private ClienteContextService clienteContextService;
 
     private FinancialReferenceService financialReferenceService;
-
 
     private CashFlowService service;
 
@@ -41,14 +39,14 @@ class CashFlowServiceTest {
         );
 
         financialReferenceService = mock(
-        FinancialReferenceService.class
-);
+                FinancialReferenceService.class
+        );
 
-when(
-        financialReferenceService.obterMesReferencia()
-).thenReturn(
-        YearMonth.of(2026, 10)
-);
+        when(
+                financialReferenceService.obterMesReferencia()
+        ).thenReturn(
+                YearMonth.of(2026, 10)
+        );
 
         when(
                 clienteContextService.getClienteAtualId()
@@ -61,9 +59,9 @@ when(
                 );
 
         service = new CashFlowService(
-        transactionAggregationService,
-        financialReferenceService
-);
+                transactionAggregationService,
+                financialReferenceService
+        );
     }
 
     @Test
@@ -136,13 +134,8 @@ when(
                         despesaOutubro
                 )
         );
-
-        /*
-         * "todos" representa todo o período existente
-         * nos dados do cliente.
-         *
-         * Neste teste existem apenas setembro e outubro.
-         */
+        
+        
         var resultado
                 = service.obterFluxoCaixa("todos");
 

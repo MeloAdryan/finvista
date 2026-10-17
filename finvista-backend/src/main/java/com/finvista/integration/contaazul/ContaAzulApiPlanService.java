@@ -10,9 +10,7 @@ import java.util.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Prepara uma conferência. Não cria, atualiza ou vincula lançamentos.
- */
+
 @Service
 public class ContaAzulApiPlanService {
 
@@ -48,7 +46,6 @@ public class ContaAzulApiPlanService {
         }
         var avisos = new ArrayList<String>();
         validar(parcela, avisos);
-        // Entidade externa é cliente/fornecedor; não reutilizá-la como ID da parcela.
         var existentes = lancamentos.findByClienteId(clienteId);
         var identificados = existentes.stream().filter(l -> ORIGEM_API.equals(l.getOrigem())
                 && parcela.id().equalsIgnoreCase(texto(l.getDocumentoReferencia()))).toList();
@@ -93,7 +90,6 @@ public class ContaAzulApiPlanService {
         if (!texto(l.getDescricao()).equalsIgnoreCase(texto(p.descricao()))) {
             return false;
         }
-        // Conservador: a diferença no valor não elimina uma possível parcela já ajustada.
         return (p.vencimento() != null && p.vencimento().equals(l.getDataVencimento()))
                 || (p.evento().competencia() != null && p.evento().competencia().equals(l.getDataCompetencia()));
     }

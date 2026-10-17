@@ -18,8 +18,8 @@ public class HistoryController {
     public HistoryController(
             HistoryService historyService
     ) {
-        this.historyService =
-                historyService;
+        this.historyService
+                = historyService;
     }
 
     @GetMapping

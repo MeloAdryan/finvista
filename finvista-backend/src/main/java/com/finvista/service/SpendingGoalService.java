@@ -7,6 +7,9 @@ import com.finvista.repository.FinancialTransactionRepository;
 import com.finvista.repository.SpendingGoalRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -27,7 +30,6 @@ public class SpendingGoalService {
 
     private ExpenseAllocationService expenseAllocationService;
 
-    // O Spring usa este construtor para incluir os rateios nos cálculos.
     @Autowired
     public SpendingGoalService(
             SpendingGoalRepository goals,
@@ -40,7 +42,6 @@ public class SpendingGoalService {
         this.expenseAllocationService = Objects.requireNonNull(allocations);
     }
 
-    // Mantém a compatibilidade com os testes anteriores.
     public SpendingGoalService(
             SpendingGoalRepository spendingGoalRepository,
             FinancialTransactionRepository financialTransactionRepository,
@@ -54,7 +55,7 @@ public class SpendingGoalService {
     }
 
     public SpendingGoal salvar(SpendingGoal meta) {
-        // Defesa adicional para chamadas internas: criação nunca aceita uma entidade existente.
+
         if (meta != null && meta.getId() != null) {
             throw new IllegalArgumentException("A criação de meta não permite informar um ID existente.");
         }
@@ -62,7 +63,6 @@ public class SpendingGoalService {
 
         meta.setTipo(meta.getTipo().trim().toUpperCase());
 
-        // O proprietário vem do contexto do usuário conectado.
         meta.setCliente(clienteContextService.getClienteAtual());
 
         return spendingGoalRepository.save(meta);
@@ -73,6 +73,20 @@ public class SpendingGoalService {
 
         return spendingGoalRepository
                 .findByClienteIdOrderByDataInicioDesc(clienteId);
+    }
+
+    @Transactional
+    public void excluir(Long id) {
+        if (!clienteContextService.isAdmin()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Apenas administradores podem excluir metas.");
+        }
+        Long clienteId = obterClienteIdAtual();
+        SpendingGoal meta = spendingGoalRepository.findByIdAndClienteId(id, clienteId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Meta não encontrada para o cliente selecionado."));
+        spendingGoalRepository.delete(meta);
+        spendingGoalRepository.flush();
     }
 
     public SpendingGoal buscarPorId(Long id) {
@@ -96,7 +110,6 @@ public class SpendingGoalService {
         String centroCustoNormalizado = normalizarFiltro(centroCusto);
         String categoriaNormalizada = normalizarFiltro(categoria);
 
-        // Os filtros restringem as despesas exibidas, sem remover metas.
         return listarMetas()
                 .stream()
                 .map(meta -> calcularSituacao(
@@ -137,7 +150,6 @@ public class SpendingGoalService {
 
         Long clienteId = meta.getCliente().getId();
 
-        // Busca apenas despesas do proprietário e do período da meta.
         List<FinancialTransaction> despesas = financialTransactionRepository
                 .findByClienteIdAndTipoAndDataBetweenOrderByDataAsc(
                         clienteId,
@@ -146,7 +158,6 @@ public class SpendingGoalService {
                         meta.getDataFim()
                 );
 
-        // Divide as despesas e aplica os critérios cadastrados na meta.
         List<ExpenseAllocationService.Parte> despesasDaMeta
                 = partes(clienteId, despesas)
                         .stream()
@@ -162,7 +173,6 @@ public class SpendingGoalService {
 
         BigDecimal gastoAtual = somarDespesas(despesasDaMeta);
 
-        // Combina os critérios da meta com os filtros escolhidos na tela.
         List<ExpenseAllocationService.Parte> despesasNoFiltro
                 = despesasDaMeta.stream()
                         .filter(parte -> correspondeCentroCusto(
@@ -194,7 +204,6 @@ public class SpendingGoalService {
                 gastoAtual
         );
 
-        // O status usa o consumo da meta, independentemente do filtro da tela.
         String status = calcularStatus(
                 percentualUtilizado,
                 meta.getPercentualAlerta()
@@ -217,7 +226,8 @@ public class SpendingGoalService {
                 percentualFiltrado,
                 filtroCategoria,
                 filtroCentroCusto
-        );
+        ).comSerie(meta.getSerieId() == null ? null : new SpendingGoalResponse.Serie(
+                meta.getSerieId(), meta.getNome(), meta.getVigenciaInicio(), meta.getVigenciaFim(), meta.getLimitePeriodo()));
     }
 
     private boolean correspondeCentroCusto(
@@ -390,4 +400,3 @@ public class SpendingGoalService {
         }
     }
 }
-

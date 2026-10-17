@@ -15,8 +15,8 @@ public class DashboardController {
     public DashboardController(
             DashboardService dashboardService
     ) {
-        this.dashboardService =
-                dashboardService;
+        this.dashboardService
+                = dashboardService;
     }
 
     @GetMapping

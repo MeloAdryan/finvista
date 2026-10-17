@@ -8,9 +8,6 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-/**
- * Controller: valida a requisição do navegador e coordena a consulta.
- */
 @RestController
 @RequestMapping("/api/integracoes/conta-azul")
 public class ContaAzulParcelDetailController {
@@ -32,7 +29,7 @@ public class ContaAzulParcelDetailController {
             @PathVariable(name = "id") String id,
             @RequestParam(name = "clienteId") Long clienteId) {
         contexto.validarAdministrador();
-        // Forma canônica de UUID: não aceitar barras, caminhos ou IDs abreviados.
+
         if (clienteId == null || clienteId <= 0 || id == null
                 || !id.matches("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) {
             throw new IllegalArgumentException("Informe empresa e identificador válido da parcela.");

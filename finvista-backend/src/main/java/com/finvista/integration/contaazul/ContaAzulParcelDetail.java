@@ -6,10 +6,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * DTO: descreve os campos da resposta, sem acesso ao banco e sem regras de
- * importação.
- */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record ContaAzulParcelDetail(
         String id,

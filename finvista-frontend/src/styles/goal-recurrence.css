@@ -1,0 +1,114 @@
+.meta-cadastro-campos {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.meta-resumo-periodos {
+  margin-block: 12px 18px;
+  line-height: 1.6;
+  color: #526a87;
+  font-size: 0.875rem;
+}
+
+.meta-cadastro-legenda {
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.meta-recorrencia-previa {
+  margin-block: 18px;
+  padding: 16px;
+  border: 1px solid #cbd9e9;
+  border-radius: 10px;
+  background: #f7fafc;
+  min-width: 0;
+}
+
+.meta-recorrencia-previa p,
+.meta-serie-periodo p {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  margin: 0 0 12px;
+}
+
+.meta-recorrencia-previa h3 {
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 16px 0 10px;
+}
+
+.meta-previa-tabela {
+  max-height: 320px;
+  max-width: 100%;
+  overflow: auto;
+}
+
+.meta-previa-tabela table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.meta-previa-tabela th,
+.meta-previa-tabela td {
+  padding: 10px;
+  border-bottom: 1px solid #dce5f0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.meta-previa-tabela th {
+  position: sticky;
+  top: 0;
+  background: #eef3f9;
+}
+
+.meta-serie-periodo {
+  padding: 12px;
+  margin-block: 12px;
+  border-radius: 8px;
+  background: #f4f7fb;
+  font-size: 0.875rem;
+}
+
+.meta-serie-periodo label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.meta-serie-periodo select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  font: inherit;
+  border: 1px solid #c4d4e7;
+  border-radius: 6px;
+  color: inherit;
+  background: #fff;
+}
+
+.meta-serie-periodo small {
+  display: block;
+  margin-top: 8px;
+}
+
+.metas-page .meta-acoes {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.metas-page .meta-card h3 {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 540px) {
+  .meta-recorrencia-previa {
+    padding: 12px;
+  }
+  .metas-page .meta-acoes .meta-excluir {
+    width: 100%;
+  }
+}

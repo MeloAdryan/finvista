@@ -20,7 +20,8 @@ public class ContaAzulOAuthService {
     public String gerarUrlAutorizacao(String redirectUri, String state) {
         if (redirectUri == null || redirectUri.isBlank() || state == null || state.isBlank()) {
             throw new IllegalArgumentException("Callback e state são obrigatórios.");
-        
-        }return "https://login.contaazul.com/#/oauth/authorize?response_type=code&client_id=" + enc(p.getClientId()) + "&redirect_uri=" + enc(redirectUri) + "&state=" + enc(state) + "&scope=" + enc("openid profile aws.cognito.signin.user.admin");
+
+        }
+        return "https://login.contaazul.com/#/oauth/authorize?response_type=code&client_id=" + enc(p.getClientId()) + "&redirect_uri=" + enc(redirectUri) + "&state=" + enc(state) + "&scope=" + enc("openid profile aws.cognito.signin.user.admin");
     }
 }

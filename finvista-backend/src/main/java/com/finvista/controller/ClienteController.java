@@ -29,11 +29,7 @@ public class ClienteController {
         this.clienteContextService = clienteContextService;
     }
 
-    /**
-     * Lista a carteira de clientes ativos.
-     *
-     * Somente ADMIN.
-     */
+    
     @GetMapping
     public ResponseEntity<List<ClienteResponse>> listar() {
 
@@ -42,9 +38,7 @@ public class ClienteController {
         );
     }
 
-    /**
-     * Seleciona o cliente que o ADMIN deseja administrar.
-     */
+
     @PostMapping("/contexto/{clienteId}")
     public ResponseEntity<ClienteResponse> selecionarCliente(
             @PathVariable Long clienteId
@@ -60,15 +54,7 @@ public class ClienteController {
         );
     }
 
-    /**
-     * Retorna o cliente atualmente utilizado pelo FinVista.
-     *
-     * ADMIN:
-     * cliente selecionado na sessão.
-     *
-     * Usuário comum:
-     * cliente associado ao próprio usuário.
-     */
+
     @GetMapping("/contexto")
     public ResponseEntity<ClienteResponse> contextoAtual() {
 
@@ -80,9 +66,7 @@ public class ClienteController {
         );
     }
 
-    /**
-     * Remove o cliente selecionado da sessão do ADMIN.
-     */
+
     @DeleteMapping("/contexto")
     public ResponseEntity<Void> limparContexto() {
 

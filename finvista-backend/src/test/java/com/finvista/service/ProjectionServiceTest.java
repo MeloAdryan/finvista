@@ -40,19 +40,13 @@ class ProjectionServiceTest {
                 ClienteContextService.class
         );
 
-        /*
-         * O FinancialTransactionAggregationService utiliza
-         * getClienteAtualId() para determinar o cliente
-         * cujos lançamentos serão consultados.
-         */
         when(
-                clienteContextService.getClienteAtualId()
+                 clienteContextService.getClienteAtualId()
         ).thenReturn(
                 CLIENTE_ID
         );
 
-        FinancialTransactionAggregationService aggregationService =
-                new FinancialTransactionAggregationService(
+        FinancialTransactionAggregationService aggregationService = new FinancialTransactionAggregationService(
                         financialTransactionRepository,
                         clienteContextService
                 );
@@ -130,7 +124,7 @@ class ProjectionServiceTest {
         List<ProjectionResponse> resultado =
                 projectionService.obterProjecao();
 
-        assertEquals(
+                 assertEquals(
                 6,
                 resultado.size()
         );
@@ -163,7 +157,7 @@ class ProjectionServiceTest {
                 setembro.resultado()
         );
 
-        assertEquals(
+                 assertEquals(
                 new BigDecimal("199399.25"),
                 setembro.saldo()
         );
@@ -191,7 +185,7 @@ class ProjectionServiceTest {
                 outubro.resultado()
         );
 
-        assertEquals(
+                 assertEquals(
                 new BigDecimal("220389.50"),
                 outubro.saldo()
         );
@@ -340,7 +334,8 @@ class ProjectionServiceTest {
 
         lancamento.setTipo(tipo);
 
-        lancamento.setValor(
+ 
+       lancamento.setValor(
                 new BigDecimal(valor)
         );
 

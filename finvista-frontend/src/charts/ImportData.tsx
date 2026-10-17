@@ -203,7 +203,7 @@ function ImportData({ cliente }: { cliente: Cliente | null }) {
       </header>
       <ContaAzulConnectionPanel key={cliente?.id ?? "sem-empresa"} cliente={cliente} />
        <div className="ca-mode" aria-label="Tipo de importação">
-        <button type="button" aria-pressed={modo === "conta-azul"} onClick={() => setModo("conta-azul")}>Contas Conta Azul</button>
+        <button type="button" aria-pressed={modo === "conta-azul"} onClick={() => setModo("conta-azul")}> Conta Azul</button>
         <button type="button" aria-pressed={modo === "padrao"} onClick={() => setModo("padrao")}>CSV e Excel padrão</button>
       </div>
       <div style={{ display: modo === "conta-azul" ? "block" : "none" }}>

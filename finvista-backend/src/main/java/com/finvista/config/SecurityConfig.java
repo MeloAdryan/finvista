@@ -78,15 +78,6 @@ public class SecurityConfig {
                                         "/api/auth/login", "/api/auth/csrf"
                                 )
                                 .permitAll()
-                                /*
-                                 * Todos os demais endpoints,
-                                 * incluindo importações,
-                                 * exigem autenticação.
-                                 *
-                                 * O isolamento dos dados por cliente
-                                 * é realizado pelas camadas de serviço
-                                 * e pelos repositories.
-                                 */
                                 .requestMatchers("/api/admin/**", "/api/importacoes/**", "/api/integracoes/conta-azul/**").hasRole("ADMIN")
                                 .anyRequest()
                                 .authenticated()

@@ -57,13 +57,7 @@ public class ClienteInitializer implements CommandLineRunner {
                         )
                 );
 
-        /*
-         * Compatibilidade com bancos ja existentes.
-         *
-         * Versoes anteriores criavam o usuario CLIENTE,
-         * mas nao criavam a entidade Cliente nem faziam
-         * a associacao entre ambos.
-         */
+      
         if (usuario.getCliente() != null) {
             return;
         }

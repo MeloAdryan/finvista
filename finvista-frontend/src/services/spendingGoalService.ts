@@ -4,6 +4,13 @@ import { API_URL } from "../config/api";
 export type SpendingGoalStatus = "NORMAL" | "ALERTA" | "EXCEDIDA";
 
 export interface SpendingGoal {
+  serie?: {
+    id: string;
+    nome: string;
+    inicio: string;
+    fim: string;
+    limitePeriodo: number;
+  } | null;
   situacaoTemporal: "FUTURA" | "EM_ANDAMENTO" | "ENCERRADA";
   dataReferencia: string;
   id: number;
@@ -93,5 +100,26 @@ export async function criarMeta(
     const mensagem = await response.text().catch(() => "");
 
     throw new Error(mensagem || "Não foi possível criar a meta.");
+  }
+}
+
+export async function excluirMeta(id: number): Promise<void> {
+  const response = await apiFetch(`${API_URL}/api/metas-gastos/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    if (response.status === 403) {
+      throw new Error(
+        "Sem permissão para excluir a meta. Confira sua sessão de administrador.",
+      );
+    }
+    if (response.status === 404) {
+      throw new Error(
+        "Meta não encontrada para o cliente selecionado. Atualize a página.",
+      );
+    }
+    throw new Error("Não foi possível excluir a meta. Tente novamente.");
   }
 }

@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class ExpenseAllocationCalculationTest {
+
     private static final Long CLIENTE = 7L, ID = 2516L;
     private static final LocalDate INICIO = LocalDate.of(2026, 4, 1), FIM = LocalDate.of(2026, 4, 30);
     private FinancialAllocationRepository rates;
@@ -158,8 +159,10 @@ class ExpenseAllocationCalculationTest {
 
     @Test
     void mensalNaoIncluiDespesasForaDoPeriodoOuReceitas() {
-        var fora = despesa(99L, "999", "Outra", "Outro"); fora.setData(INICIO.minusDays(1));
-        var receita = despesa(100L, "999", "Outra", "Outro"); receita.setTipo("RECEITA");
+        var fora = despesa(99L, "999", "Outra", "Outro");
+        fora.setData(INICIO.minusDays(1));
+        var receita = despesa(100L, "999", "Outra", "Outro");
+        receita.setTipo("RECEITA");
         when(transactions.findByClienteIdAndDataBetweenOrderByDataAsc(CLIENTE, INICIO, FIM))
                 .thenReturn(List.of(financiamento, fora, receita));
         var expenses = new ExpenseDistributionService(transactions, context, allocations);
@@ -170,8 +173,10 @@ class ExpenseAllocationCalculationTest {
     @Test
     void classificacaoEFiltroUsamCategoriaDoSegundoRateio() {
         var classifications = mock(CostCategoryClassificationRepository.class);
-        var c = new CostCategoryClassification(); c.setCategoriaChave("móveis");
-        c.setComportamento(CostBehavior.FIXO); c.setNatureza(CostNature.MATERIAIS);
+        var c = new CostCategoryClassification();
+        c.setCategoriaChave("móveis");
+        c.setComportamento(CostBehavior.FIXO);
+        c.setNatureza(CostNature.MATERIAIS);
         when(classifications.findByClienteId(CLIENTE)).thenReturn(List.of(c));
         var service = new CostCenterAnalysisService(transactions, classifications, context,
                 mock(FinancialReferenceService.class), allocations);
@@ -202,10 +207,17 @@ class ExpenseAllocationCalculationTest {
 
     private SpendingGoalService metas(String centro, String categoria) {
         var repository = mock(SpendingGoalRepository.class);
-        var cliente = mock(Cliente.class); when(cliente.getId()).thenReturn(CLIENTE);
-        var meta = new SpendingGoal(); meta.setCliente(cliente); meta.setTipo("MENSAL");
-        meta.setDataInicio(INICIO); meta.setDataFim(FIM); meta.setValorLimite(new BigDecimal("10000"));
-        meta.setPercentualAlerta(70); meta.setCentroCusto(centro); meta.setCategoria(categoria);
+        var cliente = mock(Cliente.class);
+        when(cliente.getId()).thenReturn(CLIENTE);
+        var meta = new SpendingGoal();
+        meta.setCliente(cliente);
+        meta.setTipo("MENSAL");
+        meta.setDataInicio(INICIO);
+        meta.setDataFim(FIM);
+        meta.setValorLimite(new BigDecimal("10000"));
+        meta.setPercentualAlerta(70);
+        meta.setCentroCusto(centro);
+        meta.setCategoria(categoria);
         when(repository.findByIdAndClienteId(1L, CLIENTE)).thenReturn(Optional.of(meta));
         return new SpendingGoalService(repository, transactions, new FinancialCalculationService(), context, allocations);
     }
@@ -213,19 +225,24 @@ class ExpenseAllocationCalculationTest {
     private FinancialTransaction despesa(Long id, String valor, String categoria, String centro) {
         var t = spy(new FinancialTransaction(LocalDate.of(2026, 4, 16), "Financiamento", "DESPESA",
                 new BigDecimal(valor), categoria, centro, "CONTA_AZUL", null));
-        when(t.getId()).thenReturn(id); return t;
+        when(t.getId()).thenReturn(id);
+        return t;
     }
+
     private FinancialAllocation rateio(int bloco, String cat, String valor, String centro, String valorCentro) {
         return new FinancialAllocation(financiamento, bloco, cat, new BigDecimal(valor), centro,
                 valorCentro == null ? null : new BigDecimal(valorCentro));
     }
+
     private void carregar(List<FinancialAllocation> valores) {
         when(rates.findByLancamentoClienteIdAndLancamentoIdInOrderByLancamentoIdAscBlocoAsc(CLIENTE, List.of(ID)))
                 .thenReturn(valores);
     }
+
     private BigDecimal soma(List<ExpenseAllocationService.Parte> partes) {
         return partes.stream().map(ExpenseAllocationService.Parte::valor).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
+
     private void dinheiro(String esperado, BigDecimal valor) {
         assertEquals(0, new BigDecimal(esperado).compareTo(valor), "Valor esperado: " + esperado + "; obtido: " + valor);
     }

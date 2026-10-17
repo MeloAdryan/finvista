@@ -36,19 +36,13 @@ class HistoryServiceTest {
                 ClienteContextService.class
         );
 
-        /*
-         * O FinancialTransactionAggregationService utiliza
-         * getClienteAtualId() para determinar o cliente cujos
-         * lançamentos financeiros devem ser consultados.
-         */
         when(
-                clienteContextService.getClienteAtualId()
+                 clienteContextService.getClienteAtualId()
         ).thenReturn(
                 CLIENTE_ID
         );
 
-        FinancialTransactionAggregationService transactionAggregationService =
-                new FinancialTransactionAggregationService(
+        FinancialTransactionAggregationService transactionAggregationService = new FinancialTransactionAggregationService(
                         financialTransactionRepository,
                         clienteContextService
                 );
@@ -81,7 +75,7 @@ class HistoryServiceTest {
                 LocalDate.of(2026, 9, 10),
                 LocalDate.of(2026, 9, 15),
                 List.of(
-                        receita,
+                         receita,
                         despesa
                 )
         );
@@ -92,7 +86,7 @@ class HistoryServiceTest {
                         null
                 );
 
-        assertEquals(
+                 assertEquals(
                 1,
                 resultado.size()
         );
@@ -152,7 +146,7 @@ class HistoryServiceTest {
                 LocalDate.of(2026, 10, 10),
                 List.of(
                         agosto,
-                        setembro,
+                         setembro,
                         outubro
                 )
         );
@@ -189,7 +183,7 @@ class HistoryServiceTest {
         );
 
         configurarPeriodoCompleto(
-                LocalDate.of(2026, 9, 10),
+                 LocalDate.of(2026, 9, 10),
                 LocalDate.of(2026, 9, 10),
                 List.of(despesa)
         );
@@ -281,7 +275,8 @@ class HistoryServiceTest {
             BigDecimal atual
     ) {
 
-        assertEquals(
+ 
+       assertEquals(
                 0,
                 new BigDecimal(esperado)
                         .compareTo(atual)

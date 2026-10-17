@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class FinancialChangesServiceTest {
+
     private FinancialTransactionRepository repository;
     private ClienteContextService contexto;
     private FinancialReferenceService referencia;
@@ -31,10 +32,14 @@ class FinancialChangesServiceTest {
 
     private FinancialTransaction item(String data, String tipo, String categoria, String valor) {
         var registro = new FinancialTransaction();
-        if (data != null) registro.setData(LocalDate.parse(data));
+        if (data != null) {
+            registro.setData(LocalDate.parse(data));
+        }
         registro.setTipo(tipo);
         registro.setCategoria(categoria);
-        if (valor != null) registro.setValor(new BigDecimal(valor));
+        if (valor != null) {
+            registro.setValor(new BigDecimal(valor));
+        }
         return registro;
     }
 
@@ -50,11 +55,11 @@ class FinancialChangesServiceTest {
     @Test
     void deveConciliarVariacoesComTotaisEConsultarSomenteClienteAtual() {
         registros(
-            item("2026-09-01", "DESPESA", "Marketing", "100.00"),
-            item("2026-10-31", " despesa ", "Marketing", "150.00"),
-            item("2026-09-20", "DESPESA", "Software", "80.00"),
-            item("2026-10-20", "DESPESA", "Software", "60.00"),
-            item("2026-10-02", "RECEITA", "Vendas", "900.00"));
+                item("2026-09-01", "DESPESA", "Marketing", "100.00"),
+                item("2026-10-31", " despesa ", "Marketing", "150.00"),
+                item("2026-09-20", "DESPESA", "Software", "80.00"),
+                item("2026-10-20", "DESPESA", "Software", "60.00"),
+                item("2026-10-02", "RECEITA", "Vendas", "900.00"));
         var resposta = service.obterMudancas();
         igual("180", resposta.despesaAnterior());
         igual("210", resposta.despesaAtual());
@@ -73,12 +78,12 @@ class FinancialChangesServiceTest {
     @Test
     void deveExibirMudancasQueSeCompensamMesmoSemVariacaoTotal() {
         registros(
-            item("2026-09-10", "DESPESA", "A", "100"),
-            item("2026-10-10", "DESPESA", "A", "150"),
-            item("2026-09-10", "DESPESA", "B", "100"),
-            item("2026-10-10", "DESPESA", "B", "50"),
-            item("2026-09-10", "DESPESA", "C", "20"),
-            item("2026-10-10", "DESPESA", "C", "20"));
+                item("2026-09-10", "DESPESA", "A", "100"),
+                item("2026-10-10", "DESPESA", "A", "150"),
+                item("2026-09-10", "DESPESA", "B", "100"),
+                item("2026-10-10", "DESPESA", "B", "50"),
+                item("2026-09-10", "DESPESA", "C", "20"),
+                item("2026-10-10", "DESPESA", "C", "20"));
         var resposta = service.obterMudancas();
         igual("0", resposta.diferenca());
         assertEquals(2, resposta.categorias().size());
@@ -108,11 +113,11 @@ class FinancialChangesServiceTest {
     @Test
     void deveIgnorarCamposInvalidosTransferenciasEDatasForaDoPeriodo() {
         registros(
-            item(null, "DESPESA", "A", "10"),
-            item("2026-10-10", null, "A", "10"),
-            item("2026-10-10", "DESPESA", "A", null),
-            item("2026-10-10", "TRANSFERENCIA", "A", "10"),
-            item("2026-08-10", "DESPESA", "A", "10"));
+                item(null, "DESPESA", "A", "10"),
+                item("2026-10-10", null, "A", "10"),
+                item("2026-10-10", "DESPESA", "A", null),
+                item("2026-10-10", "TRANSFERENCIA", "A", "10"),
+                item("2026-08-10", "DESPESA", "A", "10"));
         var resposta = service.obterMudancas();
         assertTrue(resposta.categorias().isEmpty());
         assertEquals(0, resposta.lancamentosAtual());
