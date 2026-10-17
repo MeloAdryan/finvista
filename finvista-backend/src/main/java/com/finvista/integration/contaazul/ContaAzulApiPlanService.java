@@ -10,7 +10,6 @@ import java.util.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 @Service
 public class ContaAzulApiPlanService {
 
@@ -118,14 +117,17 @@ public class ContaAzulApiPlanService {
         if (evento.condicao() == null || !Integer.valueOf(1).equals(evento.condicao().quantidade())) {
             avisos.add("Rateios do evento não estão confirmados para uma única parcela. Não será presumida uma divisão.");
         }
-        if (!dinheiro(p.liquido()) || !dinheiro(p.pago()) || !dinheiro(p.pendente())) {
-            avisos.add("Valores da parcela ausentes, negativos ou fora da precisão aceita."); 
-        }else if (p.pago().add(p.pendente()).compareTo(p.liquido()) != 0) {
+        if (!dinheiro(p.liquidoConferido()) || !dinheiro(p.pago()) || !dinheiro(p.pendente())) {
+            avisos.add("Valores da parcela ausentes, negativos ou fora da precisão aceita.");
+            if (p.liquido() == null && p.liquidoConferido() == null) {
+                avisos.add("Líquido principal ausente. A conferência pela composição exige uma única parcela, valores consistentes, ajustes explicitamente zerados e situação sem baixa parcial, perda ou renegociação.");
+            }
+        } else if (p.pago().add(p.pendente()).compareTo(p.liquidoConferido()) != 0) {
             avisos.add("Pago mais pendente difere do líquido da parcela.");
         }
         if (p.composicao() == null || !dinheiro(p.composicao().bruto()) || !dinheiro(p.composicao().liquido())) {
-            avisos.add("Composição de valores incompleta."); 
-        }else if (p.liquido() != null && p.composicao().liquido().compareTo(p.liquido()) != 0) {
+            avisos.add("Composição de valores incompleta.");
+        } else if (p.liquidoConferido() != null && p.composicao().liquido().compareTo(p.liquidoConferido()) != 0) {
             avisos.add("Líquido da composição difere do líquido da parcela.");
         }
         if (evento.rateio() == null || evento.rateio().isEmpty()) {
@@ -153,7 +155,7 @@ public class ContaAzulApiPlanService {
             }
             validarCentros(r, avisos);
         }
-        if (somavel && p.liquido() != null && liquido.compareTo(p.liquido()) != 0) {
+        if (somavel && p.liquidoConferido() != null && liquido.compareTo(p.liquidoConferido()) != 0) {
             avisos.add("Soma líquida das categorias difere do líquido da parcela.");
         }
         if (somavel && p.composicao() != null && p.composicao().bruto() != null && bruto.compareTo(p.composicao().bruto()) != 0) {
@@ -169,7 +171,8 @@ public class ContaAzulApiPlanService {
         if (r.centros().isEmpty()) {
             return; // Categoria explicitamente sem centro.
 
-                }var ids = new HashSet<String>();
+        }
+        var ids = new HashSet<String>();
         BigDecimal liquido = BigDecimal.ZERO, bruto = BigDecimal.ZERO;
         boolean somavel = true;
         for (var c : r.centros()) {

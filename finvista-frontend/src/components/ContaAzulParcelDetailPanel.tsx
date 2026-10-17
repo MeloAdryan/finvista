@@ -78,7 +78,7 @@ export default function ContaAzulParcelDetailPanel({
           <dl className="ca-parcel-detail-values">
             <div>
               <dt>Líquido da parcela</dt>
-              <dd>{dinheiro(p.valor_total_liquido)}</dd>
+              <dd>{dinheiro(p.valor_liquido_conferido ?? p.valor_total_liquido)}</dd>
             </div>
             <div>
               <dt>Pago / recebido</dt>
@@ -113,6 +113,12 @@ export default function ContaAzulParcelDetailPanel({
               <dd>{dinheiro(p.valor_composicao?.taxa)}</dd>
             </div>
           </dl>
+          {p.origem_valor_liquido === "COMPOSICAO_CONFERIDA" && (
+            <p role="status">
+              Líquido de {dinheiro(p.valor_liquido_conferido)} conferido pela composição da parcela e pelo saldo pago mais pendente.
+              O campo principal da API veio sem valor. Nenhum lançamento foi importado.
+            </p>
+          )}
           <h4>Rateios do evento financeiro</h4>
           <p>
             Evento: {p.evento?.id || "Não informado"} · Tipo:{" "}
