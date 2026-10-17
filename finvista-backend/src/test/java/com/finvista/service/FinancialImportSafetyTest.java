@@ -43,7 +43,8 @@ class FinancialImportSafetyTest {
         var erro = assertThrows(IllegalArgumentException.class,
                 () -> service.salvar(List.of(linha("A", "Geral"), linha("A", "Geral"))));
         assertTrue(erro.getMessage().contains("Nenhum lançamento"));
-        verifyNoInteractions(repo);
+        verify(repo).findByClienteIdAndOrigemOrderByIdAsc(7L, "CONTA_AZUL_API");
+        verifyNoMoreInteractions(repo);
     }
 
     @Test

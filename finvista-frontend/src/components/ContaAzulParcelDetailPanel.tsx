@@ -78,7 +78,9 @@ export default function ContaAzulParcelDetailPanel({
           <dl className="ca-parcel-detail-values">
             <div>
               <dt>Líquido da parcela</dt>
-              <dd>{dinheiro(p.valor_liquido_conferido ?? p.valor_total_liquido)}</dd>
+              <dd>
+                {dinheiro(p.valor_liquido_conferido ?? p.valor_total_liquido)}
+              </dd>
             </div>
             <div>
               <dt>Pago / recebido</dt>
@@ -115,8 +117,10 @@ export default function ContaAzulParcelDetailPanel({
           </dl>
           {p.origem_valor_liquido === "COMPOSICAO_CONFERIDA" && (
             <p role="status">
-              Líquido de {dinheiro(p.valor_liquido_conferido)} conferido pela composição da parcela e pelo saldo pago mais pendente.
-              O campo principal da API veio sem valor. Nenhum lançamento foi importado.
+              Líquido de {dinheiro(p.valor_liquido_conferido)} conferido pela
+              composição da parcela e pelo saldo pago mais pendente. O campo
+              principal da API veio sem valor. A conferência do líquido não
+              grava lançamentos.
             </p>
           )}
           <h4>Rateios do evento financeiro</h4>
@@ -174,8 +178,9 @@ export default function ContaAzulParcelDetailPanel({
           />
           <p>
             Detalhe consultado em{" "}
-            {new Date(resposta.consultadoEm).toLocaleString("pt-BR")}. Nenhum
-            lançamento foi importado.
+            {new Date(resposta.consultadoEm).toLocaleString("pt-BR")}. A
+            consulta do detalhe não grava lançamentos; confira o resultado da
+            sincronização no painel acima.
           </p>
         </>
       )}

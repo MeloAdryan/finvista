@@ -69,6 +69,10 @@ public class FinancialImportService {
         if (bloqueado == null || !Boolean.TRUE.equals(bloqueado.getAtivo())) {
             throw new IllegalStateException("A empresa não existe ou está inativa; nenhum lançamento foi importado.");
         }
+        if (!repository.findByClienteIdAndOrigemOrderByIdAsc(cliente.getId(), "CONTA_AZUL_API").isEmpty()) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
+                    "Esta empresa possui lançamentos API. Use Conferir contas a pagar e receber para importar o Excel com proteção entre origens. A importação genérica não permite essa conferência.");
+        }
         prepararLancamentosParaCliente(lancamentos, bloqueado);
 
         if (ehImportacaoContaAzul(lancamentos)) {

@@ -125,6 +125,7 @@ export default function ContaAzulImport({
   }
   const decisions: SyncDecision[] = (plan?.itens ?? []).flatMap<SyncDecision>(
     (item) => {
+      if (item.sugestao === "PROTEGIDO_API") return [];
       const value = choices[item.linha];
       if (value === "novo" && item.candidatos.length === 0)
         return [
@@ -393,23 +394,38 @@ export default function ContaAzulImport({
                         <label>
                           Decisão da linha {line.numero}
                           <select
+                            aria-label={`Decisão da linha ${line.numero}`}
                             value={value}
-                            disabled={!item || !!busy}
+                            disabled={
+                              !item ||
+                              !!busy ||
+                              item.sugestao === "PROTEGIDO_API"
+                            }
                             onChange={(e) =>
                               void choose(line.numero, e.target.value)
                             }
                           >
                             <option value="pendente">Deixar pendente</option>
-                            {item?.candidatos.length === 0 && (
-                              <option value="novo">Criar parcela nova</option>
-                            )}
-                            {item?.candidatos.map((id) => (
-                              <option value={`id:${id}`} key={id}>
-                                Atualizar registro #{id}
-                              </option>
-                            ))}
+                            {item?.sugestao !== "PROTEGIDO_API" &&
+                              item?.candidatos.length === 0 && (
+                                <option value="novo">Criar parcela nova</option>
+                              )}
+                            {item?.sugestao !== "PROTEGIDO_API" &&
+                              item?.candidatos.map((id) => (
+                                <option value={`id:${id}`} key={id}>
+                                  Atualizar registro #{id}
+                                </option>
+                              ))}
                           </select>
                         </label>
+                        {item?.sugestao === "PROTEGIDO_API" && (
+                          <p className="ca-notice" role="status">
+                            Protegida pela API · registros{" "}
+                            {item.candidatos.map((id) => `#${id}`).join(", ")}.
+                            Esta linha ficará pendente; o Excel não altera nem
+                            recria esses lançamentos.
+                          </p>
+                        )}
                         {item && item.candidatos.length > 1 && (
                           <p className="ca-notice">
                             Há mais de um candidato. Revise o registro
@@ -518,6 +534,8 @@ export default function ContaAzulImport({
                   onChange={(e) => setConfirmed(e.target.checked)}
                 />
                 Conferi o cliente {cliente?.nome} e as decisões selecionadas.
+                Para cada criação, revisei o histórico e confirmei que a parcela
+                ainda não está cadastrada.
               </label>
               <button
                 type="button"

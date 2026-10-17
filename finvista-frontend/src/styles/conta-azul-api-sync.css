@@ -1,0 +1,90 @@
+.ca-api-sync {
+  border: 1px solid #bdcfe3;
+  border-radius: 10px;
+  padding: 18px;
+  margin-top: 18px;
+  background: #fff;
+  color: #163854;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.ca-api-sync h4 {
+  font-size: 17px;
+  margin: 0 0 12px;
+}
+.ca-api-sync h5 {
+  font-size: 15px;
+  margin: 0 0 10px;
+}
+.ca-api-sync button {
+  padding: 10px 14px;
+  font: inherit;
+  cursor: pointer;
+}
+.ca-api-sync button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.ca-api-sync select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 10px;
+  margin-block: 8px;
+  font: inherit;
+}
+.ca-sync-comparison {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 14px;
+  margin-block: 16px;
+}
+.ca-sync-summary {
+  border-radius: 8px;
+  padding: 14px;
+  background: #f3f7fb;
+  min-width: 0;
+}
+.ca-sync-summary dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: 12px;
+}
+.ca-sync-summary dt {
+  font-size: 13px;
+  color: #4c6481;
+}
+.ca-sync-summary dd {
+  margin: 4px 0 0;
+  font-weight: 700;
+}
+.ca-sync-summary ul {
+  padding-left: 20px;
+}
+.ca-api-sync label.ca-sync-consent {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  margin-block: 18px;
+}
+.ca-api-sync .ca-sync-consent input {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin: 4px 0 0;
+  padding: 0;
+}
+.ca-sync-result {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 8px;
+  background: #edf8f2;
+  color: #175b3e;
+}
+.ca-api-sync :focus-visible {
+  outline: 3px solid #315fa5;
+  outline-offset: 3px;
+}

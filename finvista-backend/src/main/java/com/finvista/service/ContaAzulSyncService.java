@@ -34,11 +34,12 @@ public class ContaAzulSyncService {
     private final ClienteContextService contexto;
     private final EntityManager em;
     private final ObjectMapper json;
+    private final ContaAzulOriginGuard origens;
 
     public ContaAzulSyncService(ContaAzulConferenceService conferencia, ExcelImportService excel,
             FinancialTransactionRepository transacoes, FinancialAllocationRepository rateios,
             ContaAzulSyncBatchRepository lotes, ClienteContextService contexto,
-            EntityManager em, ObjectMapper json) {
+            EntityManager em, ObjectMapper json, ContaAzulOriginGuard origens) {
         this.conferencia = conferencia;
         this.excel = excel;
         this.transacoes = transacoes;
@@ -47,6 +48,7 @@ public class ContaAzulSyncService {
         this.contexto = contexto;
         this.em = em;
         this.json = json;
+        this.origens = origens;
     }
 
     private record Entrada(Linha linha, FinancialTransaction dados) {
@@ -105,8 +107,12 @@ public class ContaAzulSyncService {
             if (d == null || !porLinha.containsKey(d.linha()) || !linhasEscolhidas.add(d.linha())) {
                 throw new IllegalArgumentException("Linha inexistente ou repetida nas decisões.");
             }
+            if ("PROTEGIDO_API".equals(itens.get(d.linha()).sugestao()) && !"IGNORAR".equals(d.acao())) {
+                throw new IllegalArgumentException("Esta linha tem possível vínculo API e está protegida. O arquivo não pode criar nem atualizar esse lançamento.");
+            }
             if ("ATUALIZAR".equals(d.acao())) {
                 if (d.lancamentoId() == null || !itens.get(d.linha()).candidatos().contains(d.lancamentoId())
+                        || !ORIGEM.equals(porId.get(d.lancamentoId()).getOrigem())
                         || !idsEscolhidos.add(d.lancamentoId())) {
                     throw new IllegalArgumentException("Atualização sem candidato válido, ou ID usado em mais de uma linha.");
                 }
@@ -174,11 +180,15 @@ public class ContaAzulSyncService {
     }
 
     private List<FinancialTransaction> existentes(Long id) {
-        return transacoes.findByClienteIdAndOrigemOrderByIdAsc(id, ORIGEM);
+        List<FinancialTransaction> lista = new ArrayList<>(transacoes.findByClienteIdAndOrigemOrderByIdAsc(id, ORIGEM));
+        lista.addAll(transacoes.findByClienteIdAndOrigemOrderByIdAsc(id, "CONTA_AZUL_API"));
+        return lista;
     }
 
     private List<FinancialAllocation> alocacoes(Long id) {
-        return rateios.findByLancamentoClienteIdAndLancamentoOrigemOrderByLancamentoIdAscBlocoAsc(id, ORIGEM);
+        List<FinancialAllocation> lista = new ArrayList<>(rateios.findByLancamentoClienteIdAndLancamentoOrigemOrderByLancamentoIdAscBlocoAsc(id, ORIGEM));
+        lista.addAll(rateios.findByLancamentoClienteIdAndLancamentoOrigemOrderByLancamentoIdAscBlocoAsc(id, "CONTA_AZUL_API"));
+        return lista;
     }
 
     private Leitura ler(MultipartFile arquivo, LocalDate corte) throws IOException {
@@ -227,6 +237,7 @@ public class ContaAzulSyncService {
     private Plano plano(Leitura leitura, List<FinancialTransaction> existentes,
             List<FinancialAllocation> alocacoes, Long clienteId, LocalDate corte) {
         List<Item> itens = new ArrayList<>();
+        var historico = origens.historico(clienteId);
         Map<String, List<FinancialTransaction>> indice = new HashMap<>();
         for (FinancialTransaction tx : existentes) {
             indice.computeIfAbsent(serializar(ancora(tx)), k -> new ArrayList<>()).add(tx);
@@ -236,6 +247,13 @@ public class ContaAzulSyncService {
             repeticoes.merge(serializar(ancora(e.dados())), 1, Integer::sum);
         }
         for (Entrada e : leitura.entradas()) {
+            var protegidos = existentes.stream().filter(t -> "CONTA_AZUL_API".equals(t.getOrigem())
+                    && origens.proteger(e.dados(), t, historico)).map(FinancialTransaction::getId).sorted().toList();
+            if (!protegidos.isEmpty()) {
+                itens.add(new Item(e.linha().numero(), e.linha().descricao(), valor(e.linha().original()), "PROTEGIDO_API", protegidos,
+                        List.of("Possível correspondência com registro controlado pela API, considerando também o histórico Excel. Esta linha ficará pendente e não pode criar ou atualizar lançamentos pelo arquivo.")));
+                continue;
+            }
             List<Long> ids = indice.getOrDefault(serializar(ancora(e.dados())), List.of()).stream().filter(tx -> candidato(tx, e.dados()))
                     .map(FinancialTransaction::getId).sorted().toList();
             List<String> avisos = new ArrayList<>(e.linha().avisos());
@@ -249,7 +267,7 @@ public class ContaAzulSyncService {
         List<Object> estados = new ArrayList<>();
         existentes.stream().sorted(Comparator.comparing(FinancialTransaction::getId)).forEach(tx
                 -> estados.add(Arrays.asList(tx.getId(), estado(tx, rateiosDo(tx, alocacoes)))));
-        String token = hash(serializar(Arrays.asList(clienteId, corte.toString(), leitura.hash(), estados))
+        String token = hash(serializar(Arrays.asList(clienteId, corte.toString(), leitura.hash(), estados, historico))
                 .getBytes(java.nio.charset.StandardCharsets.UTF_8));
         return new Plano(leitura.conferencia().arquivo(), corte, token, itens.size(), List.copyOf(itens));
     }
@@ -367,35 +385,35 @@ public class ContaAzulSyncService {
     }
 
     @Transactional(readOnly = true)
-public Candidato consultarCandidato(Long id) {
-    Long clienteId = contexto.getClienteAtual().getId();
+    public Candidato consultarCandidato(Long id) {
+        Long clienteId = contexto.getClienteAtual().getId();
 
-    FinancialTransaction lancamento = existentes(clienteId)
-            .stream()
-            .filter(item -> Objects.equals(item.getId(), id))
-            .findFirst()
-            .orElseThrow(() -> new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Registro não encontrado neste cliente."
-            ));
+        FinancialTransaction lancamento = existentes(clienteId)
+                .stream()
+                .filter(item -> Objects.equals(item.getId(), id))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Registro não encontrado neste cliente."
+                ));
 
-    return new Candidato(
-            lancamento.getId(),
-            lancamento.getDescricao(),
-            lancamento.getDataCompetencia() == null
-                    ? lancamento.getData()
-                    : lancamento.getDataCompetencia(),
-            lancamento.getDataVencimento(),
-            lancamento.getValorOriginal() == null
-                    ? lancamento.getValor()
-                    : lancamento.getValorOriginal(),
-            lancamento.getValorRealizado(),
-            lancamento.getValorAberto(),
-            lancamento.getSituacao(),
-            lancamento.getEntidadeNome(),
-            lancamento.getCodigoReferencia(),
-            lancamento.getCategoria(),
-            lancamento.getCentroCusto()
-    );
-}
+        return new Candidato(
+                lancamento.getId(),
+                lancamento.getDescricao(),
+                lancamento.getDataCompetencia() == null
+                ? lancamento.getData()
+                : lancamento.getDataCompetencia(),
+                lancamento.getDataVencimento(),
+                lancamento.getValorOriginal() == null
+                ? lancamento.getValor()
+                : lancamento.getValorOriginal(),
+                lancamento.getValorRealizado(),
+                lancamento.getValorAberto(),
+                lancamento.getSituacao(),
+                lancamento.getEntidadeNome(),
+                lancamento.getCodigoReferencia(),
+                lancamento.getCategoria(),
+                lancamento.getCentroCusto()
+        );
+    }
 }
