@@ -19,8 +19,8 @@ class FinancialCalculationServiceTest {
 
     @Test
     void deveCalcularResultado() {
-        BigDecimal resultado =
-                service.calcularResultado(
+        BigDecimal resultado
+                = service.calcularResultado(
                         new BigDecimal("150000.00"),
                         new BigDecimal("92000.00")
                 );
@@ -35,8 +35,8 @@ class FinancialCalculationServiceTest {
 
     @Test
     void deveCalcularMargem() {
-        BigDecimal margem =
-                service.calcularMargem(
+        BigDecimal margem
+                = service.calcularMargem(
                         new BigDecimal("150000.00"),
                         new BigDecimal("58000.00")
                 );
@@ -49,8 +49,8 @@ class FinancialCalculationServiceTest {
 
     @Test
     void deveCalcularSaldoFuturo() {
-        BigDecimal saldo =
-                service.calcularSaldoFuturo(
+        BigDecimal saldo
+                = service.calcularSaldoFuturo(
                         new BigDecimal("10000.00"),
                         new BigDecimal("150000.00"),
                         new BigDecimal("92000.00")
@@ -67,8 +67,8 @@ class FinancialCalculationServiceTest {
     @Test
     void deveCalcularTotalPonderadoDosOrcamentos() {
 
-        BigDecimal total =
-                BigDecimal.ZERO;
+        BigDecimal total
+                = BigDecimal.ZERO;
 
         total = total.add(
                 service.calcularValorPonderado(
@@ -115,8 +115,8 @@ class FinancialCalculationServiceTest {
 
     @Test
     void deveCalcularPercentualUtilizadoDaMeta() {
-        BigDecimal percentual =
-                service.calcularPercentualUtilizado(
+        BigDecimal percentual
+                = service.calcularPercentualUtilizado(
                         new BigDecimal("75000.00"),
                         new BigDecimal("100000.00")
                 );
@@ -129,8 +129,8 @@ class FinancialCalculationServiceTest {
 
     @Test
     void deveRetornarSaldoNegativoQuandoMetaForExcedida() {
-        BigDecimal saldo =
-                service.calcularSaldoMeta(
+        BigDecimal saldo
+                = service.calcularSaldoMeta(
                         new BigDecimal("100000.00"),
                         new BigDecimal("115000.00")
                 );

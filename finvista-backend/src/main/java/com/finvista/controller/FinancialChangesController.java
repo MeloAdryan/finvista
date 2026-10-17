@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/dashboard")
 public class FinancialChangesController {
+
     private final FinancialChangesService service;
 
     public FinancialChangesController(FinancialChangesService service) {

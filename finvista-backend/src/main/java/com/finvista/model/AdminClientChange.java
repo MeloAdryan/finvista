@@ -3,10 +3,9 @@ package com.finvista.model;
 import jakarta.persistence.*;
 import java.time.Instant;
 
-/**
- * Histórico das alterações de nome/status; não armazena senha nem valores
- * financeiros.
- */
+
+
+
 @Entity
 @Table(name = "admin_client_changes")
 public class AdminClientChange {

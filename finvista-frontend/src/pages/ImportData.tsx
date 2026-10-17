@@ -216,7 +216,7 @@ function ImportData({ cliente }: { cliente: Cliente | null }) {
           aria-pressed={modo === "conta-azul"}
           onClick={() => setModo("conta-azul")}
         >
-          Contas Conta Azul
+          Conta Azul
         </button>
         <button
           type="button"

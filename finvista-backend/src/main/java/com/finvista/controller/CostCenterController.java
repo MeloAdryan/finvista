@@ -16,7 +16,6 @@ public class CostCenterController {
 
     private final CostCenterService costCenterService;
 
-
     private final FinancialReferenceService financialReferenceService;
 
     public CostCenterController(
@@ -39,5 +38,5 @@ public class CostCenterController {
                 financialReferenceService.obterMesReferencia()
         );
     }
-    
-    }
+
+}

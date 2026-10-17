@@ -26,19 +26,18 @@ public class ExpenseDistributionController {
         this.financialReferenceService = financialReferenceService;
     }
 
+    @GetMapping
+    public List<ExpenseDistributionResponse> getDistribuicaoDespesas(
+            @RequestParam(defaultValue = "false") boolean historico
+    ) {
+        if (historico) {
+            return expenseDistributionService.listar();
+        }
 
-   @GetMapping
-public List<ExpenseDistributionResponse> getDistribuicaoDespesas(
-        @RequestParam(defaultValue = "false") boolean historico
-) {
-    if (historico) {
-        return expenseDistributionService.listar();
+        return expenseDistributionService.listarNoMes(
+                financialReferenceService.obterMesReferencia()
+        );
     }
-
-    return expenseDistributionService.listarNoMes(
-            financialReferenceService.obterMesReferencia()
-    );
-}
 
     @GetMapping("/categorias")
     public List<String> getCategoriasPorCentroCusto(

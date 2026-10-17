@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class FinancialReferenceServiceTest {
+
     private static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
 
     @Test

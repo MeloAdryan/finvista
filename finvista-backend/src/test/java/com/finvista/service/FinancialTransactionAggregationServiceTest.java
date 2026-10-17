@@ -40,8 +40,8 @@ class FinancialTransactionAggregationServiceTest {
                 clienteContextService.getClienteAtualId()
         ).thenReturn(CLIENTE_ID);
 
-        aggregationService =
-                new FinancialTransactionAggregationService(
+        aggregationService
+                = new FinancialTransactionAggregationService(
                         financialTransactionRepository,
                         clienteContextService
                 );
@@ -85,11 +85,10 @@ class FinancialTransactionAggregationServiceTest {
                         )
         ).thenReturn(lancamentos);
 
-        List<FinancialTransactionAggregationService.MonthlyFinancialSummary>
-                resultado = aggregationService.obterResumoMensal(
-                        inicio,
-                        fim
-                );
+        List<FinancialTransactionAggregationService.MonthlyFinancialSummary> resultado = aggregationService.obterResumoMensal(
+                inicio,
+                fim
+        );
 
         assertEquals(
                 2,
@@ -155,11 +154,10 @@ class FinancialTransactionAggregationServiceTest {
                         )
         ).thenReturn(lancamentos);
 
-        List<FinancialTransactionAggregationService.MonthlyFinancialSummary>
-                resultado = aggregationService.obterResumoMensal(
-                        inicio,
-                        fim
-                );
+        List<FinancialTransactionAggregationService.MonthlyFinancialSummary> resultado = aggregationService.obterResumoMensal(
+                inicio,
+                fim
+        );
 
         assertEquals(
                 3,
@@ -327,8 +325,8 @@ class FinancialTransactionAggregationServiceTest {
                 )
         );
 
-        var resultado =
-                aggregationService.obterResumoMensalCompleto();
+        var resultado
+                = aggregationService.obterResumoMensalCompleto();
 
         assertEquals(
                 3,
@@ -394,8 +392,8 @@ class FinancialTransactionAggregationServiceTest {
                 )
         );
 
-        var resultado =
-                aggregationService.obterResumoMensalCompleto();
+        var resultado
+                = aggregationService.obterResumoMensalCompleto();
 
         assertEquals(
                 2,
@@ -449,8 +447,8 @@ class FinancialTransactionAggregationServiceTest {
             String valor
     ) {
 
-        FinancialTransaction lancamento =
-                new FinancialTransaction();
+        FinancialTransaction lancamento
+                = new FinancialTransaction();
 
         lancamento.setData(data);
         lancamento.setTipo(tipo);

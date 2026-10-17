@@ -44,8 +44,8 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
 
-        ApiErrorResponse resposta =
-                new ApiErrorResponse(
+        ApiErrorResponse resposta
+                = new ApiErrorResponse(
                         LocalDateTime.now(),
                         status.value(),
                         status.getReasonPhrase(),

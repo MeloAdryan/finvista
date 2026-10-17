@@ -21,8 +21,19 @@ public record SpendingGoalResponse(
         String filtroCategoria,
         String filtroCentroCusto,
         String situacaoTemporal,
-        LocalDate dataReferencia
+        LocalDate dataReferencia,
+        Serie serie
         ) {
+
+    public record Serie(String id, String nome, LocalDate inicio, LocalDate fim, BigDecimal limitePeriodo) {}
+
+    public SpendingGoalResponse(Long id, String tipo, LocalDate dataInicio, LocalDate dataFim, BigDecimal valorLimite, BigDecimal gastoAtual, BigDecimal percentualUtilizado, BigDecimal saldoMeta, Integer percentualAlerta, String status, String categoria, String centroCusto, BigDecimal gastoFiltrado, BigDecimal percentualFiltrado, String filtroCategoria, String filtroCentroCusto, String situacaoTemporal, LocalDate dataReferencia) {
+        this(id, tipo, dataInicio, dataFim, valorLimite, gastoAtual, percentualUtilizado, saldoMeta, percentualAlerta, status, categoria, centroCusto, gastoFiltrado, percentualFiltrado, filtroCategoria, filtroCentroCusto, situacaoTemporal, dataReferencia, null);
+    }
+
+    public SpendingGoalResponse comSerie(Serie serie) {
+        return new SpendingGoalResponse(id, tipo, dataInicio, dataFim, valorLimite, gastoAtual, percentualUtilizado, saldoMeta, percentualAlerta, status, categoria, centroCusto, gastoFiltrado, percentualFiltrado, filtroCategoria, filtroCentroCusto, situacaoTemporal, dataReferencia, serie);
+    }
 
     public SpendingGoalResponse(Long id, String tipo, LocalDate dataInicio, LocalDate dataFim, BigDecimal valorLimite, BigDecimal gastoAtual, BigDecimal percentualUtilizado, BigDecimal saldoMeta, Integer percentualAlerta, String status, String categoria, String centroCusto, BigDecimal gastoFiltrado, BigDecimal percentualFiltrado, String filtroCategoria, String filtroCentroCusto) {
         this(id, tipo, dataInicio, dataFim, valorLimite, gastoAtual, percentualUtilizado, saldoMeta, percentualAlerta, status, categoria, centroCusto, gastoFiltrado, percentualFiltrado, filtroCategoria, filtroCentroCusto, LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo")));

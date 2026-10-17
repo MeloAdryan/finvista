@@ -40,8 +40,9 @@ public class ContaAzulTokenCipher {
             String[] parts = token.split("\\.");
             if (parts.length != 3 || !parts[0].equals("v1")) {
                 throw new IllegalArgumentException();
-            
-            }Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+
+            }
+            Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
             c.init(Cipher.DECRYPT_MODE, new SecretKeySpec(Base64.getDecoder().decode(p.getEncryptionKey()), "AES"), new GCMParameterSpec(128, Base64.getDecoder().decode(parts[1])));
             c.updateAAD(aad(cliente, tipo));
             return new String(c.doFinal(Base64.getDecoder().decode(parts[2])), StandardCharsets.UTF_8);

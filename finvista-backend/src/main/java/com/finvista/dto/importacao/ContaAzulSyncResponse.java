@@ -27,5 +27,5 @@ public final class ContaAzulSyncResponse {
 
     public record Candidato(Long id, String descricao, LocalDate competencia, LocalDate vencimento,
             java.math.BigDecimal original, java.math.BigDecimal realizado, java.math.BigDecimal aberto,
-            String situacao, String contraparte, String referencia, String categoria, String centro) {}        
+            String situacao, String contraparte, String referencia, String categoria, String centro) {}
 }

@@ -10,15 +10,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/referencia-financeira")
 public class FinancialReferenceController {
 
-    private final FinancialReferenceService
-            financialReferenceService;
+    private final FinancialReferenceService financialReferenceService;
 
     public FinancialReferenceController(
-            FinancialReferenceService
-                    financialReferenceService
+            FinancialReferenceService financialReferenceService
     ) {
-        this.financialReferenceService =
-                financialReferenceService;
+        this.financialReferenceService
+                = financialReferenceService;
     }
 
     @GetMapping

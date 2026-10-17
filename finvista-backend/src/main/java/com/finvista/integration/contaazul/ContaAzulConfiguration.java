@@ -30,15 +30,17 @@ public class ContaAzulConfiguration {
             URI u = URI.create(p.getRedirectUri());
             if (!"https".equals(u.getScheme()) || u.getHost() == null || u.getUserInfo() != null || u.getFragment() != null || u.getQuery() != null || !u.getPath().endsWith("/api/integracoes/conta-azul/callback")) {
                 throw new IllegalArgumentException();
-        
-            }} catch (Exception e) {
+
+            }
+        } catch (Exception e) {
             throw new IllegalStateException("Configure uma URL HTTPS de callback do FinVista, sem query ou fragmento.");
         }
         try {
             if (Base64.getDecoder().decode(p.getEncryptionKey()).length != 32) {
                 throw new IllegalArgumentException();
-        
-            }} catch (Exception e) {
+
+            }
+        } catch (Exception e) {
             throw new IllegalStateException("Configure uma chave Base64 de criptografia com 32 bytes.");
         }
     }
@@ -46,7 +48,8 @@ public class ContaAzulConfiguration {
     public void exigirAtiva() {
         if (!p.isEnabled()) {
             throw new IllegalStateException("Conexão Conta Azul desabilitada. A importação por arquivo continua disponível.");
-        
-        }validar();
+
+        }
+        validar();
     }
 }

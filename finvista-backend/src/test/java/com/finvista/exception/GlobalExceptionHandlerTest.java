@@ -16,22 +16,22 @@ class GlobalExceptionHandlerTest {
     @Test
     void deveRetornarBadRequestParaIllegalArgumentException() {
 
-        GlobalExceptionHandler handler =
-                new GlobalExceptionHandler();
+        GlobalExceptionHandler handler
+                = new GlobalExceptionHandler();
 
-        HttpServletRequest request =
-                mock(HttpServletRequest.class);
+        HttpServletRequest request
+                = mock(HttpServletRequest.class);
 
         when(request.getRequestURI())
                 .thenReturn("/api/teste");
 
-        IllegalArgumentException exception =
-                new IllegalArgumentException(
+        IllegalArgumentException exception
+                = new IllegalArgumentException(
                         "Valor informado é inválido"
                 );
 
-        ResponseEntity<ApiErrorResponse> resposta =
-                handler.tratarArgumentoInvalido(
+        ResponseEntity<ApiErrorResponse> resposta
+                = handler.tratarArgumentoInvalido(
                         exception,
                         request
                 );

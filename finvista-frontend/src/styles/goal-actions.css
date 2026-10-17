@@ -1,0 +1,42 @@
+.meta-acoes {
+  display: flex;
+  justify-content: flex-end;
+  margin-block: 12px;
+}
+
+.meta-excluir {
+  padding: 9px 14px;
+  border: 1px solid #b42318;
+  border-radius: 8px;
+  background: #fff;
+  color: #a11d15;
+  font: inherit;
+  cursor: pointer;
+}
+
+.meta-excluir:hover:not(:disabled) {
+  background: #fff1f0;
+}
+
+.meta-excluir:focus-visible {
+  outline: 3px solid #b42318;
+  outline-offset: 3px;
+}
+
+.meta-excluir:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.meta-exclusao-status:empty {
+  display: none;
+}
+
+.meta-exclusao-status:not(:empty) {
+  padding: 12px 16px;
+  margin-block-end: 16px;
+  border: 1px solid #8ec9b0;
+  border-radius: 8px;
+  background: #edf8f2;
+  color: #145539;
+}

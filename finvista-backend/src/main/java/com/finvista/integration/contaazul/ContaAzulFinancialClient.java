@@ -14,9 +14,7 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-/**
- * Consulta de uma página; nenhum lançamento ou rateio é gravado.
- */
+
 @Component
 public class ContaAzulFinancialClient {
 
@@ -92,7 +90,7 @@ public class ContaAzulFinancialClient {
     private void validar(Pagina p, LocalDate inicio, LocalDate fim) {
         if (p == null || p.totalItens() == null || p.totalItens() < 0 || p.itens() == null || p.itens().size() > TAMANHO || p.itens().size() > p.totalItens()) {
             throw new IllegalArgumentException();
-        }
+        } 
         var ids = new HashSet<String>();
         for (Parcela item : p.itens()) {
             if (item == null || item.id() == null || item.id().isBlank() || !ids.add(item.id())) {

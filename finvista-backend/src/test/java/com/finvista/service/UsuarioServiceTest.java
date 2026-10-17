@@ -125,8 +125,8 @@ class UsuarioServiceTest {
         when(usuarioRepository.existsByEmailIgnoreCase("admin@finvista.com"))
                 .thenReturn(true);
 
-        IllegalArgumentException exception =
-                assertThrows(
+        IllegalArgumentException exception
+                = assertThrows(
                         IllegalArgumentException.class,
                         () -> usuarioService.criarUsuario(
                                 "Outro Administrador",
@@ -150,8 +150,8 @@ class UsuarioServiceTest {
         when(usuarioRepository.existsByEmailIgnoreCase("admin@finvista.com"))
                 .thenReturn(false);
 
-        IllegalArgumentException exception =
-                assertThrows(
+        IllegalArgumentException exception
+                = assertThrows(
                         IllegalArgumentException.class,
                         () -> usuarioService.criarUsuario(
                                 "Administrador",
@@ -182,8 +182,8 @@ class UsuarioServiceTest {
         when(usuarioRepository.findByEmailIgnoreCase("admin@finvista.com"))
                 .thenReturn(Optional.of(usuario));
 
-        Optional<Usuario> resultado =
-                usuarioService.buscarPorEmail(
+        Optional<Usuario> resultado
+                = usuarioService.buscarPorEmail(
                         " ADMIN@FINVISTA.COM "
                 );
 

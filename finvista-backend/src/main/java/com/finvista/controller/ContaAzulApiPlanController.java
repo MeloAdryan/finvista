@@ -31,7 +31,6 @@ public class ContaAzulApiPlanController {
         if (clienteId == null || clienteId <= 0 || id == null || !id.matches("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) {
             throw new IllegalArgumentException("Informe empresa e ID válido da parcela.");
         }
-        // Reconsulta a fonte: não recebe valores financeiros enviados pelo navegador.
         var acesso = conexoes.acessoParaConsulta(clienteId);
         var parcela = detalhes.consultar(acesso, id);
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(planos.planejar(clienteId, parcela));

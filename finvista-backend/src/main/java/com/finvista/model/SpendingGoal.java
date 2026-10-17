@@ -69,6 +69,61 @@ public class SpendingGoal {
     )
     private Cliente cliente;
 
+    @Column(name = "serie_id", length = 36)
+    private String serieId;
+
+    @Column(length = 120)
+    private String nome;
+
+    @Column(name = "vigencia_inicio")
+    private LocalDate vigenciaInicio;
+
+    @Column(name = "vigencia_fim")
+    private LocalDate vigenciaFim;
+
+    @Column(name = "limite_periodo", precision = 15, scale = 2)
+    private BigDecimal limitePeriodo;
+
+    public String getSerieId() {
+        return serieId;
+    }
+
+    public void setSerieId(String serieId) {
+        this.serieId = serieId;
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public void setNome(String nome) {
+        this.nome = nome;
+    }
+
+    public LocalDate getVigenciaInicio() {
+        return vigenciaInicio;
+    }
+
+    public void setVigenciaInicio(LocalDate inicio) {
+        this.vigenciaInicio = inicio;
+    }
+
+    public LocalDate getVigenciaFim() {
+        return vigenciaFim;
+    }
+
+    public void setVigenciaFim(LocalDate fim) {
+        this.vigenciaFim = fim;
+    }
+
+    public BigDecimal getLimitePeriodo() {
+        return limitePeriodo;
+    }
+
+    public void setLimitePeriodo(BigDecimal limite) {
+        this.limitePeriodo = limite;
+    }
+
     public SpendingGoal() {
     }
 

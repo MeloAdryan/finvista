@@ -33,7 +33,6 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request,
             HttpServletRequest httpRequest) {
-        // Valide primeiro: uma tentativa inválida não cria uma sessão autenticada.
         LoginResponse response = authService.login(request);
 
         Authentication authentication = new UsernamePasswordAuthenticationToken(

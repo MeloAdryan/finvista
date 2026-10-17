@@ -259,6 +259,3 @@ class ContaAzulSyncServiceTest {
         assertEquals(404, erro.getStatusCode().value());
     }
 }
-
-     
-     

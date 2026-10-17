@@ -45,17 +45,16 @@ class DashboardServiceTest {
         when(
                 clienteContextService.getClienteAtualId()
         ).thenReturn(CLIENTE_ID);
-        
-        financialReferenceService = Mockito.mock(
-        FinancialReferenceService.class
-);
 
-when(
-        financialReferenceService.obterMesReferencia()
-).thenReturn(
-        YearMonth.of(2026, 9)
-);
-        
+        financialReferenceService = Mockito.mock(
+                FinancialReferenceService.class
+        );
+
+        when(
+                financialReferenceService.obterMesReferencia()
+        ).thenReturn(
+                YearMonth.of(2026, 9)
+        );
 
         FinancialTransactionAggregationService transactionAggregationService
                 = new FinancialTransactionAggregationService(
@@ -67,10 +66,10 @@ when(
                 = new FinancialCalculationService();
 
         dashboardService = new DashboardService(
-        transactionAggregationService,
-        calculationService,
-        financialReferenceService
-);
+                transactionAggregationService,
+                calculationService,
+                financialReferenceService
+        );
     }
 
     @Test
@@ -181,7 +180,6 @@ when(
 
         YearMonth mesAtual
                 = YearMonth.of(2026, 9);
-        
 
         YearMonth mesAnterior = mesAtual.minusMonths(1);
 
@@ -262,7 +260,6 @@ when(
 
         YearMonth mesAtual
                 = YearMonth.of(2026, 9);
-        
 
         YearMonth mesAnterior = mesAtual.minusMonths(1);
 

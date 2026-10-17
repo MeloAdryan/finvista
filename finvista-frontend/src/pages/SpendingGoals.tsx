@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
+import { useLocation } from "react-router-dom";
 
 import {
-  criarMeta,
+  excluirMeta,
   listarMetas,
-  type CreateSpendingGoalRequest,
   type SpendingGoal,
 } from "../services/spendingGoalService";
 
@@ -21,7 +21,17 @@ import {
 
 import { obterUsuarioAtual, type AuthUser } from "../services/authService";
 
+import {
+  criarRecorrencia,
+  excluirRecorrencia,
+  previaRecorrencia,
+  recorrencias,
+  type RecurrenceRequest,
+  type RecurrencePreview,
+} from "../services/goalRecurrenceService";
+import "../styles/goal-recurrence.css";
 import "../styles/spending-goals.css";
+import "../styles/goal-actions.css";
 import "../styles/phase3-goal-cards.css";
 import "../styles/goal-expanded.css";
 import GoalProgress from "../components/GoalProgress";
@@ -42,15 +52,25 @@ const formatarData = (data: string) => {
 };
 
 function SpendingGoals() {
+  const { hash } = useLocation();
+  const [periodosSelecionados, setPeriodosSelecionados] = useState<
+    Record<string, { id: number; hash: string }>
+  >({});
+  const [previa, setPrevia] = useState<{
+    assinatura: string;
+    dados: RecurrencePreview;
+  } | null>(null);
+  const [gerandoPrevia, setGerandoPrevia] = useState(false);
+  const gravando = useRef(false);
   const [metas, setMetas] = useState<SpendingGoal[]>([]);
+  const [excluindo, setExcluindo] = useState<number | null>(null);
+  const [sucessoExclusao, setSucessoExclusao] = useState("");
 
   const [usuario, setUsuario] = useState<AuthUser | null>(null);
 
   const [centrosCusto, setCentrosCusto] = useState<CostCenterData[]>([]);
 
-  const [distribuicaoDespesas, setDistribuicaoDespesas] = useState<
-    ExpenseDistributionData[]
-  >([]);
+  const [, setDistribuicaoDespesas] = useState<ExpenseDistributionData[]>([]);
 
   const [categoriasFormulario, setCategoriasFormulario] = useState<string[]>(
     [],
@@ -71,8 +91,9 @@ function SpendingGoals() {
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
-  const [formulario, setFormulario] = useState<CreateSpendingGoalRequest>({
-    tipo: "MENSAL",
+  const [formulario, setFormulario] = useState<RecurrenceRequest>({
+    nome: "",
+    recorrencia: "MENSAL",
     dataInicio: "",
     dataFim: "",
     valorLimite: 0,
@@ -81,6 +102,14 @@ function SpendingGoals() {
     centroCusto: null,
   });
 
+  useEffect(() => {
+    if (carregando || !/^#meta-\d+$/.test(hash)) return;
+    const alvo = document.getElementById(hash.slice(1));
+    if (alvo) {
+      alvo.scrollIntoView({ block: "center" });
+      alvo.focus({ preventScroll: true });
+    }
+  }, [hash, carregando]);
   const carregarMetas = async (
     centroCusto = filtroCentroCusto,
     categoria = filtroCategoria,
@@ -216,28 +245,6 @@ function SpendingGoals() {
     return Array.from(nomes).sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [centrosCusto, metas]);
 
-  const opcoesCategoria = useMemo(() => {
-    const categorias = new Set<string>();
-
-    distribuicaoDespesas.forEach((item) => {
-      const categoria = item.categoria?.trim();
-
-      if (categoria) {
-        categorias.add(categoria);
-      }
-    });
-
-    metas.forEach((meta) => {
-      const categoria = meta.categoria?.trim();
-
-      if (categoria) {
-        categorias.add(categoria);
-      }
-    });
-
-    return Array.from(categorias).sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [distribuicaoDespesas, metas]);
-
   /*
    * =========================================================
    * FILTRAGEM DAS METAS
@@ -246,23 +253,44 @@ function SpendingGoals() {
 
   const metasFiltradas = useMemo(
     () =>
-      [...metas].sort((a, b) => {
-        const etapa = (m: SpendingGoal) =>
-          m.situacaoTemporal === "EM_ANDAMENTO"
-            ? 0
-            : m.situacaoTemporal === "FUTURA"
-              ? 1
-              : 2;
-        return (
-          etapa(a) - etapa(b) ||
-          (etapa(a) === 0
-            ? Number(b.percentualUtilizado) - Number(a.percentualUtilizado)
-            : etapa(a) === 1
-              ? a.dataInicio.localeCompare(b.dataInicio)
-              : b.dataFim.localeCompare(a.dataFim))
-        );
-      }),
-    [metas],
+      [...new Map(metas.map((m) => [m.serie?.id ?? `meta-${m.id}`, m])).keys()]
+        .map((chave) => {
+          const periodos = metas.filter(
+            (m) => (m.serie?.id ?? `meta-${m.id}`) === chave,
+          );
+          const idHash = /^#meta-\d+$/.test(hash)
+            ? Number(hash.slice(6))
+            : null;
+          const selecao = periodosSelecionados[chave];
+          return (
+            periodos.find(
+              (m) => selecao?.hash === hash && m.id === selecao.id,
+            ) ??
+            periodos.find((m) => m.id === idHash) ??
+            periodos.find((m) => m.situacaoTemporal === "EM_ANDAMENTO") ??
+            [...periodos]
+              .filter((m) => m.situacaoTemporal === "FUTURA")
+              .sort((a, b) => a.dataInicio.localeCompare(b.dataInicio))[0] ??
+            [...periodos].sort((a, b) => b.dataFim.localeCompare(a.dataFim))[0]
+          );
+        })
+        .sort((a, b) => {
+          const etapa = (m: SpendingGoal) =>
+            m.situacaoTemporal === "EM_ANDAMENTO"
+              ? 0
+              : m.situacaoTemporal === "FUTURA"
+                ? 1
+                : 2;
+          return (
+            etapa(a) - etapa(b) ||
+            (etapa(a) === 0
+              ? Number(b.percentualUtilizado) - Number(a.percentualUtilizado)
+              : etapa(a) === 1
+                ? a.dataInicio.localeCompare(b.dataInicio)
+                : b.dataFim.localeCompare(a.dataFim))
+          );
+        }),
+    [metas, periodosSelecionados, hash],
   );
 
   const filtrosAtivos = Boolean(filtroCentroCusto) || Boolean(filtroCategoria);
@@ -311,7 +339,7 @@ function SpendingGoals() {
   }, [metasFiltradas]);
 
   const atualizarFormulario = (
-    campo: keyof CreateSpendingGoalRequest,
+    campo: keyof RecurrenceRequest,
     valor: string | number | null,
   ) => {
     setFormulario((atual) => ({
@@ -347,8 +375,34 @@ function SpendingGoals() {
     }
   };
 
+  async function visualizarPeriodos() {
+    const pedido = { ...formulario };
+    setGerandoPrevia(true);
+    setPrevia(null);
+    setErro("");
+    try {
+      const dados = await previaRecorrencia(pedido);
+      setPrevia({ assinatura: JSON.stringify(pedido), dados });
+    } catch (error) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível gerar a prévia.",
+      );
+    } finally {
+      setGerandoPrevia(false);
+    }
+  }
+
   const salvarMeta = async (event: FormEvent) => {
     event.preventDefault();
+    if (gravando.current) return;
+    if (!previa || previa.assinatura !== JSON.stringify(formulario)) {
+      setErro(
+        "Visualize os períodos antes de salvar. Se alterar os dados, gere uma nova prévia.",
+      );
+      return;
+    }
 
     if (
       !formulario.dataInicio ||
@@ -373,13 +427,16 @@ function SpendingGoals() {
     }
 
     try {
+      gravando.current = true;
       setSalvando(true);
       setErro("");
 
-      await criarMeta(formulario);
+      await criarRecorrencia(formulario);
+      setPrevia(null);
 
       setFormulario({
-        tipo: "MENSAL",
+        nome: "",
+        recorrencia: "MENSAL",
         dataInicio: "",
         dataFim: "",
         valorLimite: 0,
@@ -398,12 +455,56 @@ function SpendingGoals() {
           : "Não foi possível criar a meta.",
       );
     } finally {
+      gravando.current = false;
       setSalvando(false);
     }
   };
 
+  async function confirmarExclusao(meta: SpendingGoal) {
+    if (!usuarioAdmin || excluindo !== null) return;
+    const serie = meta.serie;
+    const quantidade = serie
+      ? metas.filter((m) => m.serie?.id === serie.id).length
+      : 1;
+    const descricao = serie
+      ? `Excluir a meta "${serie.nome}" e todos os seus ${quantidade} períodos, inclusive encerrados?`
+      : `Excluir a meta #${meta.id}, de ${formatarData(meta.dataInicio)} a ${formatarData(meta.dataFim)}?`;
+    if (
+      !window.confirm(
+        `${descricao}\n\nA exclusão é definitiva. Os lançamentos financeiros serão preservados.`,
+      )
+    )
+      return;
+    setExcluindo(meta.id);
+    setErro("");
+    setSucessoExclusao("");
+    try {
+      if (serie) {
+        await excluirRecorrencia(serie.id);
+        setMetas((atuais) => atuais.filter((m) => m.serie?.id !== serie.id));
+      } else {
+        await excluirMeta(meta.id);
+        setMetas((atuais) => atuais.filter((m) => m.id !== meta.id));
+      }
+      setSucessoExclusao(
+        serie ? `Meta "${serie.nome}" excluída.` : `Meta #${meta.id} excluída.`,
+      );
+    } catch (error) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível excluir a meta.",
+      );
+    } finally {
+      setExcluindo(null);
+    }
+  }
+
   return (
     <section className="metas-page">
+      <div role="status" aria-live="polite" className="meta-exclusao-status">
+        {sucessoExclusao}
+      </div>
       <div className="metas-header">
         <div>
           <span className="metas-eyebrow">PLANEJAMENTO FINANCEIRO</span>
@@ -420,7 +521,11 @@ function SpendingGoals() {
           <button
             type="button"
             className="metas-primary-button"
-            onClick={() => setMostrarFormulario((atual) => !atual)}
+            disabled={salvando}
+            onClick={() => {
+              setMostrarFormulario((atual) => !atual);
+              setPrevia(null);
+            }}
           >
             <span>+</span>
             Nova meta
@@ -432,152 +537,235 @@ function SpendingGoals() {
 
       {usuarioAdmin && mostrarFormulario && (
         <form className="metas-formulario" onSubmit={salvarMeta}>
-          <div className="metas-form-grid">
-            <fieldset className="meta-type-segment">
-              <legend>Tipo da meta</legend>
-              <div>
-                {(["MENSAL", "SEMESTRAL"] as const).map((tipo) => (
-                  <label key={tipo}>
-                    <input
-                      type="radio"
-                      name="tipo-meta"
-                      value={tipo}
-                      checked={formulario.tipo === tipo}
-                      onChange={() => atualizarFormulario("tipo", tipo)}
-                    />
-                    <span>{tipo === "MENSAL" ? "Mensal" : "Semestral"}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+          <fieldset className="meta-cadastro-campos" disabled={salvando}>
+            <legend className="meta-cadastro-legenda">
+              Cadastrar meta e períodos
+            </legend>
+            <div className="metas-form-grid">
+              <label>
+                Nome da meta
+                <input
+                  maxLength={120}
+                  required
+                  value={formulario.nome}
+                  onChange={(event) =>
+                    atualizarFormulario("nome", event.target.value)
+                  }
+                  placeholder="Ex.: Despesas operacionais"
+                />
+              </label>
+              <label>
+                Recorrência
+                <select
+                  aria-label="Recorrência"
+                  value={formulario.recorrencia}
+                  onChange={(event) =>
+                    atualizarFormulario("recorrencia", event.target.value)
+                  }
+                >
+                  {Object.entries(recorrencias).map(([valor, nome]) => (
+                    <option key={valor} value={valor}>
+                      {nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-            <label>
-              Valor limite
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={formulario.valorLimite || ""}
-                onChange={(event) =>
-                  atualizarFormulario("valorLimite", Number(event.target.value))
-                }
-                placeholder="Ex.: 100000,00"
-              />
-            </label>
-
-            <label>
-              Data inicial
-              <input
-                type="date"
-                value={formulario.dataInicio}
-                onChange={(event) =>
-                  atualizarFormulario("dataInicio", event.target.value)
-                }
-              />
-            </label>
-
-            <label>
-              Data final
-              <input
-                type="date"
-                value={formulario.dataFim}
-                onChange={(event) =>
-                  atualizarFormulario("dataFim", event.target.value)
-                }
-              />
-            </label>
-
-            <label>
-              Alerta a partir de
-              <div className="metas-input-percentual">
+              <label>
+                {formulario.recorrencia === "SEM_RECORRENCIA"
+                  ? "Limite para toda a vigência"
+                  : "Limite por período completo"}
                 <input
                   type="number"
-                  min="1"
-                  max="100"
-                  value={formulario.percentualAlerta}
+                  min="0.01"
+                  step="0.01"
+                  value={formulario.valorLimite || ""}
                   onChange={(event) =>
                     atualizarFormulario(
-                      "percentualAlerta",
+                      "valorLimite",
                       Number(event.target.value),
                     )
                   }
+                  placeholder="Ex.: 100000,00"
                 />
-                <span>%</span>
-              </div>
-            </label>
-          </div>
+              </label>
 
-          <div className="metas-form-grid metas-form-grid-contexto">
-            <label>
-              Centro de custo
-              <select
-                value={formulario.centroCusto ?? ""}
-                onChange={(event) => {
-                  void alterarCentroCustoFormulario(event.target.value);
-                }}
-              >
-                <option value="">Todos os centros de custo</option>
+              <label>
+                Início da vigência
+                <input
+                  type="date"
+                  value={formulario.dataInicio}
+                  onChange={(event) =>
+                    atualizarFormulario("dataInicio", event.target.value)
+                  }
+                />
+              </label>
 
-                {opcoesCentroCusto.map((centro) => (
-                  <option key={centro} value={centro}>
-                    {centro}
+              <label>
+                Fim da vigência
+                <input
+                  type="date"
+                  value={formulario.dataFim}
+                  onChange={(event) =>
+                    atualizarFormulario("dataFim", event.target.value)
+                  }
+                />
+              </label>
+
+              <label>
+                Alerta a partir de
+                <div className="metas-input-percentual">
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={formulario.percentualAlerta}
+                    onChange={(event) =>
+                      atualizarFormulario(
+                        "percentualAlerta",
+                        Number(event.target.value),
+                      )
+                    }
+                  />
+                  <span>%</span>
+                </div>
+              </label>
+            </div>
+
+            <div className="metas-form-grid metas-form-grid-contexto">
+              <label>
+                Centro de custo
+                <select
+                  value={formulario.centroCusto ?? ""}
+                  onChange={(event) => {
+                    void alterarCentroCustoFormulario(event.target.value);
+                  }}
+                >
+                  <option value="">Todos os centros de custo</option>
+
+                  {opcoesCentroCusto.map((centro) => (
+                    <option key={centro} value={centro}>
+                      {centro}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Categoria
+                <select
+                  value={formulario.categoria ?? ""}
+                  disabled={
+                    !formulario.centroCusto || carregandoCategoriasFormulario
+                  }
+                  onChange={(event) =>
+                    atualizarFormulario("categoria", event.target.value || null)
+                  }
+                >
+                  <option value="">
+                    {carregandoCategoriasFormulario
+                      ? "Carregando categorias..."
+                      : formulario.centroCusto
+                        ? "Todas as categorias"
+                        : "Selecione um centro de custo"}
                   </option>
-                ))}
-              </select>
-            </label>
 
-            <label>
-              Categoria
-              <select
-                value={formulario.categoria ?? ""}
-                disabled={
-                  !formulario.centroCusto || carregandoCategoriasFormulario
-                }
-                onChange={(event) =>
-                  atualizarFormulario("categoria", event.target.value || null)
-                }
-              >
-                <option value="">
-                  {carregandoCategoriasFormulario
-                    ? "Carregando categorias..."
-                    : formulario.centroCusto
-                      ? "Todas as categorias"
-                      : "Selecione um centro de custo"}
-                </option>
+                  {categoriasFormulario.map((categoria) => (
+                    <option key={categoria} value={categoria}>
+                      {categoria}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
 
-                {categoriasFormulario.map((categoria) => (
-                  <option key={categoria} value={categoria}>
-                    {categoria}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="metas-formulario-footer">
-            <span>
-              O alerta não bloqueia lançamentos. Ele funciona como indicador
-              gerencial.
-            </span>
-
-            <div>
+            <div className="meta-recorrencia-previa">
+              <p>
+                Os ciclos seguem o calendário: mês, trimestre, semestre ou ano.
+                Períodos incompletos recebem limite proporcional aos dias, sem
+                transferência de saldo. Vigência de até dez anos e no máximo 120
+                períodos.
+              </p>
               <button
                 type="button"
                 className="metas-secondary-button"
-                onClick={() => setMostrarFormulario(false)}
+                disabled={gerandoPrevia || salvando}
+                onClick={() => void visualizarPeriodos()}
               >
-                Cancelar
+                {gerandoPrevia ? "Gerando prévia…" : "Visualizar períodos"}
               </button>
-
-              <button
-                type="submit"
-                className="metas-primary-button"
-                disabled={salvando}
-              >
-                {salvando ? "Salvando..." : "Criar meta"}
-              </button>
+              {previa && previa.assinatura === JSON.stringify(formulario) && (
+                <div aria-live="polite">
+                  <h3>
+                    {previa.dados.periodos.length}{" "}
+                    {previa.dados.periodos.length === 1
+                      ? "período"
+                      : "períodos"}{" "}
+                    · Limite somado: {formatarMoeda(previa.dados.limiteTotal)}
+                  </h3>
+                  <div
+                    className="meta-previa-tabela"
+                    tabIndex={0}
+                    aria-label="Períodos previstos"
+                  >
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Início</th>
+                          <th>Fim</th>
+                          <th>Limite</th>
+                          <th>Cálculo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previa.dados.periodos.map((periodo) => (
+                          <tr key={periodo.inicio}>
+                            <td>{formatarData(periodo.inicio)}</td>
+                            <td>{formatarData(periodo.fim)}</td>
+                            <td>{formatarMoeda(periodo.limite)}</td>
+                            <td>
+                              {periodo.proporcional
+                                ? `${periodo.dias}/${periodo.diasPeriodoCompleto} dias`
+                                : "Integral"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
+
+            <div className="metas-formulario-footer">
+              <span>
+                O alerta não bloqueia lançamentos. Ele funciona como indicador
+                gerencial.
+              </span>
+
+              <div>
+                <button
+                  type="button"
+                  className="metas-secondary-button"
+                  onClick={() => setMostrarFormulario(false)}
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="submit"
+                  className="metas-primary-button"
+                  disabled={
+                    salvando ||
+                    !previa ||
+                    previa.assinatura !== JSON.stringify(formulario)
+                  }
+                >
+                  {salvando ? "Salvando..." : "Criar meta"}
+                </button>
+              </div>
+            </div>
+          </fieldset>
         </form>
       )}
 
@@ -633,37 +821,16 @@ function SpendingGoals() {
             </select>
           </label>
 
-          <label>
-            <span>Categoria</span>
-
-            <select
-              value={filtroCategoria}
-              disabled={carregando}
-              onChange={(event) => {
-                const novaCategoria = event.target.value;
-
-                setFiltroCategoria(novaCategoria);
-
-                void carregarMetas(filtroCentroCusto, novaCategoria);
-              }}
-            >
-              <option value="">Todas as categorias</option>
-
-              {opcoesCategoria.map((categoria) => (
-                <option key={categoria} value={categoria}>
-                  {categoria}
-                </option>
-              ))}
-            </select>
-          </label>
-
           <div className="metas-filtro-resultado">
             <span>Resultados</span>
 
             <strong>{metasFiltradas.length}</strong>
 
             <small>
-              de {metas.length} {metas.length === 1 ? "meta" : "metas"}
+              {metas.length}{" "}
+              {metas.length === 1
+                ? "período cadastrado"
+                : "períodos cadastrados"}
             </small>
           </div>
         </div>
@@ -676,7 +843,7 @@ function SpendingGoals() {
           <strong>{formatarMoeda(resumo.limiteTotal)}</strong>
 
           <small>
-            Limites das metas cadastradas, sem alteração pelos filtros
+            Limites dos períodos exibidos, sem alteração pelos filtros
           </small>
         </article>
 
@@ -690,7 +857,7 @@ function SpendingGoals() {
           <small>
             {filtrosAtivos
               ? "Despesas selecionadas nos períodos das metas"
-              : "Valor consumido nas metas"}
+              : "Valor consumido nos períodos exibidos"}
           </small>
         </article>
 
@@ -699,7 +866,7 @@ function SpendingGoals() {
 
           <strong>{formatarMoeda(resumo.saldoTotal)}</strong>
 
-          <small>Considera o consumo total, sem filtros</small>
+          <small>Saldo nos períodos exibidos, sem filtros</small>
         </article>
 
         <article>
@@ -707,9 +874,14 @@ function SpendingGoals() {
 
           <strong>{resumo.metasAtencao}</strong>
 
-          <small>Alertas pelo consumo total, sem filtros</small>
+          <small>Alertas nos períodos exibidos, sem filtros</small>
         </article>
       </div>
+
+      <p className="meta-resumo-periodos">
+        Resumo dos períodos exibidos em cada cartão. Metas com escopos
+        sobrepostos podem incluir a mesma despesa.
+      </p>
 
       <div className="metas-content">
         <div className="metas-section-heading">
@@ -767,16 +939,21 @@ function SpendingGoals() {
               return (
                 <article
                   className={`meta-card meta-risk-${meta.status.toLowerCase()}`}
-                  key={meta.id}
+                  key={meta.serie?.id ?? meta.id}
+                  id={`meta-${meta.id}`}
+                  tabIndex={-1}
                 >
                   <div className="meta-card-top">
                     <div>
-                      <h3>Meta de gastos #{meta.id}</h3>
+                      <h3>
+                        {meta.serie?.nome ?? `Meta de gastos #${meta.id}`}
+                      </h3>
 
                       <small>
                         <span aria-hidden="true">▦ </span>
-                        {meta.tipo === "MENSAL" ? "Mensal" : "Semestral"} ·{" "}
-                        {formatarData(meta.dataInicio)}
+                        {recorrencias[meta.tipo as keyof typeof recorrencias] ??
+                          meta.tipo}{" "}
+                        · {formatarData(meta.dataInicio)}
                         {" — "}
                         {formatarData(meta.dataFim)}
                       </small>
@@ -791,6 +968,50 @@ function SpendingGoals() {
                       {periodoMeta(meta)}
                     </span>
                   </div>
+
+                  {meta.serie && (
+                    <div className="meta-serie-periodo">
+                      <p>
+                        Vigência: {formatarData(meta.serie.inicio)} —{" "}
+                        {formatarData(meta.serie.fim)} · Limite integral:{" "}
+                        {formatarMoeda(meta.serie.limitePeriodo)}
+                      </p>
+                      <label>
+                        Período em acompanhamento
+                        <select
+                          aria-label="Período em acompanhamento"
+                          value={meta.id}
+                          onChange={(event) =>
+                            setPeriodosSelecionados((atuais) => ({
+                              ...atuais,
+                              [meta.serie!.id]: {
+                                id: Number(event.target.value),
+                                hash,
+                              },
+                            }))
+                          }
+                        >
+                          {metas
+                            .filter((m) => m.serie?.id === meta.serie!.id)
+                            .sort((a, b) =>
+                              a.dataInicio.localeCompare(b.dataInicio),
+                            )
+                            .map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {formatarData(m.dataInicio)} —{" "}
+                                {formatarData(m.dataFim)} · {periodoMeta(m)}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                      {Number(meta.valorLimite) !==
+                        Number(meta.serie.limitePeriodo) && (
+                        <small>
+                          Limite proporcional aos dias deste período.
+                        </small>
+                      )}
+                    </div>
+                  )}
 
                   {(meta.categoria || meta.centroCusto) && (
                     <div className="meta-contexto">
@@ -854,6 +1075,20 @@ function SpendingGoals() {
                           {Number(meta.percentualFiltrado).toFixed(1)}%
                         </strong>
                       </span>
+                    </div>
+                  )}
+
+                  {usuarioAdmin && (
+                    <div className="meta-acoes">
+                      <button
+                        type="button"
+                        className="meta-excluir"
+                        aria-label={`Excluir meta ${meta.serie?.nome ?? `de gastos #${meta.id}`}`}
+                        disabled={excluindo !== null}
+                        onClick={() => void confirmarExclusao(meta)}
+                      >
+                        {excluindo === meta.id ? "Excluindo…" : "Excluir meta"}
+                      </button>
                     </div>
                   )}
 

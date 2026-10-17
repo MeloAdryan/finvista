@@ -27,8 +27,7 @@ class FinancialEngineIntegrationTest {
 
     private static final Long CLIENTE_ID = 1L;
 
-    private FinancialTransactionRepository
-            financialTransactionRepository;
+    private FinancialTransactionRepository financialTransactionRepository;
 
     private ProjectionService projectionService;
 
@@ -37,48 +36,47 @@ class FinancialEngineIntegrationTest {
     @BeforeEach
     void setUp() {
 
-        financialTransactionRepository =
-                mock(
+        financialTransactionRepository
+                = mock(
                         FinancialTransactionRepository.class
                 );
 
-        clienteContextService =
-                mock(
+        clienteContextService
+                = mock(
                         ClienteContextService.class
                 );
 
         when(
-        clienteContextService.isAdmin()
-).thenReturn(
-        false
-);
+                clienteContextService.isAdmin()
+        ).thenReturn(
+                false
+        );
 
-when(
-        clienteContextService.getClienteAtualId()
-).thenReturn(
-        CLIENTE_ID
-);
+        when(
+                clienteContextService.getClienteAtualId()
+        ).thenReturn(
+                CLIENTE_ID
+        );
 
-        FinancialCalculationService calculationService =
-                new FinancialCalculationService();
+        FinancialCalculationService calculationService
+                = new FinancialCalculationService();
 
-        FinancialTransactionAggregationService
-                aggregationService =
-                new FinancialTransactionAggregationService(
+        FinancialTransactionAggregationService aggregationService
+                = new FinancialTransactionAggregationService(
                         financialTransactionRepository,
                         clienteContextService
                 );
 
-        Clock clock =
-                Clock.fixed(
+        Clock clock
+                = Clock.fixed(
                         Instant.parse(
                                 "2026-09-20T12:00:00Z"
                         ),
                         ZoneId.of("UTC")
                 );
 
-        projectionService =
-                new ProjectionService(
+        projectionService
+                = new ProjectionService(
                         aggregationService,
                         calculationService,
                         clock
@@ -88,8 +86,8 @@ when(
     @Test
     void deveIntegrarTransacoesEProjecaoDeSeisMeses() {
 
-        List<FinancialTransaction> transacoes =
-                List.of(
+        List<FinancialTransaction> transacoes
+                = List.of(
                         novaTransacao(
                                 LocalDate.of(
                                         2026,
@@ -143,16 +141,16 @@ when(
                 transacoes
         );
 
-        List<ProjectionResponse> projecao =
-                projectionService.obterProjecao();
+        List<ProjectionResponse> projecao
+                = projectionService.obterProjecao();
 
         assertEquals(
                 6,
                 projecao.size()
         );
 
-        ProjectionResponse setembro =
-                projecao.get(0);
+        ProjectionResponse setembro
+                = projecao.get(0);
 
         assertEquals(
                 "2026-09",
@@ -194,8 +192,8 @@ when(
                 setembro.saldo()
         );
 
-        ProjectionResponse outubro =
-                projecao.get(1);
+        ProjectionResponse outubro
+                = projecao.get(1);
 
         assertEquals(
                 "2026-10",
@@ -232,8 +230,8 @@ when(
                 outubro.saldo()
         );
 
-        ProjectionResponse novembro =
-                projecao.get(2);
+        ProjectionResponse novembro
+                = projecao.get(2);
 
         assertEquals(
                 "2026-11",
@@ -265,8 +263,8 @@ when(
                 novembro.saldo()
         );
 
-        ProjectionResponse dezembro =
-                projecao.get(3);
+        ProjectionResponse dezembro
+                = projecao.get(3);
 
         assertEquals(
                 "2026-12",
@@ -288,8 +286,8 @@ when(
                 dezembro.saldo()
         );
 
-        ProjectionResponse janeiro =
-                projecao.get(4);
+        ProjectionResponse janeiro
+                = projecao.get(4);
 
         assertEquals(
                 "2027-01",
@@ -311,8 +309,8 @@ when(
                 janeiro.saldo()
         );
 
-        ProjectionResponse fevereiro =
-                projecao.get(5);
+        ProjectionResponse fevereiro
+                = projecao.get(5);
 
         assertEquals(
                 "2027-02",

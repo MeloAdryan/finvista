@@ -38,9 +38,9 @@ public class Budget {
 
     @Column(name = "data_fim", nullable = false)
     private LocalDate dataFim;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
-    
+
     @JoinColumn(name = "cliente_id")
     private Cliente cliente;
 

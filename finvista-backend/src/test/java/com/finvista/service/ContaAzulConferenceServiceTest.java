@@ -66,8 +66,9 @@ class ContaAzulConferenceServiceTest {
                 h.createCell(c).setCellValue(headers[c]);
                 if (values[c] != null) {
                     r.createCell(c).setCellValue(values[c]);
-            
-                }}
+
+                }
+            }
             if (formula) {
                 r.getCell(10).setCellFormula("100+0");
             }

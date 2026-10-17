@@ -64,17 +64,16 @@ public class ContaAzulConnectionService {
         repo.saveAndFlush(c);
     }
 
-    /**
-     * Retorna a credencial somente para uso interno; não expor em controllers
-     * ou logs.
-     */
+     
+
     @Transactional(readOnly = true)
     public String acessoParaConsulta(Long clienteEsperado) {
-        context.validarAdministrador();
+    context.validarAdministrador();
         cfg.exigirAtiva();
         Long id = context.getClienteAtualId();
         if (!id.equals(clienteEsperado)) {
-            throw new IllegalArgumentException("A empresa selecionada mudou. Atualize a consulta.");
+
+    throw new IllegalArgumentException("A empresa selecionada mudou. Atualize a consulta.");
         }
         var c = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("Autorize esta empresa na Conta Azul antes de consultar."));
         if (c.getExpiresAt() == null || !c.getExpiresAt().isAfter(Instant.now().plusSeconds(30))) {

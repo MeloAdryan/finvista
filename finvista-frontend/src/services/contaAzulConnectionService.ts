@@ -1,3 +1,4 @@
+import { apiFetch } from "../config/http";
 import { API_URL } from "../config/api";
 export interface ContaAzulStatus {
   clienteId: number;
@@ -12,7 +13,7 @@ async function request<T>(
   method = "GET",
   signal?: AbortSignal,
 ): Promise<T> {
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_URL}/api/integracoes/conta-azul/${path}`,
     {
       method,
@@ -28,7 +29,7 @@ async function request<T>(
       const data = await response.json();
       message = data.mensagem || data.erro || data.message || message;
     } catch {
-      /* resposta sem JSON */
+      message = "Não foi possível consultar a conexão Conta Azul.";
     }
     throw new Error(message);
   }

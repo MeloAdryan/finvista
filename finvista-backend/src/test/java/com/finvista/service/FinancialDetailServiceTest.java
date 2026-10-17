@@ -133,17 +133,3 @@ class FinancialDetailServiceTest {
         assertEquals(0, new BigDecimal(esperado).compareTo(valor));
     }
 }
-
-
-     
-           
-         
-           
-         
-         
-         
-           
-         
-        
-    
-    
