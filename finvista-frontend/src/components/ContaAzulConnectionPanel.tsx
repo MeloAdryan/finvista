@@ -102,8 +102,11 @@ export default function ContaAzulConnectionPanel({
         </p>
       )}
       <p>
-        A autorização não importa lançamentos automaticamente. A importação por
-        arquivo segue disponível abaixo.
+        A autorização não importa lançamentos automaticamente. Consulte uma
+        parcela para preparar e confirmar sua sincronização ou conferir um
+        vínculo Excel/API. O plano de importação Conta Azul protege possíveis
+        correspondências com a API; a importação genérica permanece bloqueada
+        para empresas com lançamentos API.
       </p>
       {erro && (
         <p role="alert" className="ca-connection-error">

@@ -240,8 +240,9 @@ export default function ContaAzulFinancialPanel({
             </button>
           </div>
           <p>
-            Os registros podem mudar entre consultas. Esta conferência ainda não
-            aplica importação nem compara com os arquivos já importados.
+            Os registros podem mudar entre consultas. A listagem não grava
+            lançamentos. Abra os detalhes para conferir e preparar uma
+            sincronização individual.
           </p>
         </>
       )}

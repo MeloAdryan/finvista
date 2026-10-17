@@ -1,3 +1,5 @@
+import ContaAzulApiSyncPanel from "./ContaAzulApiSyncPanel";
+import ContaAzulOriginLinkPanel from "./ContaAzulOriginLinkPanel";
 import { useEffect, useRef, useState } from "react";
 import {
   prepararPlanoApi,
@@ -27,6 +29,7 @@ export default function ContaAzulApiPlanPanel({
   parcelaId,
   aoAtualizar,
 }: Props) {
+  const [sincronizado, setSincronizado] = useState(false);
   const [plano, setPlano] = useState<PlanoApi | null>(null);
   const [erro, setErro] = useState("");
   const [busy, setBusy] = useState(false);
@@ -40,6 +43,7 @@ export default function ContaAzulApiPlanPanel({
     setBusy(true);
     setErro("");
     setPlano(null);
+    setSincronizado(false);
     try {
       const value = await prepararPlanoApi(
         clienteId,
@@ -72,7 +76,8 @@ export default function ContaAzulApiPlanPanel({
       <h4>Plano de conferência desta parcela</h4>
       <p>
         Reconsulta a Conta Azul e compara com os lançamentos da empresa
-        selecionada. Nenhum registro será criado ou atualizado.
+        selecionada. Este plano não grava lançamentos; a sincronização exige a
+        prévia e a confirmação abaixo.
       </p>
       <button type="button" disabled={busy} onClick={() => void preparar()}>
         {busy
@@ -89,13 +94,19 @@ export default function ContaAzulApiPlanPanel({
       {plano && (
         <>
           <p role="status">
-            <strong>{rotulo[plano.situacao]}</strong>
+            <strong>
+              {sincronizado
+                ? "Operação de sincronização registrada no FinVista"
+                : rotulo[plano.situacao]}
+            </strong>
           </p>
           <p className="ca-parcel-detail-id">
-            Identidade proposta para API: {plano.identidadeApi}. Ainda não
-            gravada.
+            Identidade da API: {plano.identidadeApi}.{" "}
+            {sincronizado
+              ? "Vínculo registrado."
+              : "Esta conferência não grava o vínculo."}
           </p>
-          {plano.avisos.length > 0 && (
+          {!sincronizado && plano.avisos.length > 0 && (
             <ul>
               {plano.avisos.map((aviso, index) => (
                 <li key={index}>{aviso}</li>
@@ -103,10 +114,11 @@ export default function ContaAzulApiPlanPanel({
             </ul>
           )}
           <p>
-            {plano.totalCorrespondencias} correspondências encontradas. Exibindo
-            até 20.
+            {sincronizado
+              ? "Gere outro plano para consultar o estado após a sincronização."
+              : `${plano.totalCorrespondencias} correspondências encontradas. Exibindo até 20.`}
           </p>
-          {plano.correspondencias.length > 0 && (
+          {!sincronizado && plano.correspondencias.length > 0 && (
             <ul>
               {plano.correspondencias.map((c) => (
                 <li key={c.id}>
@@ -123,6 +135,23 @@ export default function ContaAzulApiPlanPanel({
             conferência, não uma autorização para gravar. Não confirma
             identidade entre registros semelhantes.
           </p>
+          {(plano.situacao === "SEM_CORRESPONDENCIA" ||
+            plano.situacao === "REGISTRO_IDENTIFICADO") && (
+            <ContaAzulApiSyncPanel
+              key={plano.consultadoEm}
+              clienteId={clienteId}
+              parcelaId={parcelaId}
+              aoConcluir={() => setSincronizado(true)}
+            />
+          )}
+          {plano.situacao === "CORRESPONDENCIA_POSSIVEL" && (
+            <ContaAzulOriginLinkPanel
+              key={plano.consultadoEm}
+              plano={plano}
+              parcelaId={parcelaId}
+              aoConcluir={() => setSincronizado(true)}
+            />
+          )}
         </>
       )}
     </section>
