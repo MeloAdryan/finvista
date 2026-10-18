@@ -1,4 +1,5 @@
 import ContaAzulConnectionPanel from "../components/ContaAzulConnectionPanel";
+import ContaAzulAutoPanel from "../components/ContaAzulAutoPanel";
 import ContaAzulFinancialPanel from "../components/ContaAzulFinancialPanel";
 import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
 
@@ -210,13 +211,17 @@ function ImportData({ cliente }: { cliente: Cliente | null }) {
         key={cliente?.id ?? "sem-empresa-consulta"}
         cliente={cliente}
       />
+      <ContaAzulAutoPanel
+        key={cliente?.id ?? "sem-automacao"}
+        cliente={cliente}
+      />
       <div className="ca-mode" aria-label="Tipo de importação">
         <button
           type="button"
           aria-pressed={modo === "conta-azul"}
           onClick={() => setModo("conta-azul")}
         >
-          Conta Azul
+          Contas Conta Azul
         </button>
         <button
           type="button"

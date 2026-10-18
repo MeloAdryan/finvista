@@ -12,7 +12,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class ApiImportTransitionTest {
-
     @Test
     void importacaoGenericaNaoMisturaArquivosAposInicioDaAPI() {
         var repository = mock(FinancialTransactionRepository.class);

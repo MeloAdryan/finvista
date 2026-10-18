@@ -11,4 +11,4 @@ public interface ContaAzulApiOperationRepository extends JpaRepository<ContaAzul
     Optional<ContaAzulApiOperation> findByIdAndClienteId(UUID id, Long clienteId);
 
     List<ContaAzulApiOperation> findByClienteIdAndAcaoOrderByConcluidoEmAsc(Long clienteId, String acao);
-}    
+}

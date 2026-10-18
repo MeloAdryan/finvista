@@ -40,6 +40,14 @@ public class ContaAzulApiPlanService {
         if (clienteId == null || !clienteId.equals(contexto.getClienteAtualId())) {
             throw new IllegalArgumentException("A empresa selecionada mudou. Prepare outro plano.");
         }
+        var plano = analisar(clienteId, parcela);
+        if (!clienteId.equals(contexto.getClienteAtualId())) {
+            throw new IllegalArgumentException("A empresa selecionada mudou durante a análise.");
+        }
+        return plano;
+    }
+
+    Plano analisar(Long clienteId, ContaAzulParcelDetail parcela) {
         if (parcela == null || parcela.id() == null) {
             throw new IllegalArgumentException("Parcela inválida.");
         }
@@ -72,9 +80,6 @@ public class ContaAzulApiPlanService {
         }
         if (encontrados.isEmpty()) {
             avisos.add("Nenhuma correspondência encontrada por estas regras. Isso não comprova que a parcela seja nova.");
-        }
-        if (!clienteId.equals(contexto.getClienteAtualId())) {
-            throw new IllegalArgumentException("A empresa selecionada mudou durante a análise.");
         }
         return new Plano(clienteId, clienteId + ":" + ORIGEM_API + ":" + parcela.id().toLowerCase(Locale.ROOT),
                 situacao, Instant.now(), parcela, List.copyOf(avisos),
