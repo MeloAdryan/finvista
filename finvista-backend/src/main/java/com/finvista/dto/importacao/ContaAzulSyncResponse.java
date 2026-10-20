@@ -28,4 +28,10 @@ public final class ContaAzulSyncResponse {
     public record Candidato(Long id, String descricao, LocalDate competencia, LocalDate vencimento,
             java.math.BigDecimal original, java.math.BigDecimal realizado, java.math.BigDecimal aberto,
             String situacao, String contraparte, String referencia, String categoria, String centro) {}
+    public record CampoRecuperacao(String campo,java.math.BigDecimal valor) {}
+    public record ItemRecuperacao(int linha,String descricao,Long lancamentoId,String motivo,
+            boolean elegivel,List<CampoRecuperacao> campos) {}
+    public record PlanoRecuperacao(Long clienteId,String arquivo,LocalDate dataCorte,String token,
+            int elegiveis,int pendentes,List<ItemRecuperacao> itens) {}
+    public record ResultadoRecuperacao(Long loteId,int atualizados,int camposPreenchidos,int pendentes) {}
 }

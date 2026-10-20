@@ -29,7 +29,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            SecurityContextRepository securityContextRepository
+            SecurityContextRepository securityContextRepository,
+            org.springframework.core.env.Environment environment
     ) throws Exception {
 
         http
@@ -77,6 +78,11 @@ public class SecurityConfig {
                                 .requestMatchers(
                                         "/api/auth/login", "/api/auth/csrf"
                                 )
+                                .permitAll()
+                                .requestMatchers(request -> environment.acceptsProfiles(org.springframework.core.env.Profiles.of("dev & !prod"))
+                                        && environment.getProperty("finvista.conta-azul.local-callback-relay", Boolean.class, false)
+                                        && "GET".equals(request.getMethod())
+                                        && request.getRequestURI().equals(request.getContextPath() + "/api/integracoes/conta-azul/callback"))
                                 .permitAll()
                                 .requestMatchers("/api/admin/**", "/api/importacoes/**", "/api/integracoes/conta-azul/**").hasRole("ADMIN")
                                 .anyRequest()

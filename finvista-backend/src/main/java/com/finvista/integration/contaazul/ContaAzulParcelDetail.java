@@ -25,7 +25,19 @@ public record ContaAzulParcelDetail(
         @JsonProperty(value = "perda", access = JsonProperty.Access.WRITE_ONLY)
         Ajuste perda,
         @JsonProperty(value = "renegociacao", access = JsonProperty.Access.WRITE_ONLY)
-        Ajuste renegociacao) {
+        Ajuste renegociacao,
+        List<Baixa> baixas) {
+
+    public ContaAzulParcelDetail(String id, String descricao, String status, LocalDate vencimento,
+            BigDecimal liquido, BigDecimal pago, BigDecimal pendente, Composicao composicao, Evento evento,
+            Ajuste perda, Ajuste renegociacao) {
+        this(id, descricao, status, vencimento, liquido, pago, pendente, composicao, evento, perda, renegociacao, null);
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Baixa(String id, @JsonProperty("id_parcela") String parcelaId,
+            @JsonProperty("data_pagamento") LocalDate data,
+            @JsonProperty("valor_composicao") Composicao composicao) {}
 
     public ContaAzulParcelDetail(String id, String descricao, String status, LocalDate vencimento,
             BigDecimal liquido, BigDecimal pago, BigDecimal pendente, Composicao composicao, Evento evento) {
@@ -40,23 +52,23 @@ public record ContaAzulParcelDetail(
         if (liquido != null) {
             return liquido;
         }
-        if (perda != null || renegociacao != null || composicao == null || evento == null || evento.condicao() == null
-                || !Integer.valueOf(1).equals(evento.condicao().quantidade())
-                || !("RECEITA".equals(evento.tipo()) || "DESPESA".equals(evento.tipo()))
-                || !dinheiro(composicao.bruto()) || !dinheiro(composicao.liquido())
-                || !dinheiro(pago) || !dinheiro(pendente)
-                || !zero(composicao.juros()) || !zero(composicao.multa())
-                || !zero(composicao.desconto()) || !zero(composicao.taxa())
-                || composicao.bruto().compareTo(composicao.liquido()) != 0
-                || pago.add(pendente).compareTo(composicao.liquido()) != 0) {
-            return null;
-        }
-        boolean emAberto = "PENDENTE".equals(status) || "EM_ABERTO".equals(status) || "ATRASADO".equals(status);
+        if (evento == null || evento.condicao() == null || evento.condicao().quantidade() == null
+                || evento.condicao().quantidade() < 1 || composicao == null || composicao.liquido() == null
+                || !("RECEITA".equals(evento.tipo()) || "DESPESA".equals(evento.tipo()))) return null;
+        if (perda != null || renegociacao != null) return null;
+        // Mantém a conferência de leitura legada. A gravação exige baixas explícitas na policy.
+        boolean aberto = "PENDENTE".equals(status) || "EM_ABERTO".equals(status) || "ATRASADO".equals(status);
         boolean quitado = "QUITADO".equals(status) || "RECEBIDO".equals(status);
-        if (!(emAberto && pago.signum() == 0) && !(quitado && pendente.signum() == 0)) {
-            return null;
-        }
-        return composicao.liquido();
+        if (baixas == null && dinheiro(composicao.bruto()) && dinheiro(composicao.liquido())
+                && dinheiro(pago) && dinheiro(pendente)
+                && zero(composicao.juros()) && zero(composicao.multa())
+                && zero(composicao.desconto()) && zero(composicao.taxa())
+                && composicao.bruto().compareTo(composicao.liquido()) == 0
+                && pago.add(pendente).compareTo(composicao.liquido()) == 0
+                && ((aberto && pago.signum() == 0) || (quitado && pendente.signum() == 0)))
+            return composicao.liquido();
+        try { return ContaAzulSettlementPolicy.conferir(this).liquido(); }
+        catch (IllegalArgumentException e) { return null; }
     }
 
     @JsonProperty("origem_valor_liquido")

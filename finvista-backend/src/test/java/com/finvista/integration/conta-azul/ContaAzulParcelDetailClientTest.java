@@ -144,4 +144,26 @@ class ContaAzulParcelDetailClientTest {
     void serverErrorIsSanitized() {
         error(HttpStatus.INTERNAL_SERVER_ERROR, 502);
     }
+    @Test
+    void buscaBaixasQuandoParcelaPagaNaoAsInclui() {
+        response("\"valor_pago\":10,\"nao_pago\":0");
+        server.expect(requestTo(url()+"/baixa")).andExpect(method(HttpMethod.GET))
+                .andExpect(header("Authorization","Bearer private-token"))
+                .andRespond(withSuccess("[{\"id\":\"baixa\",\"id_parcela\":\""+ID+"\",\"data_pagamento\":\"2026-10-19\","
+                        +"\"valor_composicao\":{\"valor_bruto\":10,\"juros\":0,\"multa\":0,\"desconto\":0,\"taxa\":0}}]",MediaType.APPLICATION_JSON));
+        var p=query(); assertEquals(1,p.baixas().size());
+        assertEquals(java.time.LocalDate.parse("2026-10-19"),p.baixas().get(0).data()); server.verify();
+    }
+    @Test
+    void erroAoBuscarBaixasNaoRetornaDetalheFinanceiroIncompleto() {
+        response("\"valor_pago\":10");
+        server.expect(requestTo(url()+"/baixa")).andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+        assertEquals(429,assertThrows(ResponseStatusException.class,this::query).getStatusCode().value()); server.verify();
+    }
+    @Test
+    void baixasEmbutidasSaoMantidasSemConsultarOutraRota() {
+        response("\"valor_pago\":10,\"baixas\":[]");
+        assertTrue(query().baixas().isEmpty()); server.verify();
+    }
+
 }

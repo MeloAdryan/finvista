@@ -58,6 +58,11 @@ public class ClienteController {
     @GetMapping("/contexto")
     public ResponseEntity<ClienteResponse> contextoAtual() {
 
+        if (clienteContextService.isAdmin()
+                && clienteContextService.getClienteSelecionadoId() == null) {
+            return ResponseEntity.noContent().build();
+        }
+
         Cliente cliente =
                 clienteContextService.getClienteAtual();
 

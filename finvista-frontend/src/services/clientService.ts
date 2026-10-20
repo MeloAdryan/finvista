@@ -9,6 +9,7 @@ export interface Cliente {
 }
 
 interface ApiErrorResponse {
+  mensagem?: string;
   erro?: string;
   message?: string;
 }
@@ -22,7 +23,9 @@ async function lerErro(
   try {
     const data = (await response.json()) as ApiErrorResponse;
 
-    if (data.erro) {
+    if (data.mensagem) {
+      mensagem = data.mensagem;
+    } else if (data.erro) {
       mensagem = data.erro;
     } else if (data.message) {
       mensagem = data.message;
@@ -53,17 +56,12 @@ export async function obterClienteAtual(): Promise<Cliente | null> {
     credentials: "include",
   });
 
-  if (response.ok) {
-    return (await response.json()) as Cliente;
+  if (response.status === 204) {
+    return null;
   }
 
-  if (
-    response.status === 400 ||
-    response.status === 403 ||
-    response.status === 404 ||
-    response.status === 409
-  ) {
-    return null;
+  if (response.ok) {
+    return (await response.json()) as Cliente;
   }
 
   return lerErro(response, "Não foi possível obter o cliente atual.");

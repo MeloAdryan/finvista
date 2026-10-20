@@ -31,10 +31,12 @@ export default function GoalProgress({
   meta,
   automatico = false,
   resumo = false,
+  evolucaoEmDialogo = false,
 }: {
   meta: SpendingGoal;
   automatico?: boolean;
   resumo?: boolean;
+  evolucaoEmDialogo?: boolean;
 }) {
   const [aberto, setAberto] = useState(automatico);
   const [expandido, setExpandido] = useState(false);
@@ -140,13 +142,16 @@ export default function GoalProgress({
         )}
         <button
           type="button"
-          onClick={() => setAberto(!aberto)}
-          aria-expanded={aberto}
+          onClick={() => (evolucaoEmDialogo ? ampliar() : setAberto(!aberto))}
+          aria-haspopup={evolucaoEmDialogo ? "dialog" : undefined}
+          aria-expanded={evolucaoEmDialogo ? undefined : aberto}
         >
-          {aberto ? "Ocultar evolução diária" : "Ver evolução diária"}
+          {!evolucaoEmDialogo && aberto
+            ? "Ocultar evolução diária"
+            : "Ver evolução diária"}
         </button>
       </div>
-      {aberto && (
+      {aberto && !evolucaoEmDialogo && (
         <div className="gp-evolution">
           {erro ? (
             <p role="alert">
@@ -170,7 +175,13 @@ export default function GoalProgress({
         </div>
       )}
       {expandido && (
-        <GoalDetailDialog meta={meta} aoFechar={() => setExpandido(false)}>
+        <GoalDetailDialog
+          meta={meta}
+          aoFechar={() => setExpandido(false)}
+          rotuloFechar={
+            evolucaoEmDialogo ? "Fechar e voltar ao painel" : undefined
+          }
+        >
           <div className="goal-detail-summary">
             <GoalUsageGauge
               meta={meta}

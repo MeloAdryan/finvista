@@ -180,3 +180,20 @@ export async function applyContaAzul(
     ),
   );
 }
+
+export interface RecoveryField { campo: string; valor: Money }
+export interface RecoveryItem { linha: number; descricao: string; lancamentoId: number | null;
+  motivo: string; elegivel: boolean; campos: RecoveryField[] }
+export interface RecoveryPlan { clienteId: number; arquivo: string; dataCorte: string; token: string;
+  elegiveis: number; pendentes: number; itens: RecoveryItem[] }
+export interface RecoveryResult { loteId: number; atualizados: number; camposPreenchidos: number; pendentes: number }
+export async function previewRecovery(file: File,cut: string,signal: AbortSignal) {
+  return read<RecoveryPlan>(await apiFetch(`${API_URL}/api/importacoes/conta-azul/sincronizacao/recuperacao/planejar`,
+    { method: "POST",credentials: "include",body: body(file,cut),signal }));
+}
+export async function applyRecovery(file: File,plan: RecoveryPlan,linhas: number[]) {
+  const form=body(file,plan.dataCorte);form.append("token",plan.token);
+  form.append("linhas",JSON.stringify(linhas));form.append("confirmado","true");
+  return read<RecoveryResult>(await apiFetch(`${API_URL}/api/importacoes/conta-azul/sincronizacao/recuperacao/aplicar`,
+    { method: "POST",credentials: "include",body: form }));
+}

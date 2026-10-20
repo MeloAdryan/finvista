@@ -22,8 +22,16 @@ export default function ContaAzulOriginLinkPanel({
       <p>
         Escolha explicitamente o lançamento que representa esta parcela. O
         vínculo mantém o registro existente e não cria outra receita ou despesa.
-        A prévia verifica descrição, tipo, valor, competência e vencimento;
-        divergências ou baixas impedem o vínculo nesta entrega.
+        A prévia verifica descrição, tipo, principal original, competência,
+        vencimento, valores pagos, saldos, ajustes e última baixa. Parcelas
+        pagas ou parcialmente pagas podem ser vinculadas quando todos esses
+        dados conferem. Campos financeiros ausentes devem ser recuperados antes;
+        divergências impedem o vínculo.
+      </p>
+      <p>
+        Após o vínculo, a sincronização pela API e a automação autorizada podem
+        atualizar este mesmo registro com os valores e rateios da Conta Azul.
+        Confira a prévia antes de reativar a automação.
       </p>
       {candidatos.length > 0 ? (
         <label>

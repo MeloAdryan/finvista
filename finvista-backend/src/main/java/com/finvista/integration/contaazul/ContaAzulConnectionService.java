@@ -32,7 +32,7 @@ public class ContaAzulConnectionService {
         context.validarAdministrador();
         Long id = context.getClienteAtualId();
         var c = repo.findById(id).orElse(null);
-        return new Status(id, p.isEnabled(), cfg.pronta(), c != null, c == null ? null : c.getExpiresAt(), !p.isEnabled() ? "Conexão desabilitada; importação por arquivo disponível." : !cfg.pronta() ? "Configure as credenciais, callback e chave no backend." : c == null ? "A empresa ainda não autorizou a conexão." : "Autorização armazenada para esta empresa; sincronização financeira automática ainda não disponível.");
+        return new Status(id, p.isEnabled(), cfg.pronta(), c != null, c == null ? null : c.getExpiresAt(), !p.isEnabled() ? "Conexão desabilitada; importação por arquivo disponível." : !cfg.pronta() ? "Configure as credenciais, callback e chave no backend." : c == null ? "A empresa ainda não autorizou a conexão." : "Autorização armazenada. Acompanhe a automação e as pendências no painel de sincronização.");
     }
 
     @Transactional

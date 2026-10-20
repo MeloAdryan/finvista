@@ -179,6 +179,105 @@ public class ContaAzulSyncService {
         return new Resultado(lote.getId(), criados, atualizados, mantidos, pendentes);
     }
 
+    @Transactional(readOnly=true)
+    public PlanoRecuperacao planejarRecuperacao(MultipartFile arquivo,LocalDate corte) throws IOException {
+        contexto.validarAdministrador();Long id=contexto.getClienteAtual().getId();
+        return recuperacao(ler(arquivo,corte),existentes(id),alocacoes(id),id,corte);
+    }
+
+    private boolean identidadeRecuperacao(FinancialTransaction a,FinancialTransaction b) {
+        if(!ORIGEM.equals(a.getOrigem()) || !candidato(a,b)) return false;
+        LocalDate ac=a.getDataCompetencia()==null?a.getData():a.getDataCompetencia();
+        if(ac==null || !ac.equals(b.getDataCompetencia()) || a.getDataVencimento()==null
+                || !a.getDataVencimento().equals(b.getDataVencimento())) return false;
+        if(a.getDataRealizacao()!=null && b.getDataRealizacao()!=null && !a.getDataRealizacao().equals(b.getDataRealizacao())) return false;
+        if(a.getDataPrevista()!=null && b.getDataPrevista()!=null && !a.getDataPrevista().equals(b.getDataPrevista())) return false;
+        String as=texto(a.getSituacao()),bs=texto(b.getSituacao());
+        if(as!=null && bs!=null && !as.equals(bs)) return false;
+        String ai=texto(a.getEntidadeExternaId()),bi=texto(b.getEntidadeExternaId());
+        String an=texto(a.getEntidadeNome()),bn=texto(b.getEntidadeNome());
+        if(ai!=null && bi!=null) { if(!ai.equals(bi)) return false; }
+        else if(an==null || bn==null || !an.equals(bn)) return false;
+        String ar=texto(a.getCodigoReferencia()),br=texto(b.getCodigoReferencia());
+        return ar==null || br==null || ar.equals(br);
+    }
+
+    private PlanoRecuperacao recuperacao(Leitura leitura,List<FinancialTransaction> existentes,
+            List<FinancialAllocation> alocacoes,Long id,LocalDate corte) {
+        Plano base=plano(leitura,existentes,alocacoes,id,corte);
+        Map<Long,FinancialTransaction> porId=new HashMap<>();existentes.forEach(t -> porId.put(t.getId(),t));
+        Map<Integer,Entrada> porLinha=new HashMap<>();leitura.entradas().forEach(e -> porLinha.put(e.linha().numero(),e));
+        Map<Integer,List<FinancialTransaction>> matches=new HashMap<>();Map<Long,Integer> usos=new HashMap<>();
+        for(Item item:base.itens()) {
+            if("PROTEGIDO_API".equals(item.sugestao())) continue;
+            var fonte=porLinha.get(item.linha()).dados();
+            var lista=item.candidatos().stream().map(porId::get).filter(Objects::nonNull)
+                    .filter(t -> identidadeRecuperacao(t,fonte)).toList();
+            matches.put(item.linha(),lista);
+            // Uma linha ambígua também reserva seus candidatos: não reaproveitar o ID em outra linha.
+            lista.forEach(t -> usos.merge(t.getId(),1,Integer::sum));
+        }
+        List<ItemRecuperacao> itens=new ArrayList<>();int elegiveis=0;
+        for(Item item:base.itens()) {
+            var lista=matches.getOrDefault(item.linha(),List.of());Long destino=null;String motivo;
+            List<CampoRecuperacao> campos=List.of();
+            if("PROTEGIDO_API".equals(item.sugestao())) motivo="Protegido pela API.";
+            else if(lista.isEmpty()) motivo="Sem correspondência completa de descrição, datas, valor original e contraparte.";
+            else if(lista.size()!=1) motivo="Mais de um registro correspondente. Revisão individual necessária.";
+            else {
+                var atual=lista.get(0);var fonte=porLinha.get(item.linha()).dados();destino=atual.getId();
+                if(usos.getOrDefault(destino,0)!=1) motivo="O registro corresponde a mais de uma linha do arquivo.";
+                else if(ContaAzulRecoveryPolicy.divergente(atual,fonte)) motivo="Valor financeiro já informado diverge do arquivo.";
+                else {
+                    campos=ContaAzulRecoveryPolicy.campos(atual,fonte);
+                    motivo=campos.isEmpty()?"Nenhum campo financeiro ausente para preencher.":"Correspondência única; somente campos financeiros ausentes.";
+                }
+            }
+            boolean elegivel=!campos.isEmpty();if(elegivel)elegiveis++;
+            itens.add(new ItemRecuperacao(item.linha(),item.descricao(),destino,motivo,elegivel,campos));
+        }
+        return new PlanoRecuperacao(id,base.arquivo(),corte,hash(("RECUPERAR_NULOS_V1:"+base.token())
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8)),elegiveis,itens.size()-elegiveis,List.copyOf(itens));
+    }
+
+    @Transactional(rollbackFor=Exception.class)
+    public ResultadoRecuperacao aplicarRecuperacao(MultipartFile arquivo,LocalDate corte,String token,
+            List<Integer> linhas,boolean confirmado) throws IOException {
+        contexto.validarAdministrador();
+        if(!confirmado || linhas==null || linhas.isEmpty() || linhas.stream().anyMatch(Objects::isNull)
+                || new HashSet<>(linhas).size()!=linhas.size())
+            throw new IllegalArgumentException("Revise a prévia e confirme uma seleção de linhas não repetidas.");
+        Long id=contexto.getClienteAtual().getId();
+        Cliente cliente=em.find(Cliente.class,id,LockModeType.PESSIMISTIC_WRITE);
+        if(cliente==null || !Boolean.TRUE.equals(cliente.getAtivo())) throw new IllegalArgumentException("Cliente indisponível.");
+        Leitura leitura=ler(arquivo,corte);var existentes=existentes(id);var alocacoes=alocacoes(id);
+        var plano=recuperacao(leitura,existentes,alocacoes,id,corte);
+        if(token==null || !token.equals(plano.token())) throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Os dados ou o arquivo mudaram. Gere outra prévia de recuperação.");
+        Map<Integer,ItemRecuperacao> itens=new HashMap<>();plano.itens().forEach(i -> itens.put(i.linha(),i));
+        for(int linha:linhas) if(!itens.containsKey(linha) || !itens.get(linha).elegivel())
+            throw new IllegalArgumentException("A seleção contém linha não elegível. Nenhum registro foi recuperado.");
+        Map<Long,FinancialTransaction> porId=new HashMap<>();existentes.forEach(t -> porId.put(t.getId(),t));
+        // Relê os registros selecionados sob bloqueio de linha antes da comparação final.
+        linhas.stream().map(l -> itens.get(l).lancamentoId()).sorted().forEach(registroId ->
+                em.refresh(porId.get(registroId),LockModeType.PESSIMISTIC_WRITE));
+        alocacoes=alocacoes(id);
+        if(!token.equals(recuperacao(leitura,existentes,alocacoes,id,corte).token()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT,"Os registros mudaram durante a confirmação. Gere outra prévia.");
+        int preenchidos=0;List<Object> mudancas=new ArrayList<>();
+        for(int linha:linhas) {
+            var item=itens.get(linha);var destino=porId.get(item.lancamentoId());var listaRateios=rateiosDo(destino,alocacoes);
+            Object antes=estado(destino,listaRateios);
+            ContaAzulRecoveryPolicy.preencher(destino,item.campos());transacoes.save(destino);
+            preenchidos+=item.campos().size();
+            mudancas.add(Map.of("linha",linha,"id",destino.getId(),"campos",item.campos(),"antes",antes,"depois",estado(destino,listaRateios)));
+        }
+        var registro=Map.of("tipo","RECUPERAR_CAMPOS_NULOS","linhas",linhas,"mudancas",mudancas);
+        var lote=lotes.save(new ContaAzulSyncBatch(cliente,leitura.hash(),token,
+                contexto.getUsuarioAutenticado().getEmail(),corte,serializar(registro)));
+        return new ResultadoRecuperacao(lote.getId(),linhas.size(),preenchidos,plano.itens().size()-linhas.size());
+    }
+
     private List<FinancialTransaction> existentes(Long id) {
         List<FinancialTransaction> lista = new ArrayList<>(transacoes.findByClienteIdAndOrigemOrderByIdAsc(id, ORIGEM));
         lista.addAll(transacoes.findByClienteIdAndOrigemOrderByIdAsc(id, "CONTA_AZUL_API"));

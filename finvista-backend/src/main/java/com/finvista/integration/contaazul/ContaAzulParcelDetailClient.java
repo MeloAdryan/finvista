@@ -43,6 +43,16 @@ public class ContaAzulParcelDetailClient {
             if (result == null || result.id() == null || !id.equalsIgnoreCase(result.id())) {
                 throw new IllegalArgumentException("Parcela diferente da solicitada.");
             }
+            if (result.pago() != null && result.pago().signum() > 0 && result.baixas() == null) {
+                var baixas = http.get()
+                        .uri(ContaAzulFinancialClient.BASE + "/v1/financeiro/eventos-financeiros/parcelas/{id}/baixa", id)
+                        .headers(headers -> headers.setBearerAuth(acesso))
+                        .retrieve().body(ContaAzulParcelDetail.Baixa[].class);
+                if (baixas == null || baixas.length > 1000) throw new IllegalArgumentException("Baixas incompletas.");
+                result = new ContaAzulParcelDetail(result.id(), result.descricao(), result.status(), result.vencimento(),
+                        result.liquido(), result.pago(), result.pendente(), result.composicao(), result.evento(),
+                        result.perda(), result.renegociacao(), java.util.Arrays.asList(baixas));
+            }
             validarRateios(result);
             return result;
         } catch (RestClientResponseException erro) {

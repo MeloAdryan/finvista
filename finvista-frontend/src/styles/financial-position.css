@@ -1,0 +1,178 @@
+.executive-dashboard .fp-panel {
+  margin: 20px 0;
+}
+.executive-dashboard .fp-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.executive-dashboard .fp-heading h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #183b53;
+}
+.executive-dashboard .fp-heading p,
+.executive-dashboard .fp-note {
+  margin: 6px 0;
+  font-size: 13px;
+  color: #52657c;
+  line-height: 1.5;
+}
+.executive-dashboard .fp-heading button {
+  border: 1px solid #ccd9e7;
+  border-radius: 7px;
+  background: white;
+  color: #183b53;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+.executive-dashboard .fp-heading button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.executive-dashboard .fp-heading button:focus-visible {
+  outline: 3px solid #96b8d4;
+  outline-offset: 2px;
+}
+.executive-dashboard .fp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.executive-dashboard .fp-card {
+  background: #fff;
+  border: 1px solid #dbe4ef;
+  border-radius: 10px;
+  padding: 18px;
+  min-width: 0;
+}
+.executive-dashboard .fp-card h3 {
+  margin: 0 0 14px;
+  font-size: 15px;
+  color: #183b53;
+}
+.executive-dashboard .fp-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.executive-dashboard .fp-card dt {
+  color: #52657c;
+  font-size: 13px;
+  margin-bottom: 7px;
+}
+.executive-dashboard .fp-card dd {
+  margin: 0;
+  font-weight: 700;
+  font-size: clamp(16px, 1.7vw, 22px);
+  color: #183b53;
+  overflow-wrap: anywhere;
+}
+.executive-dashboard .fp-card dd.fp-overdue {
+  color: #b43a36;
+}
+.executive-dashboard .fp-unavailable {
+  font-size: 17px;
+  color: #52657c;
+}
+.executive-dashboard .fp-card p {
+  font-size: 13px;
+  color: #52657c;
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+@media (max-width: 900px) {
+  .executive-dashboard .fp-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.executive-dashboard .fp-account-total {
+  display: block;
+  font-size: 22px;
+  color: #183b53;
+  overflow-wrap: anywhere;
+}
+.executive-dashboard .fp-accounts details {
+  margin-top: 12px;
+  font-size: 13px;
+}
+.executive-dashboard .fp-accounts summary {
+  cursor: pointer;
+  color: #183b53;
+  padding: 6px 0;
+}
+.executive-dashboard .fp-accounts summary:focus-visible {
+  outline: 2px solid #96b8d4;
+}
+.executive-dashboard .fp-accounts ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+  max-height: 230px;
+  overflow: auto;
+}
+.executive-dashboard .fp-accounts li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid #e7edf3;
+}
+.executive-dashboard .fp-accounts li span {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.executive-dashboard .fp-accounts li strong {
+  white-space: nowrap;
+}
+.executive-dashboard .fp-card p.fp-accounts-warning {
+  color: #8a540c;
+}
+.executive-dashboard .fp-card p.fp-accounts-source {
+  margin-top: 12px;
+  font-size: 12px;
+}
+
+.executive-dashboard .fp-coverage-warning {
+  border-left: 3px solid #b77b25;
+  background: #fff8ec;
+  color: #775016;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  border-radius: 6px;
+}
+.executive-dashboard .fp-coverage {
+  margin-top: 10px;
+  font-size: 13px;
+  border-top: 1px solid #dbe4ef;
+  padding-top: 10px;
+}
+.executive-dashboard .fp-coverage summary {
+  cursor: pointer;
+  padding: 6px 0;
+  color: #183b53;
+}
+.executive-dashboard .fp-coverage summary:focus-visible {
+  outline: 2px solid #96b8d4;
+  outline-offset: 3px;
+}
+.executive-dashboard .fp-coverage ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+}
+.executive-dashboard .fp-coverage li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  padding: 8px 0;
+  border-bottom: 1px solid #dbe4ef;
+}
+.executive-dashboard .fp-diagnostic p {
+  overflow-wrap: anywhere;
+}

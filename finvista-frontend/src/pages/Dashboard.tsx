@@ -1,3 +1,4 @@
+import FinancialPositionPanel from "../components/FinancialPositionPanel";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import {
@@ -25,6 +26,7 @@ import KpiComparison from "../components/KpiComparison";
 import SpendingGoalGauge from "../components/SpendingGoalGauge";
 
 import "../styles/dashboard.css";
+import "../styles/dashboard-polish.css";
 
 function Dashboard() {
   const { periodo, atualizarPeriodo } = useAnalysisPeriod();
@@ -415,6 +417,11 @@ function Dashboard() {
           />
         </article>
       </section>
+
+      <FinancialPositionPanel
+        key={analise.clienteId}
+        clienteId={analise.clienteId}
+      />
 
       <FinancialAlertsPanel
         key={`${analise.clienteId}:${analise.inicio}:${analise.fim}:${analise.categoria ?? ""}`}

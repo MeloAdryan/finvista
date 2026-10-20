@@ -1,3 +1,4 @@
+import ContaAzulRecoveryPanel from "./ContaAzulRecoveryPanel";
 import { useEffect, useRef, useState } from "react";
 import type { Cliente } from "../services/clientService";
 import {
@@ -44,6 +45,7 @@ export default function ContaAzulImport({
   const [result, setResult] = useState<SyncResult | null>(null);
   const [busy, setBusy] = useState<"read" | "write" | null>(null);
   const [error, setError] = useState("");
+  const [recoveryBusy,setRecoveryBusy] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -154,7 +156,7 @@ export default function ContaAzulImport({
       !decisions.length ||
       repeatedId ||
       readingCandidates ||
-      busy
+      (busy || recoveryBusy)
     )
       return;
     const current = version.current;
@@ -213,7 +215,7 @@ export default function ContaAzulImport({
           <input
             type="file"
             accept=".xls,.xlsx"
-            disabled={!!busy}
+            disabled={(!!busy || recoveryBusy)}
             onChange={(e) => {
               invalidate();
               const selected = e.target.files?.[0] ?? null;
@@ -231,7 +233,7 @@ export default function ContaAzulImport({
           <input
             type="date"
             value={cut}
-            disabled={!!busy}
+            disabled={(!!busy || recoveryBusy)}
             onChange={(e) => {
               invalidate();
               setCut(e.target.value);
@@ -241,7 +243,7 @@ export default function ContaAzulImport({
         <button
           type="button"
           className="ca-primary"
-          disabled={!file || !cut || !cliente || !!busy}
+          disabled={!file || !cut || !cliente || (!!busy || recoveryBusy)}
           onClick={() => void analyze()}
         >
           {busy === "read" ? "Analisando…" : "Analisar e gerar plano"}
@@ -263,6 +265,10 @@ export default function ContaAzulImport({
           Arquivo selecionado: <strong>{file.name}</strong>
         </p>
       )}
+      {file && cut && cliente && <ContaAzulRecoveryPanel
+        key={`${cliente.id}:${file.name}:${file.size}:${file.lastModified}:${cut}`}
+        file={file} cut={cut} clienteId={cliente.id} clienteNome={cliente.nome}
+        disabled={!!busy} aoOcupar={setRecoveryBusy} aoConcluir={invalidate} />}
       {error && (
         <p className="ca-error" role="alert">
           {error}
@@ -398,7 +404,7 @@ export default function ContaAzulImport({
                             value={value}
                             disabled={
                               !item ||
-                              !!busy ||
+                              (!!busy || recoveryBusy) ||
                               item.sugestao === "PROTEGIDO_API"
                             }
                             onChange={(e) =>
@@ -468,7 +474,7 @@ export default function ContaAzulImport({
                         {id !== null && !candidate && !candidateBusy[id] && (
                           <button
                             type="button"
-                            disabled={!!busy}
+                            disabled={(!!busy || recoveryBusy)}
                             onClick={() => void choose(line.numero, value)}
                           >
                             Consultar registro novamente
@@ -526,7 +532,7 @@ export default function ContaAzulImport({
                   type="checkbox"
                   checked={confirmed}
                   disabled={
-                    !!busy ||
+                    (!!busy || recoveryBusy) ||
                     readingCandidates ||
                     !decisions.length ||
                     repeatedId
@@ -545,7 +551,7 @@ export default function ContaAzulImport({
                   !decisions.length ||
                   repeatedId ||
                   readingCandidates ||
-                  !!busy
+                  (!!busy || recoveryBusy)
                 }
                 onClick={() => void apply()}
               >

@@ -1,33 +1,15 @@
 import marcaIcone from "./assets/brand-icon.svg";
 import logoEscuro from "./assets/logo-skyline-escuro.svg";
 import "./styles/brand-assets.css";
-import { useEffect, useState } from "react";
+import { lazy, useEffect, useState } from "react";
 
 import { useLocation, useNavigate } from "react-router-dom";
 
-import Dashboard from "./pages/Dashboard";
-import AlertCenter from "./pages/AlertCenter";
 import AnalysisPeriodProvider from "./contexts/AnalysisPeriodProvider";
-import SpendingGoals from "./pages/SpendingGoals";
-
-import ImportData from "./pages/ImportData";
 
 import Login from "./pages/Login";
 
-import Projection from "./pages/Projection";
-
-import CashFlow from "./pages/CashFlow";
-
-import CostCenters from "./pages/CostCenters";
-
-import Expenses from "./pages/Expenses";
-
-import Budgets from "./pages/Budgets";
-
-import History from "./pages/History";
-
 import ClientSelector from "./components/ClientSelector";
-import AdminRegistration from "./components/AdminRegistration";
 
 import {
   obterClienteAtual,
@@ -47,6 +29,20 @@ import {
 } from "./services/financialReferenceService";
 
 import "./styles/app-layout.css";
+
+import PageBoundary from "./components/PageBoundary";
+
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const AlertCenter = lazy(() => import("./pages/AlertCenter"));
+const SpendingGoals = lazy(() => import("./pages/SpendingGoals"));
+const ImportData = lazy(() => import("./pages/ImportData"));
+const Projection = lazy(() => import("./pages/Projection"));
+const CashFlow = lazy(() => import("./pages/CashFlow"));
+const CostCenters = lazy(() => import("./pages/CostCenters"));
+const Expenses = lazy(() => import("./pages/Expenses"));
+const Budgets = lazy(() => import("./pages/Budgets"));
+const History = lazy(() => import("./pages/History"));
+const AdminRegistration = lazy(() => import("./components/AdminRegistration"));
 
 type PaginaAtiva =
   | "dashboard"
@@ -921,25 +917,6 @@ function App() {
               <strong>{referenciaFinanceira?.mesAno ?? "—"}</strong>
             </div>
 
-            <button
-              type="button"
-              className="finvista-topbar-refresh"
-              title="Atualização automática será integrada posteriormente"
-              aria-label="Atualizar dados"
-              disabled
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M20 6V10H16" />
-
-                <path d="M4 18V14H8" />
-
-                <path d="M18.5 9A7 7 0 0 0 6.3 6.3L4 10" />
-
-                <path d="M5.5 15A7 7 0 0 0 17.7 17.7L20 14" />
-              </svg>
-
-              <span>Atualizar</span>
-            </button>
           </div>
         </header>
 
@@ -947,6 +924,7 @@ function App() {
           key={`${usuario.id}:${clienteAtual?.id ?? "cliente-sessao"}`}
         >
           <main className="finvista-main">
+            <PageBoundary key={paginaAtiva}>
             {paginaAtiva === "cadastros" && usuarioAdmin ? (
               <AdminRegistration
                 onVoltar={() => navigate("/metas")}
@@ -978,6 +956,7 @@ function App() {
             ) : (
               <SpendingGoals />
             )}
+            </PageBoundary>
           </main>
         </AnalysisPeriodProvider>
 

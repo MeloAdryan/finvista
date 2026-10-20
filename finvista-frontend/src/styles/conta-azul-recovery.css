@@ -1,0 +1,18 @@
+.ca-import .ca-recovery { border:1px solid #cbdbe8; border-radius:10px; padding:18px; margin:18px 0; background:#f8fafc; color:#183b53; min-width:0; }
+.ca-import .ca-recovery h3 { margin:0 0 8px; font-size:17px; }
+.ca-import .ca-recovery p { line-height:1.6; font-size:14px; margin:8px 0; }
+.ca-import .ca-recovery button,.ca-import .ca-recovery select { min-height:40px; padding:9px 12px; border:1px solid #c5d6e5; border-radius:6px; color:#183b53; background:white; font-size:13px; cursor:pointer; }
+.ca-import .ca-recovery button:disabled { opacity:.55; cursor:default; }
+.ca-import .ca-recovery :focus-visible { outline:3px solid #d8974a; outline-offset:3px; }
+.ca-import .ca-recovery input[type=checkbox] { width:17px; height:17px; flex-shrink:0; }
+.ca-import .ca-recovery-tools { display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin:14px 0; }
+.ca-import .ca-recovery-tools label { display:grid; gap:5px; font-size:13px; }
+.ca-import .ca-recovery-list { list-style:none; margin:12px 0; padding:0; }
+.ca-import .ca-recovery-list > li { display:grid; grid-template-columns:minmax(0,1fr) minmax(220px,.9fr); gap:16px; border-top:1px solid #dbe5ee; padding:14px 0; font-size:14px; }
+.ca-import .ca-recovery-list strong { overflow-wrap:anywhere; }
+.ca-import .ca-recovery-choice,.ca-import .ca-recovery-confirm { display:flex; align-items:start; gap:9px; font-size:14px; line-height:1.6; margin:8px 0 16px; }
+.ca-import .ca-recovery summary { cursor:pointer; padding:6px 0; }
+.ca-import .ca-recovery details ul { padding-left:18px; line-height:1.7; }
+.ca-import .ca-recovery-pages { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:13px; }
+.ca-import .ca-recovery-result { padding:14px; margin-top:12px; border-left:3px solid #3b866f; background:#eef8f3; }
+@media(max-width:700px){.ca-import .ca-recovery{padding:14px}.ca-import .ca-recovery-list>li{grid-template-columns:1fr}.ca-import .ca-recovery-tools{align-items:stretch;flex-direction:column}.ca-import .ca-recovery-tools select{max-width:100%}}

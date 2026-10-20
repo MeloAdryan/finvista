@@ -1,4 +1,5 @@
 import ContaAzulConnectionPanel from "../components/ContaAzulConnectionPanel";
+import ContaAzulAutoPanel from "../components/ContaAzulAutoPanel";
 import ContaAzulFinancialPanel from "../components/ContaAzulFinancialPanel";
 import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
 
@@ -14,6 +15,7 @@ import ContaAzulImport from "../components/ContaAzulImport";
 
 import type { Cliente } from "../services/clientService";
 import "../styles/import-data.css";
+import "../styles/import-workspace.css";
 
 type EstadoImportacao =
   | "inicial"
@@ -25,6 +27,7 @@ type EstadoImportacao =
 
 function ImportData({ cliente }: { cliente: Cliente | null }) {
   const [modo, setModo] = useState<"conta-azul" | "padrao">("conta-azul");
+  const [area, setArea] = useState<"automacao" | "consulta" | "arquivo">("automacao");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -189,7 +192,7 @@ function ImportData({ cliente }: { cliente: Cliente | null }) {
           <h1>Importação de dados</h1>
 
           <p>
-            Importe lançamentos financeiros através de arquivos CSV ou Excel.
+            Conecte uma vez. Acompanhe a sincronização e revise apenas o que precisa de atenção.
           </p>
         </div>
 
@@ -198,25 +201,41 @@ function ImportData({ cliente }: { cliente: Cliente | null }) {
 
           <div>
             <small>DESTINO</small>
-            <strong>FinVista</strong>
+            <strong>{cliente?.nome || "Selecione uma empresa"}</strong>
           </div>
         </div>
       </header>
       <ContaAzulConnectionPanel
-        key={cliente?.id ?? "sem-empresa"}
+        key={`conexao-${cliente?.id ?? "nenhum"}`}
         cliente={cliente}
       />
-      <ContaAzulFinancialPanel
-        key={cliente?.id ?? "sem-empresa-consulta"}
-        cliente={cliente}
-      />
+      <nav className="import-workspace-nav" aria-label="Áreas da importação">
+        {([
+          ["automacao", "Automação e pendências", "Acompanhar o dia a dia"],
+          ["consulta", "Consultar e conciliar", "Conferir uma parcela ou vínculo Excel/API"],
+          ["arquivo", "Importar arquivo", "Revisar dados do Excel ou CSV"],
+        ] as const).map(([id, titulo, descricao]) => (
+          <button key={id} type="button" aria-pressed={area === id}
+            aria-controls={`import-area-${id}`} onClick={() => setArea(id)}>
+            <strong>{titulo}</strong><span>{descricao}</span>
+          </button>
+        ))}
+      </nav>
+      <div id="import-area-automacao" hidden={area !== "automacao"}>
+        <ContaAzulAutoPanel key={`automacao-${cliente?.id ?? "nenhum"}`} cliente={cliente} />
+      </div>
+      <div id="import-area-consulta" hidden={area !== "consulta"}>
+        <ContaAzulFinancialPanel key={`consulta-${cliente?.id ?? "nenhum"}`} cliente={cliente} />
+      </div>
+      <div id="import-area-arquivo" hidden={area !== "arquivo"}>
+      <p className="import-workspace-help">Use arquivos para trazer um histórico ou revisar lançamentos. Registros controlados pela API permanecem protegidos.</p>
       <div className="ca-mode" aria-label="Tipo de importação">
         <button
           type="button"
           aria-pressed={modo === "conta-azul"}
           onClick={() => setModo("conta-azul")}
         >
-          Conta Azul
+          Contas Conta Azul
         </button>
         <button
           type="button"
@@ -457,6 +476,7 @@ function ImportData({ cliente }: { cliente: Cliente | null }) {
             </div>
           </section>
         )}
+      </div>
       </div>
     </div>
   );

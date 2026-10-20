@@ -9,6 +9,17 @@ export interface SyncResumo {
   valor: number;
   pago: number | null;
   pendente: number | null;
+  financeiro?: {
+    principalPago: number | null;
+    principalAberto: number | null;
+    jurosPago: number | null;
+    multaPaga: number | null;
+    descontoPago: number | null;
+    jurosAberto: number | null;
+    multaAberta: number | null;
+    descontoAberto: number | null;
+    ultimaBaixa: string | null;
+  } | null;
   rateios: {
     categoria: string;
     valor: number;

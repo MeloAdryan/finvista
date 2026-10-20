@@ -40,6 +40,14 @@ public class ContaAzulApiPlanService {
         if (clienteId == null || !clienteId.equals(contexto.getClienteAtualId())) {
             throw new IllegalArgumentException("A empresa selecionada mudou. Prepare outro plano.");
         }
+        var plano = analisar(clienteId, parcela);
+        if (!clienteId.equals(contexto.getClienteAtualId())) {
+            throw new IllegalArgumentException("A empresa selecionada mudou durante a análise.");
+        }
+        return plano;
+    }
+
+    Plano analisar(Long clienteId, ContaAzulParcelDetail parcela) {
         if (parcela == null || parcela.id() == null) {
             throw new IllegalArgumentException("Parcela inválida.");
         }
@@ -73,9 +81,6 @@ public class ContaAzulApiPlanService {
         if (encontrados.isEmpty()) {
             avisos.add("Nenhuma correspondência encontrada por estas regras. Isso não comprova que a parcela seja nova.");
         }
-        if (!clienteId.equals(contexto.getClienteAtualId())) {
-            throw new IllegalArgumentException("A empresa selecionada mudou durante a análise.");
-        }
         return new Plano(clienteId, clienteId + ":" + ORIGEM_API + ":" + parcela.id().toLowerCase(Locale.ROOT),
                 situacao, Instant.now(), parcela, List.copyOf(avisos),
                 encontrados.stream().limit(20).map(l -> new Correspondencia(l.getId(), l.getDescricao(), l.getTipo(),
@@ -83,6 +88,9 @@ public class ContaAzulApiPlanService {
     }
 
     private boolean possivel(FinancialTransaction l, ContaAzulParcelDetail p) {
+        // Parcelas distintas já identificadas não são duplicatas por descrição/competência.
+        if (ORIGEM_API.equals(l.getOrigem()) && texto(l.getDocumentoReferencia())
+                .matches("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) return false;
         if (p.evento() == null || !Objects.equals(l.getTipo(), p.evento().tipo())) {
             return false;
         }
@@ -114,8 +122,8 @@ public class ContaAzulApiPlanService {
         if (!Set.of("PENDENTE", "EM_ABERTO", "QUITADO", "RECEBIDO", "RECEBIDO_PARCIAL", "ATRASADO").contains(texto(p.status()))) {
             avisos.add("Situação da parcela precisa de conferência específica.");
         }
-        if (evento.condicao() == null || !Integer.valueOf(1).equals(evento.condicao().quantidade())) {
-            avisos.add("Rateios do evento não estão confirmados para uma única parcela. Não será presumida uma divisão.");
+        if (evento.condicao() == null || (evento.condicao().quantidade() == null || evento.condicao().quantidade() < 1)) {
+            avisos.add("Quantidade de parcelas ausente ou inválida. Os rateios devem fechar com esta parcela, sem divisão presumida.");
         }
         if (!dinheiro(p.liquidoConferido()) || !dinheiro(p.pago()) || !dinheiro(p.pendente())) {
             avisos.add("Valores da parcela ausentes, negativos ou fora da precisão aceita.");

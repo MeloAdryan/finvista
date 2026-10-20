@@ -33,15 +33,11 @@ function SpendingGoalGauge({
     <article className="executive-panel goal-panel">
       <div className="executive-panel-header goal-panel-header">
         <div>
-          <span className="executive-eyebrow">
-            Controle de gastos
-          </span>
+          <span className="executive-eyebrow">Controle de gastos</span>
 
           <h2>Limite da meta</h2>
 
-          <p>
-            Acompanhamento do período próprio da meta selecionada
-          </p>
+          <p>Acompanhamento do período próprio da meta selecionada</p>
         </div>
 
         {metas.length > 0 && (
@@ -74,14 +70,15 @@ function SpendingGoalGauge({
           meta={meta}
           automatico
           resumo
+          evolucaoEmDialogo
         />
       ) : (
         <div className="goal-empty">
           <strong>Nenhuma meta para o período exibido</strong>
 
           <span>
-            Consulte as metas cadastradas ou escolha um período
-            que inclua uma meta.
+            Consulte as metas cadastradas ou escolha um período que inclua uma
+            meta.
           </span>
         </div>
       )}
