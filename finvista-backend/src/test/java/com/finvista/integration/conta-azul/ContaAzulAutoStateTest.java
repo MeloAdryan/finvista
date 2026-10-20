@@ -267,4 +267,130 @@ class ContaAzulAutoStateTest {
         assertEquals(100, fila.size());
         assertTrue(atual().listagemMudou);
     }
+
+    @Test
+    void cicloConcluidoRespeitaIntervaloSemSolicitacaoManual() {
+        var primeira = state.assumir(7L);
+        state.pagina(primeira, new ContaAzulFinancialClient.Pagina(0, List.of()));
+        state.pagina(primeira, new ContaAzulFinancialClient.Pagina(0, List.of()));
+        state.devolver(primeira, true);
+        Instant marcada = agora.plusSeconds(config.intervaloMinutos * 60L);
+        assertEquals(marcada, config.proximaEm);
+        agora = marcada.minusSeconds(1);
+        assertNull(state.assumir(7L));
+        agora = marcada;
+        var segunda = state.assumir(7L);
+        assertNotNull(segunda);
+        assertNotEquals(primeira.execucaoId(), segunda.execucaoId());
+    }
+
+    @Test
+    void conclusaoAposFalhaNaoExibeMensagemDeErroAntiga() {
+        var r = state.assumir(7L);
+        state.falhar(r, "Falha temporária", false);
+        agora = config.proximaEm;
+        var retomada = state.assumir(7L);
+        assertEquals(r.execucaoId(), retomada.execucaoId());
+        assertNull(atual().mensagem);
+        state.pagina(retomada, new ContaAzulFinancialClient.Pagina(0, List.of()));
+        state.pagina(retomada, new ContaAzulFinancialClient.Pagina(0, List.of()));
+        state.devolver(retomada, true);
+        assertEquals("CONCLUIDA", atual().status);
+        assertNull(atual().mensagem);
+    }
+
+    @Test
+    void novaInstanciaRetomaFilaSemReaplicarItemJaConcluido() {
+        var r = comItem();
+        UUID item = state.proximo(r).id;
+        when(sync.aplicarAutomatico(eq(cliente), eq(3L), eq(item), any(), eq(false)))
+                .thenReturn(new Resultado(item, 7L, id, "SEM_ALTERACAO", 123L, agora));
+        state.aplicar(r, item, detalhe());
+        state.falhar(r, "Interrupção entre etapas", false);
+        agora = config.proximaEm;
+        var outraInstancia = new ContaAzulAutoState(configs, runs, itens, clientes, usuarios, tx, sync, contexto, integracao, clock, true);
+        var nova = outraInstancia.assumir(7L);
+        assertEquals(r.execucaoId(), nova.execucaoId());
+        assertNull(outraInstancia.proximo(nova));
+        outraInstancia.pagina(nova, new ContaAzulFinancialClient.Pagina(0, List.of()));
+        outraInstancia.devolver(nova, true);
+        assertEquals(1, atual().mantidas);
+        verify(sync, times(1)).aplicarAutomatico(eq(cliente), eq(3L), eq(item), any(), eq(false));
+    }
+
+    @Test
+    void conclusaoParcialMantemAvisoDeCobertura() {
+        var r = state.assumir(7L);
+        atual().listagemMudou = true;
+        atual().mensagem = "Identidade local exige revisão.";
+        state.pagina(r, new ContaAzulFinancialClient.Pagina(0, List.of()));
+        state.pagina(r, new ContaAzulFinancialClient.Pagina(0, List.of()));
+        state.devolver(r, true);
+        assertEquals("PARCIAL", atual().status);
+        assertEquals("Identidade local exige revisão.", atual().mensagem);
+    }
+
+
+    @Test
+    void periodoMovelExigeNovaAutorizacaoECalculaDatasNoServidor() {
+        var pedido = new Configurar(7L, true, LocalDate.of(2000,1,1), LocalDate.of(2000,1,2), 30, false, false, false, true);
+        assertThrows(IllegalArgumentException.class, () -> state.configurar(pedido));
+        assertNull(config.periodoMovel);
+        state.configurar(new Configurar(7L, true, pedido.inicio(), pedido.fim(), 30, false, true, false, true));
+        assertEquals(Boolean.TRUE, config.periodoMovel);
+        assertEquals(LocalDate.of(2026,10,17).minusDays(90), config.inicio);
+        assertEquals(LocalDate.of(2026,10,17).plusDays(90), config.fim);
+        assertTrue(state.status(7L,1).configuracao().periodoMovel());
+    }
+
+    @Test
+    void periodoMovelNaoDispensaRevisaoDoHistoricoParaInclusoes() {
+        assertThrows(IllegalArgumentException.class, () -> state.configurar(new Configurar(7L, true, config.inicio, config.fim, 30, true, true, false, true)));
+        assertNull(config.periodoMovel);
+    }
+
+    @Test
+    void retomadaMantemPeriodoENovaVarreduraAcompanhaCalendario() {
+        when(clock.withZone(any())).thenAnswer(i -> Clock.fixed(agora, i.getArgument(0)));
+        config.periodoMovel = true;
+        var original = state.assumir(7L);
+        LocalDate inicioOriginal = atual().inicio;
+        LocalDate fimOriginal = atual().fim;
+        state.falhar(original, "Interrupção", false);
+        agora = agora.plusSeconds(2 * 86400L);
+        var retomada = state.assumir(7L);
+        assertEquals(original.execucaoId(), retomada.execucaoId());
+        assertEquals(inicioOriginal, atual().inicio);
+        assertEquals(fimOriginal, atual().fim);
+        state.pagina(retomada, new ContaAzulFinancialClient.Pagina(0, List.of()));
+        state.pagina(retomada, new ContaAzulFinancialClient.Pagina(0, List.of()));
+        state.devolver(retomada, true);
+        agora = config.proximaEm;
+        var nova = state.assumir(7L);
+        assertNotEquals(original.execucaoId(), nova.execucaoId());
+        assertEquals(inicioOriginal.plusDays(2), atual().inicio);
+        assertEquals(fimOriginal.plusDays(2), atual().fim);
+    }
+
+    @Test
+    void periodoMovelUsaDataDeBrasiliaNaViradaDoAno() {
+        agora = Instant.parse("2027-01-01T01:00:00Z");
+        when(clock.withZone(any())).thenAnswer(i -> Clock.fixed(agora, i.getArgument(0)));
+        config.periodoMovel = true;
+        state.assumir(7L);
+        assertEquals(LocalDate.of(2026,12,31).minusDays(90), atual().inicio);
+        assertEquals(LocalDate.of(2026,12,31).plusDays(90), atual().fim);
+    }
+
+    @Test
+    void contratosAntigosContinuamComPeriodoFixo() throws Exception {
+        var json = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        String payload = json.writeValueAsString(Map.of("clienteId",7,"habilitada",true,"inicio","2026-10-01","fim","2026-10-31","intervaloMinutos",30,"incluirNovas",false,"confirmado",true,"confirmoHistorico",false));
+        var pedido = json.readValue(payload, Configurar.class);
+        assertFalse(pedido.periodoMovel());
+        state.configurar(pedido);
+        assertEquals(Boolean.FALSE, config.periodoMovel);
+        assertEquals(LocalDate.of(2026,10,1), config.inicio);
+    }
+
 }

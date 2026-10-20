@@ -28,7 +28,7 @@ function Resumo({ titulo, resumo }: { titulo: string; resumo: SyncResumo }) {
           <dd>{resumo.tipo === "RECEITA" ? "Receita" : "Despesa"}</dd>
         </div>
         <div>
-          <dt>Valor</dt>
+          <dt>Principal original</dt>
           <dd>{dinheiro(resumo.valor)}</dd>
         </div>
         <div>
@@ -40,14 +40,42 @@ function Resumo({ titulo, resumo }: { titulo: string; resumo: SyncResumo }) {
           <dd>{data(resumo.vencimento)}</dd>
         </div>
         <div>
-          <dt>Pago / recebido</dt>
+          <dt>Total pago / recebido</dt>
           <dd>{dinheiro(resumo.pago)}</dd>
         </div>
         <div>
-          <dt>Pendente</dt>
+          <dt>Total pendente</dt>
           <dd>{dinheiro(resumo.pendente)}</dd>
         </div>
       </dl>
+      {resumo.financeiro && (
+        <details>
+          <summary>Conferir principal, ajustes e última baixa</summary>
+          <dl>
+            {(
+              [
+                ["Principal pago", resumo.financeiro.principalPago],
+                ["Principal em aberto", resumo.financeiro.principalAberto],
+                ["Juros realizados", resumo.financeiro.jurosPago],
+                ["Multa realizada", resumo.financeiro.multaPaga],
+                ["Desconto realizado", resumo.financeiro.descontoPago],
+                ["Juros em aberto", resumo.financeiro.jurosAberto],
+                ["Multa em aberto", resumo.financeiro.multaAberta],
+                ["Desconto em aberto", resumo.financeiro.descontoAberto],
+              ] as [string, number | null][]
+            ).map(([rotulo, valor]) => (
+              <div key={rotulo}>
+                <dt>{rotulo}</dt>
+                <dd>{dinheiro(valor)}</dd>
+              </div>
+            ))}
+            <div>
+              <dt>Última baixa</dt>
+              <dd>{data(resumo.financeiro.ultimaBaixa)}</dd>
+            </div>
+          </dl>
+        </details>
+      )}
       <ul>
         {resumo.rateios.map((r, i) => (
           <li key={i}>
@@ -171,8 +199,9 @@ export default function ContaAzulApiSyncPanel({
         altera o Conta Azul.
       </p>
       <p>
-        Esta entrega aceita somente uma parcela por evento, em aberto e sem
-        ajustes. O Excel Conta Azul pode ser revisado pelo plano de importação;
+        A sincronização confere cada parcela pelo seu ID, incluindo baixas e
+        ajustes quando os componentes e rateios fecham com os totais informados
+        pela API. O Excel Conta Azul pode ser revisado pelo plano de importação;
         linhas com possível correspondência API ficam protegidas. A importação
         genérica permanece bloqueada nesta empresa após o primeiro vínculo API.
       </p>

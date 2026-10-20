@@ -1,0 +1,17 @@
+.finvista-page-feedback {
+  padding: 24px;
+  border: 1px solid #d9e3ee;
+  border-radius: 12px;
+  background: #fff;
+  color: #183b53;
+}
+.finvista-page-feedback p { margin: 8px 0 16px; }
+.finvista-page-feedback button {
+  min-height: 36px;
+  padding: 8px 14px;
+  border: 1px solid #b8cfe5;
+  border-radius: 6px;
+  background: #f4f7fb;
+  color: inherit;
+  cursor: pointer;
+}

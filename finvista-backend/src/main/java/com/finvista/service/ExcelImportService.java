@@ -28,7 +28,7 @@ import java.math.BigDecimal;
 
 import java.time.LocalDate;
 
-import java.time.ZoneId;
+import java.time.format.ResolverStyle;
 
 import java.time.format.DateTimeFormatter;
 
@@ -57,7 +57,7 @@ public class ExcelImportService {
     }
 
     private static final DateTimeFormatter DATE_FORMATTER
-            = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            = DateTimeFormatter.ofPattern("dd/MM/uuuu").withResolverStyle(ResolverStyle.STRICT);
 
     private final DataFormatter dataFormatter
             = new DataFormatter(new Locale("pt", "BR"));
@@ -481,17 +481,8 @@ public class ExcelImportService {
                         "valor realizado"
                 );
 
-        BigDecimal valorAberto
-                = converterValorOpcional(
-                        linha,
-                        localizarPrimeiraColuna(
-                                colunas,
-                                "valor em aberto da parcela (r$)",
-                                "valor aberto da parcela (r$)"
-                        ),
-                        numeroLinha,
-                        "valor em aberto"
-                );
+        BigDecimal valorAberto = converterValorAlternativo(linha,colunas,numeroLinha,"valor em aberto",
+                "valor da parcela em aberto (r$)", "valor em aberto da parcela (r$)", "valor aberto da parcela (r$)");
 
         String codigoReferencia
                 = obterCampoOpcional(
@@ -616,6 +607,19 @@ public class ExcelImportService {
         lancamento.setValorAberto(
                 valorAberto
         );
+       
+        lancamento.setValorTotalAberto(converterValorAlternativo(linha,colunas,numeroLinha,"total em aberto",
+                "valor total da parcela em aberto (r$)"));
+        lancamento.setValorTotalRealizado(converterValorAlternativo(linha,colunas,numeroLinha,"total realizado",
+                tipoLayout == TipoLayout.CONTA_AZUL_RECEBER ? "valor total recebido da parcela (r$)" : "valor total pago da parcela (r$)"));
+        lancamento.setJurosRealizado(converterValorAlternativo(linha,colunas,numeroLinha,"juros realizado","juros realizado (r$)"));
+        lancamento.setMultaRealizada(converterValorAlternativo(linha,colunas,numeroLinha,"multa realizada","multa realizado (r$)"));
+        lancamento.setDescontoRealizado(converterValorAlternativo(linha,colunas,numeroLinha,"desconto realizado","desconto realizado (r$)"));
+        lancamento.setJurosPrevisto(converterValorAlternativo(linha,colunas,numeroLinha,"juros previsto","juros previsto (r$)"));
+        lancamento.setMultaPrevista(converterValorAlternativo(linha,colunas,numeroLinha,"multa prevista","multa previsto (r$)"));
+        lancamento.setDescontoPrevisto(converterValorAlternativo(linha,colunas,numeroLinha,"desconto previsto","desconto previsto (r$)"));
+        lancamento.setDataRealizacao(converterDataOpcional(linha,colunas.get("data do último pagamento"),numeroLinha,"data do último pagamento"));
+
 
         lancamento.setEntidadeExternaId(
                 entidadeExternaId
@@ -922,11 +926,7 @@ public class ExcelImportService {
         if (celula.getCellType() == CellType.NUMERIC
                 && DateUtil.isCellDateFormatted(celula)) {
 
-            return celula
-                    .getDateCellValue()
-                    .toInstant()
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate();
+            return celula.getLocalDateTimeCellValue().toLocalDate();
 
         }
 
@@ -1035,6 +1035,19 @@ public class ExcelImportService {
 
         return valor;
 
+    }
+
+    private BigDecimal converterValorAlternativo(Row linha,Map<String,Integer> colunas,int numeroLinha,
+            String campo,String... nomes) {
+        BigDecimal resultado=null;
+        for (String nome : nomes) {
+            BigDecimal valor=converterValorOpcional(linha,colunas.get(nome),numeroLinha,nome);
+            if (valor==null) continue;
+            if (resultado!=null && resultado.compareTo(valor)!=0)
+                throw new IllegalArgumentException("Colunas alternativas com valores divergentes na linha " + numeroLinha + ": " + campo);
+            resultado=valor;
+        }
+        return resultado;
     }
 
     private BigDecimal converterValorOpcional(

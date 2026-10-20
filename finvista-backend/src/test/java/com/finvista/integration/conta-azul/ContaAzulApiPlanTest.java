@@ -146,8 +146,10 @@ class ContaAzulApiPlanTest {
     }
 
     @Test
-    void variasParcelasNaoRecebemDivisaoPresumida() {
-        bloqueado(parcela(2, "100", "0", List.of(categoria("100", List.of()))));
+    void variasParcelasAceitamSomenteRateioQueFechaComAParcelaConsultada() {
+        assertEquals(ContaAzulApiPlanService.Situacao.SEM_CORRESPONDENCIA,
+                service.planejar(1L, parcela(2, "100", "0", List.of(categoria("100", List.of())))).situacao());
+        bloqueado(parcela(2, "100", "0", List.of(categoria("200", List.of()))));
     }
 
     @Test

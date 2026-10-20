@@ -10,7 +10,12 @@ public final class ContaAzulAutoResponse {
     }
 
     public record Configurar(Long clienteId, boolean habilitada, LocalDate inicio, LocalDate fim, int intervaloMinutos,
-            boolean incluirNovas, boolean confirmado, boolean confirmoHistorico) {
+            boolean incluirNovas, boolean confirmado, boolean confirmoHistorico, boolean periodoMovel) {
+
+        public Configurar(Long clienteId, boolean habilitada, LocalDate inicio, LocalDate fim, int intervaloMinutos,
+                boolean incluirNovas, boolean confirmado, boolean confirmoHistorico) {
+            this(clienteId, habilitada, inicio, fim, intervaloMinutos, incluirNovas, confirmado, confirmoHistorico, false);
+        }
 
         @JsonAnySetter
         public void rejeitar(String nome, Object valor) {
@@ -27,7 +32,12 @@ public final class ContaAzulAutoResponse {
     }
 
     public record Config(Long clienteId, boolean habilitada, LocalDate inicio, LocalDate fim, int intervaloMinutos,
-            boolean incluirNovas, Instant proximaEm, Instant alteradoEm) {}
+            boolean incluirNovas, Instant proximaEm, Instant alteradoEm, boolean periodoMovel) {
+        public Config(Long clienteId, boolean habilitada, LocalDate inicio, LocalDate fim, int intervaloMinutos,
+                boolean incluirNovas, Instant proximaEm, Instant alteradoEm) {
+            this(clienteId, habilitada, inicio, fim, intervaloMinutos, incluirNovas, proximaEm, alteradoEm, false);
+        }
+    }
 
     public record Execucao(UUID id, String status, LocalDate inicio, LocalDate fim, Instant criadoEm, Instant concluidoEm,
             int incluidas, int atualizadas, int mantidas, int pendentes, long emFila, String mensagem) {}

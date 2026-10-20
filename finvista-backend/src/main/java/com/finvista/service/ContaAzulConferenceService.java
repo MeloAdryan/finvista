@@ -67,12 +67,23 @@ public class ContaAzulConferenceService {
             if (blocos.isEmpty()) {
                 throw new IllegalArgumentException("Nenhum bloco de categoria encontrado.");
             }
+            Set<Integer> blocosComCentro = new HashSet<>();
             for (int inicio : blocos) {
-                if (inicio + 3 >= nomes.size()
-                        || !nomes.get(inicio + 1).startsWith("valor na categoria ")
-                        || !nomes.get(inicio + 2).startsWith("centro de custo ")
-                        || !nomes.get(inicio + 3).startsWith("valor no centro de custo ")) {
+                if (inicio + 1 >= nomes.size()
+                        || !nomes.get(inicio + 1).startsWith("valor na categoria ")) {
                     throw new IllegalArgumentException("Estrutura de rateio não reconhecida na coluna " + (inicio + 1));
+                }
+                boolean centro = inicio + 2 < nomes.size()
+                        && nomes.get(inicio + 2).startsWith("centro de custo ");
+                boolean valorCentro = inicio + 3 < nomes.size()
+                        && nomes.get(inicio + 3).startsWith("valor no centro de custo ");
+                boolean valorSemCentro = inicio + 2 < nomes.size()
+                        && nomes.get(inicio + 2).startsWith("valor no centro de custo ");
+                if (centro != valorCentro || valorSemCentro) {
+                    throw new IllegalArgumentException("Estrutura de centro de custo incompleta na coluna " + (inicio + 1));
+                }
+                if (centro) {
+                    blocosComCentro.add(inicio);
                 }
             }
             List<Linha> linhas = new ArrayList<>();
@@ -122,13 +133,17 @@ public class ContaAzulConferenceService {
                 BigDecimal somaCategoria = BigDecimal.ZERO, somaCentro = BigDecimal.ZERO;
                 for (int i = 0; i < blocos.size(); i++) {
                     int c = blocos.get(i);
+                    boolean comCentro = blocosComCentro.contains(c);
                     if (texto(row.getCell(c), formatter) == null && texto(row.getCell(c + 1), formatter) == null
-                            && texto(row.getCell(c + 2), formatter) == null && texto(row.getCell(c + 3), formatter) == null) {
+                            && (!comCentro || (texto(row.getCell(c + 2), formatter) == null
+                            && texto(row.getCell(c + 3), formatter) == null))) {
                         continue;
                     }
-                    String categoria = texto(row.getCell(c), formatter), centro = texto(row.getCell(c + 2), formatter);
+                    String categoria = texto(row.getCell(c), formatter);
+                    String centro = comCentro ? texto(row.getCell(c + 2), formatter) : null;
                     BigDecimal vc = decimal(row.getCell(c + 1), formatter, erros, "Valor da categoria, bloco " + (i + 1));
-                    BigDecimal vcc = decimal(row.getCell(c + 3), formatter, erros, "Valor do centro, bloco " + (i + 1));
+                    BigDecimal vcc = comCentro
+                            ? decimal(row.getCell(c + 3), formatter, erros, "Valor do centro, bloco " + (i + 1)) : null;
                     if (categoria == null) {
                         avisos.add("Sem categoria no bloco " + (i + 1));
                     }

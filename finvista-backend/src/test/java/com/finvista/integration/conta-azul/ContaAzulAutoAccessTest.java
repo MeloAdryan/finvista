@@ -44,4 +44,19 @@ class ContaAzulAutoAccessTest {
         var annotation=ContaAzulAutoAccess.class.getMethod("acesso",Long.class).getAnnotation(org.springframework.transaction.annotation.Transactional.class);
         assertEquals(org.springframework.transaction.annotation.Propagation.REQUIRES_NEW,annotation.propagation());
     }
+
+    @Test void tokenExpiradoRenovaUmaVezEReinicioUsaCredenciaisRotacionadas() {
+        connection.atualizar("ac", "rc", agora.minusSeconds(1), agora);
+        when(tokens.renovar("refresh-teste")).thenReturn(new ContaAzulTokenClient.Tokens("novo-access", "novo-refresh", 3600, "Bearer"));
+        when(cipher.cifrar("novo-access",7L,"access")).thenReturn("novo-ac");
+        when(cipher.cifrar("novo-refresh",7L,"refresh")).thenReturn("novo-rc");
+        when(cipher.decifrar("novo-ac",7L,"access")).thenReturn("novo-access");
+        assertEquals("novo-access", service.acesso(7L));
+        var reiniciado = new ContaAzulAutoAccess(repo, cipher, tokens, cfg, Clock.fixed(agora.plusSeconds(120), ZoneOffset.UTC));
+        assertEquals("novo-access", reiniciado.acesso(7L));
+        verify(tokens, times(1)).renovar("refresh-teste");
+        verify(repo, times(1)).saveAndFlush(connection);
+        assertEquals("novo-rc", connection.getRefreshCipher());
+    }
+
 }

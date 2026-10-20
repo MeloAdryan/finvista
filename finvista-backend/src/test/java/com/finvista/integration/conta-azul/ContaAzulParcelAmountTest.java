@@ -50,7 +50,7 @@ class ContaAzulParcelAmountTest {
     }
 
     @Test
-    void divergenciasAusenciasAjustesOuEventosComMaisParcelasContinuamBloqueados() throws Exception {
+    void divergenciasAusenciasAjustesInconsistentesEQuantidadeInvalidaContinuamBloqueados() throws Exception {
         for (String data : List.of(
                 json.replace("\"nao_pago\":50.00", "\"nao_pago\":49.00"),
                 json.replace("\"valor_pago\":0.00", "\"valor_pago\":null"),
@@ -63,7 +63,7 @@ class ContaAzulParcelAmountTest {
                 json.replace("\"desconto\":0.00", "\"desconto\":1.00"),
                 json.replace("\"taxa\":0.00", "\"taxa\":1.00"),
                 json.replace("\"taxa\":0.00", "\"taxa\":null"),
-                json.replace("\"quantidade_parcelas\":1", "\"quantidade_parcelas\":2"),
+                json.replace("\"quantidade_parcelas\":1", "\"quantidade_parcelas\":0"),
                 json.replace("\"tipo\":\"RECEITA\"", "\"tipo\":\"OUTRO\""))) {
             var p = ler(data);
             assertNull(p.liquidoConferido());
@@ -103,6 +103,15 @@ class ContaAzulParcelAmountTest {
         var p = planejar(ler(json));
         assertEquals(ContaAzulApiPlanService.Situacao.SEM_CORRESPONDENCIA, p.situacao());
         assertTrue(p.avisos().stream().anyMatch(a -> a.contains("não comprova")));
+    }
+
+    @Test
+    void composicaoComAjustesExplicitosConfereSemInventarBaixa() throws Exception {
+        var p = ler(json.replace("\"nao_pago\":50.00", "\"nao_pago\":51.00")
+                .replace("\"valor_liquido\":50.00", "\"valor_liquido\":51.00")
+                .replace("\"juros\":0.00", "\"juros\":1.00"));
+        assertEquals(new BigDecimal("51.00"), p.liquidoConferido());
+        assertNull(p.baixas());
     }
 
     private ContaAzulApiPlanService.Plano planejar(ContaAzulParcelDetail parcela) {

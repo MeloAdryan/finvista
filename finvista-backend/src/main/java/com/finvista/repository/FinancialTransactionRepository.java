@@ -14,7 +14,6 @@ public interface FinancialTransactionRepository
         extends JpaRepository<FinancialTransaction, Long> {
 
 
-    List<FinancialTransaction> findAllByOrderByDataDesc();
 
     /*
      * ============================================================

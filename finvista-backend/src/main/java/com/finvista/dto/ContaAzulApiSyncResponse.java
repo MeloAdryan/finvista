@@ -39,8 +39,17 @@ public final class ContaAzulApiSyncResponse {
 
     public record Rateio(String categoria, BigDecimal valor, String centro, BigDecimal valorCentro) {}
 
+    public record Financeiro(BigDecimal principalPago, BigDecimal principalAberto, BigDecimal jurosPago,
+            BigDecimal multaPaga, BigDecimal descontoPago, BigDecimal jurosAberto, BigDecimal multaAberta,
+            BigDecimal descontoAberto, LocalDate ultimaBaixa) {}
+
     public record Resumo(String descricao, String tipo, LocalDate competencia, LocalDate vencimento,
-            BigDecimal valor, BigDecimal pago, BigDecimal pendente, List<Rateio> rateios) {}
+            BigDecimal valor, BigDecimal pago, BigDecimal pendente, List<Rateio> rateios, Financeiro financeiro) {
+        public Resumo(String descricao, String tipo, LocalDate competencia, LocalDate vencimento,
+                BigDecimal valor, BigDecimal pago, BigDecimal pendente, List<Rateio> rateios) {
+            this(descricao, tipo, competencia, vencimento, valor, pago, pendente, rateios, null);
+        }
+    }
 
     public record Previa(Long clienteId, String clienteNome, String parcelaId, String acao, Long lancamentoId,
             Instant expiraEm, String token, Resumo antes, Resumo depois, List<String> avisos) {}

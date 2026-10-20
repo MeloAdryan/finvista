@@ -8,6 +8,7 @@ export interface AutoConfig {
   fim: string;
   intervaloMinutos: number;
   incluirNovas: boolean;
+  periodoMovel?: boolean;
   proximaEm: string | null;
   alteradoEm: string | null;
 }
@@ -46,6 +47,7 @@ export interface AutoPedido {
   fim: string;
   intervaloMinutos: number;
   incluirNovas: boolean;
+  periodoMovel?: boolean;
   confirmado: boolean;
   confirmoHistorico: boolean;
 }

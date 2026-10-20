@@ -15,6 +15,8 @@ public class ContaAzulAutoConfig {
     public boolean habilitada;
     @Column(name = "incluir_novas")
     public boolean incluirNovas;
+    @Column(name = "periodo_movel")
+    public Boolean periodoMovel;
     @Column(name = "inicio")
     public LocalDate inicio;
     @Column(name = "fim")

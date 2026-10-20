@@ -48,7 +48,7 @@ public class ContaAzulAutoState {
         var c=configs.findById(cliente).orElse(null);
         LocalDate hoje=LocalDate.now(clock.withZone(ZoneId.of("America/Sao_Paulo")));
         Config config=c==null?new Config(cliente,false,hoje.minusDays(90),hoje.plusDays(90),30,false,null,null)
-                :new Config(cliente,c.habilitada,c.inicio,c.fim,c.intervaloMinutos,c.incluirNovas,c.proximaEm,c.alteradoEm);
+                :new Config(cliente,c.habilitada,Boolean.TRUE.equals(c.periodoMovel)?hoje.minusDays(90):c.inicio,Boolean.TRUE.equals(c.periodoMovel)?hoje.plusDays(90):c.fim,c.intervaloMinutos,c.incluirNovas,c.proximaEm,c.alteradoEm,Boolean.TRUE.equals(c.periodoMovel));
         var lista=runs.findTop10ByClienteIdOrderByCriadoEmDesc(cliente);
         List<Execucao> execucoes=lista.stream().map(r->new Execucao(r.id,r.status,r.inicio,r.fim,r.criadoEm,r.concluidoEm,
                 r.incluidas,r.atualizadas,r.mantidas,r.pendentes,itens.countByExecucaoIdAndStatus(r.id,"EM_FILA"),r.mensagem)).toList();
@@ -63,8 +63,11 @@ public class ContaAzulAutoState {
     public void configurar(Configurar pedido) {
         Long usuario=conferir(pedido.clienteId());
         if(pedido.habilitada() && !habilitado) throw new IllegalStateException("Habilite CONTA_AZUL_AUTO_ENABLED no backend antes de ativar a automação.");
-        if(pedido.inicio()==null || pedido.fim()==null || pedido.fim().isBefore(pedido.inicio())
-                || ChronoUnit.DAYS.between(pedido.inicio(),pedido.fim())>365
+        LocalDate hoje=LocalDate.now(clock.withZone(ZoneId.of("America/Sao_Paulo")));
+        LocalDate inicio=pedido.periodoMovel()?hoje.minusDays(90):pedido.inicio();
+        LocalDate fim=pedido.periodoMovel()?hoje.plusDays(90):pedido.fim();
+        if(inicio==null || fim==null || fim.isBefore(inicio)
+                || ChronoUnit.DAYS.between(inicio,fim)>365
                 || !Set.of(30,60,360,1440).contains(pedido.intervaloMinutos()))
             throw new IllegalArgumentException("Escolha um período de até 366 dias e um intervalo disponível.");
         if(pedido.habilitada() && (!pedido.confirmado() || (pedido.incluirNovas() && !pedido.confirmoHistorico())))
@@ -73,7 +76,7 @@ public class ContaAzulAutoState {
         clientes.bloquearAtivoPorId(pedido.clienteId()).orElseThrow(()->new IllegalArgumentException("Empresa indisponível."));
         var c=configs.bloquear(pedido.clienteId()).orElseGet(()->{var novo=new ContaAzulAutoConfig();novo.clienteId=pedido.clienteId();return novo;});
         cancelar(c);
-        c.habilitada=pedido.habilitada();c.incluirNovas=pedido.incluirNovas();c.inicio=pedido.inicio();c.fim=pedido.fim();
+        c.habilitada=pedido.habilitada();c.incluirNovas=pedido.incluirNovas();c.inicio=inicio;c.fim=fim;c.periodoMovel=pedido.periodoMovel();
         c.intervaloMinutos=pedido.intervaloMinutos();c.autorizadoPor=usuario;c.revisao=UUID.randomUUID();c.alteradoEm=clock.instant();
         c.falhas=0;c.proximaEm=c.habilitada?clock.instant():null;
         conferir(pedido.clienteId());configs.saveAndFlush(c);
@@ -107,7 +110,10 @@ public class ContaAzulAutoState {
         var r=c.execucaoId==null?null:runs.findByIdAndClienteId(c.execucaoId,cliente).orElse(null);
         if(r==null || finalizada(r.status)) {
             r=new ContaAzulAutoRun();r.id=UUID.randomUUID();r.clienteId=cliente;r.autorizadoPor=c.autorizadoPor;
-            r.revisao=c.revisao;r.inicio=c.inicio;r.fim=c.fim;r.incluirNovas=c.incluirNovas;
+            r.revisao=c.revisao;
+            LocalDate hoje=LocalDate.now(clock.withZone(ZoneId.of("America/Sao_Paulo")));
+            r.inicio=Boolean.TRUE.equals(c.periodoMovel)?hoje.minusDays(90):c.inicio;
+            r.fim=Boolean.TRUE.equals(c.periodoMovel)?hoje.plusDays(90):c.fim;r.incluirNovas=c.incluirNovas;
             r.criadoEm=agora;r.status="EM_ANDAMENTO";r.pagina=1;
             runs.saveAndFlush(r);c.execucaoId=r.id;
             for(var t:transacoes.findByClienteIdAndOrigemOrderByIdAsc(cliente,"CONTA_AZUL_API")) {
@@ -118,7 +124,7 @@ public class ContaAzulAutoState {
                 }
             }
         }
-        r.status="EM_ANDAMENTO";c.dono=UUID.randomUUID();c.reservaAte=agora.plusSeconds(120);
+        r.status="EM_ANDAMENTO";if(!r.listagemMudou) r.mensagem=null;c.dono=UUID.randomUUID();c.reservaAte=agora.plusSeconds(120);
         return new Reserva(cliente,r.id,c.dono);
     }
 
@@ -182,6 +188,7 @@ public class ContaAzulAutoState {
             if(r.etapa!=2 || itens.countByExecucaoIdAndStatus(r.id,"EM_FILA")!=0) throw new ReservaPerdida();
             r.status=r.listagemMudou?"PARCIAL":r.pendentes>0?"CONCLUIDA_COM_PENDENCIAS":"CONCLUIDA";
             if(r.listagemMudou && r.mensagem==null) r.mensagem="A listagem mudou durante a consulta. A cobertura não foi confirmada; outra varredura será feita no próximo ciclo.";
+            if(!r.listagemMudou) r.mensagem=null;
             r.concluidoEm=clock.instant();c.proximaEm=clock.instant().plusSeconds(c.intervaloMinutos*60L);c.falhas=0;
         } else c.proximaEm=clock.instant();
         c.dono=null;c.reservaAte=null;

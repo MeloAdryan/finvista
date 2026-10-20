@@ -8,10 +8,12 @@ export default function GoalDetailDialog({
   meta,
   aoFechar,
   children,
+  rotuloFechar = "Fechar e voltar às metas",
 }: {
   meta: SpendingGoal;
   aoFechar: () => void;
   children: ReactNode;
+  rotuloFechar?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titulo = useId();
@@ -50,7 +52,7 @@ export default function GoalDetailDialog({
           </p>
         </div>
         <button type="button" autoFocus onClick={aoFechar}>
-          Fechar e voltar às metas
+          {rotuloFechar}
         </button>
       </header>
       <div className="goal-detail-body">{children}</div>

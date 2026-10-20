@@ -90,20 +90,34 @@ public class ContaAzulSyncController {
         return service.consultarCandidato(id);
     }
 
+    @PostMapping("/recuperacao/planejar")
+    public com.finvista.dto.importacao.ContaAzulSyncResponse.PlanoRecuperacao planejarRecuperacao(
+            @RequestParam("arquivo") MultipartFile arquivo,
+            @RequestParam("dataCorte") @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate corte) {
+        try { return service.planejarRecuperacao(arquivo,corte); }
+        catch(IllegalArgumentException | IOException e) { throw erro(e); }
+    }
+    @PostMapping("/recuperacao/aplicar")
+    public com.finvista.dto.importacao.ContaAzulSyncResponse.ResultadoRecuperacao aplicarRecuperacao(
+            @RequestParam("arquivo") MultipartFile arquivo,@RequestParam("token") String token,
+            @RequestParam("dataCorte") @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate corte,
+            @RequestParam("linhas") String linhas,@RequestParam("confirmado") boolean confirmado) {
+        try { return service.aplicarRecuperacao(arquivo,corte,token,
+                json.readValue(linhas,new TypeReference<List<Integer>>() {}),confirmado); }
+        catch(IllegalArgumentException | IOException e) { throw erro(e); }
+    }
+
     private LocalDate resolverDataCorte(LocalDate dataCorte) {
         return dataCorte == null
                 ? LocalDate.now(FUSO_HORARIO)
                 : dataCorte;
     }
 
-    private ResponseStatusException erro(Exception e) {
+    private IllegalArgumentException erro(Exception e) {
         String mensagem = e instanceof IOException
                 ? "Falha ao ler arquivo ou decisões JSON."
                 : e.getMessage();
 
-        return new ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                mensagem
-        );
+        return new IllegalArgumentException(mensagem);
     }
 }

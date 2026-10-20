@@ -88,6 +88,9 @@ public class ContaAzulApiPlanService {
     }
 
     private boolean possivel(FinancialTransaction l, ContaAzulParcelDetail p) {
+        // Parcelas distintas já identificadas não são duplicatas por descrição/competência.
+        if (ORIGEM_API.equals(l.getOrigem()) && texto(l.getDocumentoReferencia())
+                .matches("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) return false;
         if (p.evento() == null || !Objects.equals(l.getTipo(), p.evento().tipo())) {
             return false;
         }
@@ -119,8 +122,8 @@ public class ContaAzulApiPlanService {
         if (!Set.of("PENDENTE", "EM_ABERTO", "QUITADO", "RECEBIDO", "RECEBIDO_PARCIAL", "ATRASADO").contains(texto(p.status()))) {
             avisos.add("Situação da parcela precisa de conferência específica.");
         }
-        if (evento.condicao() == null || !Integer.valueOf(1).equals(evento.condicao().quantidade())) {
-            avisos.add("Rateios do evento não estão confirmados para uma única parcela. Não será presumida uma divisão.");
+        if (evento.condicao() == null || (evento.condicao().quantidade() == null || evento.condicao().quantidade() < 1)) {
+            avisos.add("Quantidade de parcelas ausente ou inválida. Os rateios devem fechar com esta parcela, sem divisão presumida.");
         }
         if (!dinheiro(p.liquidoConferido()) || !dinheiro(p.pago()) || !dinheiro(p.pendente())) {
             avisos.add("Valores da parcela ausentes, negativos ou fora da precisão aceita.");

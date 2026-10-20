@@ -12,6 +12,14 @@ import ContaAzulParcelDetailPanel from "./ContaAzulParcelDetailPanel";
 const horario = (v: string | null) =>
   v ? new Date(v).toLocaleString("pt-BR") : "Não agendada";
 const data = (v: string) => v.split("-").reverse().join("/");
+function datasMoveis() {
+  const hoje = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Sao_Paulo" }).format(new Date());
+  const deslocar = (dias: number) => {
+    const d = new Date(`${hoje}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + dias);
+    return d.toISOString().slice(0, 10);
+  };
+  return { inicio: deslocar(-90), fim: deslocar(90) };
+}
 const rotulos: Record<string, string> = {
   EM_ANDAMENTO: "Em andamento",
   AGUARDANDO_REPETICAO: "Aguardando nova tentativa",
@@ -30,6 +38,7 @@ export default function ContaAzulAutoPanel({
   const [inicio, setInicio] = useState("");
   const [fim, setFim] = useState("");
   const [intervalo, setIntervalo] = useState(30);
+  const [movel, setMovel] = useState(false);
   const [novas, setNovas] = useState(false);
   const [confirmado, setConfirmado] = useState(false);
   const [historico, setHistorico] = useState(false);
@@ -40,6 +49,8 @@ export default function ContaAzulAutoPanel({
   const [parcelaSelecionada, setParcelaSelecionada] = useState<string | null>(
     null,
   );
+  const [instanteConsulta, setInstanteConsulta] = useState(0);
+  const [consultadoEm, setConsultadoEm] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
   const generation = useRef(0);
   const inicializado = useRef(false);
@@ -62,11 +73,15 @@ export default function ContaAzulAutoPanel({
         );
         if (controller.signal.aborted || atual !== generation.current) return;
         setStatus(value);
+        setConsultadoEm(new Date().toLocaleTimeString("pt-BR"));
+        setInstanteConsulta(Date.now());
+        setAviso((v) => v === "Atualizando status…" ? "Status atualizado." : v);
         if (!inicializado.current) {
           setInicio(value.configuracao.inicio);
           setFim(value.configuracao.fim);
           setIntervalo(value.configuracao.intervaloMinutos);
           setNovas(value.configuracao.incluirNovas);
+          setMovel(Boolean(value.configuracao.periodoMovel));
           inicializado.current = true;
         }
         setErro("");
@@ -93,13 +108,6 @@ export default function ContaAzulAutoPanel({
   async function agir(acao: "salvar" | "pausar" | "executar") {
     if (!cliente || operacao.current) return;
     if (acao === "salvar" && (!confirmado || (novas && !historico))) return;
-    if (
-      acao === "salvar" &&
-      !window.confirm(
-        `Autorizar a sincronização periódica de ${cliente.nome}, de ${data(inicio)} a ${data(fim)} por vencimento?\n\n${novas ? "Novas parcelas simples poderão ser incluídas após as verificações de correspondência." : "Somente registros já identificados pela API serão atualizados; novas parcelas ficarão pendentes."}`,
-      )
-    )
-      return;
     generation.current++;
     const controller = new AbortController();
     pending.current = controller;
@@ -120,12 +128,15 @@ export default function ContaAzulAutoPanel({
                 incluirNovas: novas,
                 confirmado,
                 confirmoHistorico: historico,
+                periodoMovel: movel,
               },
               controller.signal,
             )
           : await acaoAutomacao(cliente.id, acao, controller.signal);
       if (controller.signal.aborted) return;
       setStatus(value);
+      setConsultadoEm(new Date().toLocaleTimeString("pt-BR"));
+        setInstanteConsulta(Date.now());
       setPagina(1);
       setConfirmado(false);
       setHistorico(false);
@@ -165,29 +176,38 @@ export default function ContaAzulAutoPanel({
               : "Pausada"}
         </strong>
       </header>
-      <p>
-        {cliente?.nome || "Selecione uma empresa"}. Consulta periódica de contas
-        a pagar e receber, com renovação do acesso e registro das operações.
-      </p>
-      <p>
-        O período é fixo e considera vencimentos. Parcelas simples em aberto
-        podem ser processadas; baixas, ajustes, múltiplas parcelas e possíveis
-        correspondências Excel ficam pendentes. A execução depende de o backend
-        estar ativo.
-      </p>
+      <p>Contas a pagar e receber sincronizadas automaticamente. Revise os casos que precisam de atenção.</p>
+      {status && (
+        <div className="ca-auto-overview">
+          <div><span>{status.configuracao.periodoMovel ? "Período móvel · por vencimento" : "Período autorizado · por vencimento"}</span><strong>{data(status.configuracao.inicio)} a {data(status.configuracao.fim)}</strong></div>
+          <div><span>Próxima verificação</span><strong>{status.configuracao.habilitada ? atual?.status === "EM_ANDAMENTO" ? "Execução em andamento" : status.configuracao.proximaEm && new Date(status.configuracao.proximaEm).getTime() <= instanteConsulta ? "Aguardando processamento" : horario(status.configuracao.proximaEm) : "Automação pausada"}</strong><small>Intervalo: {status.configuracao.intervaloMinutos === 1440 ? "diariamente" : `${status.configuracao.intervaloMinutos} min`} após concluir a varredura.</small></div>
+          <div><span>Novas parcelas</span><strong>{status.configuracao.incluirNovas ? "Inclusão autorizada" : "Somente registros já vinculados"}</strong></div>
+        </div>
+      )}
       {status && !status.processadorHabilitado && (
         <p role="status">
           O processador está desativado no backend. Configure
           CONTA_AZUL_AUTO_ENABLED antes de ativar esta empresa.
         </p>
       )}
+      <details className="ca-auto-settings" key={status?.configuracao.alteradoEm || "nova"} open={Boolean(status && !status.configuracao.alteradoEm)}>
+        <summary>{status?.configuracao.alteradoEm ? "Configurar automação" : "Configurar e autorizar automação"}</summary>
+        <p>Esta autorização fica salva. As confirmações abaixo são necessárias apenas para ativar ou alterar a configuração.</p>
+        <label className="ca-auto-check">
+          <input type="checkbox" checked={movel} disabled={busy} onChange={(e) => {
+            setMovel(e.target.checked); setConfirmado(false); setHistorico(false);
+            if (e.target.checked) { const datas = datasMoveis(); setInicio(datas.inicio); setFim(datas.fim); }
+          }} />
+          Acompanhar o calendário automaticamente: últimos 90 e próximos 90 dias.
+        </label>
+        <p>{movel ? "Cada nova varredura recalcula as datas pelo horário de Brasília. Uma varredura em andamento mantém o período com que começou." : "Período fixo de até 366 dias. Vencimentos fora dele não serão consultados."}</p>
       <div className="ca-auto-fields">
         <label>
           Vencimento inicial da automação
           <input
             type="date"
             value={inicio}
-            disabled={busy}
+            disabled={busy || movel}
             onChange={(e) => {
               setInicio(e.target.value);
               setConfirmado(false);
@@ -201,7 +221,7 @@ export default function ContaAzulAutoPanel({
             type="date"
             value={fim}
             min={inicio}
-            disabled={busy}
+            disabled={busy || movel}
             onChange={(e) => {
               setFim(e.target.value);
               setConfirmado(false);
@@ -260,8 +280,7 @@ export default function ContaAzulAutoPanel({
           disabled={busy}
           onChange={(e) => setConfirmado(e.target.checked)}
         />
-        Autorizo as execuções periódicas para esta empresa e este período,
-        conforme as opções acima.
+        {movel ? "Autorizo as execuções periódicas para esta empresa no período móvel, acompanhando o calendário, conforme as opções acima." : "Autorizo as execuções periódicas para esta empresa e este período, conforme as opções acima."}
       </label>
       <div className="ca-auto-actions">
         <button
@@ -277,8 +296,11 @@ export default function ContaAzulAutoPanel({
           }
           onClick={() => void agir("salvar")}
         >
-          Salvar e ativar automação
+          {status?.configuracao.habilitada ? "Salvar configuração autorizada" : "Salvar e ativar automação"}
         </button>
+      </div>
+      </details>
+      <div className="ca-auto-actions ca-auto-daily-actions">
         <button
           type="button"
           disabled={busy || !status?.configuracao.habilitada}
@@ -300,27 +322,24 @@ export default function ContaAzulAutoPanel({
         <button
           type="button"
           disabled={busy}
-          onClick={() => setRefresh((p) => p + 1)}
+          onClick={() => { setAviso("Atualizando status…"); setRefresh((p) => p + 1); }}
         >
           Atualizar status da automação
         </button>
       </div>
       {aviso && <p role="status">{aviso}</p>}
       {erro && <p role="alert">{erro}</p>}
-      {status && (
-        <p>
-          Configuração salva: {data(status.configuracao.inicio)} a{" "}
-          {data(status.configuracao.fim)} · próximas etapas a partir de{" "}
-          {horario(status.configuracao.proximaEm)}. A execução completa pode
-          exigir várias etapas.
-        </p>
-      )}
+      {consultadoEm && <p className="ca-auto-updated">Status consultado às {consultadoEm}. A execução continua no backend com esta página fechada, enquanto ele estiver ativo.</p>}
+      {!atual && status && <div className="ca-auto-empty"><h3>{status.configuracao.habilitada ? "Aguardando a primeira execução" : "Comece pela configuração"}</h3><p>{status.configuracao.habilitada ? "O resultado aparecerá aqui quando a fila começar a ser processada." : "Escolha o período e autorize a sincronização uma vez. Depois acompanhe os resultados por aqui."}</p></div>}
       {atual && (
         <section
           className="ca-auto-run"
           aria-label="Última execução automática"
         >
-          <h3>{rotulos[atual.status] || atual.status}</h3>
+          <div className={`ca-auto-result-heading ${atual.status === "CONCLUIDA" ? "is-complete" : "needs-attention"}`}>
+            <span>Última execução</span>
+            <h3>{atual.status === "CONCLUIDA" ? "Tudo atualizado neste período" : atual.status === "CONCLUIDA_COM_PENDENCIAS" ? `${atual.pendentes} pendência(s) para revisar` : rotulos[atual.status] || atual.status}</h3>
+          </div>
           <p>
             Período consultado: {data(atual.inicio)} a {data(atual.fim)} ·
             início {horario(atual.criadoEm)}
@@ -344,10 +363,10 @@ export default function ContaAzulAutoPanel({
               </div>
             ))}
           </dl>
-          {atual.mensagem && <p>{atual.mensagem}</p>}
+          {atual.mensagem && !["CONCLUIDA", "CONCLUIDA_COM_PENDENCIAS"].includes(atual.status) && <p role="status">{atual.mensagem}</p>}
           {status!.pendencias.length > 0 && (
             <>
-              <h4>Parcelas que exigem conferência</h4>
+              <h4>O que precisa da sua atenção</h4><p>Revise cada caso abaixo. A consulta de uma pendência não grava lançamentos.</p>
               <ul>
                 {status!.pendencias.map((p) => (
                   <li key={p.parcelaId}>
@@ -391,7 +410,7 @@ export default function ContaAzulAutoPanel({
             </>
           )}
           <details>
-            <summary>Histórico das últimas execuções</summary>
+            <summary>Ver histórico das execuções</summary>
             <ul>
               {status!.execucoes.map((r) => (
                 <li key={r.id}>

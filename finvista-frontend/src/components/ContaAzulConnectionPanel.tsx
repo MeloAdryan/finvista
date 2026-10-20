@@ -93,26 +93,22 @@ export default function ContaAzulConnectionPanel({
         </span>
       </div>
       <p aria-live="polite">
-        {status?.mensagem || (cliente && !erro ? "Consultando conexão…" : "")}
+        {pronta && status?.conectado
+          ? "Conexão autorizada. Acompanhe os resultados e as pendências na aba Automação."
+          : status?.mensagem || (cliente && !erro ? "Consultando conexão…" : "")}
       </p>
-      {status?.expiraEm && (
-        <p>
-          Validade do acesso:{" "}
-          {new Date(status.expiraEm).toLocaleString("pt-BR")}.
-        </p>
+      {pronta && !status?.conectado && (
+        <button type="button" className="ca-connect-primary" disabled={busy} onClick={() => void agir("autorizar")}>Conectar Conta Azul</button>
       )}
-      <p>
-        A autorização não importa lançamentos automaticamente. Consulte uma
-        parcela para preparar e confirmar sua sincronização ou conferir um
-        vínculo Excel/API. O plano de importação Conta Azul protege possíveis
-        correspondências com a API; a importação genérica permanece bloqueada
-        para empresas com lançamentos API.
-      </p>
       {erro && (
         <p role="alert" className="ca-connection-error">
           {erro}
         </p>
       )}
+      <details className="ca-connection-manage">
+        <summary>Gerenciar conexão</summary>
+        <p>A autorização fica armazenada por empresa. A automação renova o acesso quando necessário; use as ações abaixo para conferir ou recuperar a conexão.</p>
+        {status?.expiraEm && <p>Validade do acesso atual: {new Date(status.expiraEm).toLocaleString("pt-BR")}.</p>}
       <div className="ca-connection-actions">
         <button
           type="button"
@@ -125,7 +121,7 @@ export default function ContaAzulConnectionPanel({
         >
           Atualizar status
         </button>
-        {pronta && (
+        {pronta && status?.conectado && (
           <button
             type="button"
             disabled={busy}
@@ -144,6 +140,7 @@ export default function ContaAzulConnectionPanel({
           </button>
         )}
       </div>
+      </details>
     </section>
   );
 }

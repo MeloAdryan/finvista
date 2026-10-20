@@ -245,15 +245,10 @@ import java.util.*;
             if (vincularId == null && plano.situacao() == ContaAzulApiPlanService.Situacao.CORRESPONDENCIA_POSSIVEL) {
                 throw conflito("Há possíveis lançamentos existentes. O vínculo com registros de arquivo ou cadastro manual exige conferência específica; a inclusão foi bloqueada.");
             }
-            if (p.perda() != null || p.renegociacao() != null || p.composicao() == null
-                    || !zero(p.composicao().juros()) || !zero(p.composicao().multa())
-                    || !zero(p.composicao().desconto()) || !zero(p.composicao().taxa())
-                    || p.pago() == null || p.pago().signum() != 0
-                    || !("PENDENTE".equals(p.status()) || "EM_ABERTO".equals(p.status()) || "ATRASADO".equals(p.status()))
-                    || p.liquidoConferido() == null || p.liquidoConferido().signum() <= 0
-                    || p.composicao().bruto().compareTo(p.liquidoConferido()) != 0) {
-                throw conflito("Esta entrega sincroniza somente parcelas em aberto, positivas e sem baixas, ajustes, perdas ou renegociação.");
-            }
+            ContaAzulSettlementPolicy.Valores financeiro;
+            try { financeiro = ContaAzulSettlementPolicy.conferir(p); }
+            catch (IllegalArgumentException e) { throw conflito(e.getMessage()); }
+            if (financeiro.original().signum() <= 0) throw conflito("O principal deve ser positivo.");
             var identificados = estado.registros().stream().filter(t -> ORIGEM.equals(t.getOrigem())
                     && p.id().equalsIgnoreCase(t.getDocumentoReferencia())).toList();
             if (vincularId != null) {
@@ -263,13 +258,13 @@ import java.util.*;
                 var excel = estado.registros().stream().filter(t -> Objects.equals(t.getId(), vincularId)
                         && "CONTA_AZUL_EXCEL".equals(t.getOrigem())).findFirst()
                         .orElseThrow(() -> conflito("O lançamento Excel não está disponível nesta empresa."));
-                validarVinculo(excel, p);
+                validarVinculo(excel, p, financeiro);
                 var atuais = alocacoes(excel, estado.alocacoes());
                 var resumo = resumo(excel, atuais);
                 return new Proposta("VINCULAR_EXCEL", excel, resumo, resumo, atuais,
                         List.of("Confirme que este lançamento Excel e esta parcela da API representam a mesma operação.",
                                 "O vínculo mantém valores, datas, metadados e rateios do lançamento. Somente a origem e a referência externa passam ao controle da API.",
-                                "As futuras importações Excel protegerão esta referência histórica. Atualizações financeiras exigem outra prévia pela API."));
+                                "As futuras importações Excel protegerão esta referência histórica. Após o vínculo, a sincronização pela API e a automação autorizada podem atualizar este mesmo registro, incluindo valores e rateios da fonte."));
             }
             if (identificados.size() > 1 || (plano.situacao() == ContaAzulApiPlanService.Situacao.REGISTRO_IDENTIFICADO && identificados.size() != 1)) {
                 throw conflito("O vínculo externo não é único. Revise os registros existentes.");
@@ -285,25 +280,19 @@ import java.util.*;
             if (destino != null && !p.evento().tipo().equals(destino.getTipo())) {
                 throw conflito("O tipo da parcela mudou. O vínculo precisa de revisão.");
             }
-            if (destino != null && (destino.getDataRealizacao() != null
-                    || (destino.getValorRealizado() != null && destino.getValorRealizado().signum() != 0))) {
-                throw conflito("O registro local possui baixa ou realização. Esta entrega não altera registros com baixa.");
-            }
             List<Rateio> novos = new ArrayList<>();
             Set<String> nomesCategorias = new HashSet<>();
             for (var categoria : p.evento().rateio()) {
-                if (categoria.bruto().compareTo(categoria.valor()) != 0
-                        || !nomesCategorias.add(categoria.categoriaNome().trim().toLowerCase(Locale.ROOT))) {
-                    throw conflito("Rateios com ajustes ou categorias de mesmo nome exigem conferência específica.");
+                if (!nomesCategorias.add(categoria.categoriaNome().trim().toLowerCase(Locale.ROOT))) {
+                    throw conflito("Categorias de mesmo nome exigem conferência específica.");
                 }
                 if (categoria.centros().isEmpty()) {
                     novos.add(new Rateio(categoria.categoriaNome().trim(), moeda(categoria.bruto()), null, null));
                 } else {
                     Set<String> centros = new HashSet<>();
                     for (var centro : categoria.centros()) {
-                        if (centro.bruto().compareTo(centro.valor()) != 0
-                                || !centros.add(centro.centroNome().trim().toLowerCase(Locale.ROOT))) {
-                            throw conflito("Rateios de centro com ajustes ou nomes repetidos exigem conferência específica.");
+                        if (!centros.add(centro.centroNome().trim().toLowerCase(Locale.ROOT))) {
+                            throw conflito("Centros com nomes repetidos exigem conferência específica.");
                         }
                         novos.add(new Rateio(categoria.categoriaNome().trim(), moeda(centro.bruto()), centro.centroNome().trim(), moeda(centro.bruto())));
                     }
@@ -312,7 +301,7 @@ import java.util.*;
             var ordenados = ordenar(novos);
             Resumo antes = destino == null ? null : resumo(destino, alocacoes(destino, estado.alocacoes()));
             var depois = new Resumo(p.descricao(), p.evento().tipo(), p.evento().competencia(), p.vencimento(),
-                    moeda(p.composicao().bruto()), moeda(p.pago()), moeda(p.pendente()), ordenados);
+                    moeda(p.composicao().bruto()), financeiro.totalPago(), financeiro.totalAberto(), ordenados, detalhe(financeiro));
             return new Proposta(destino == null ? "INCLUIR" : "ATUALIZAR", destino, antes, depois, ordenados,
                     destino == null ? List.of("A ausência de correspondências não comprova que a parcela seja nova. Confira os lançamentos da empresa antes de confirmar.")
                             : List.of("Atualização restrita ao registro já identificado pelo ID externo da API."));
@@ -327,16 +316,18 @@ import java.util.*;
             t.setTipo(p.evento().tipo());
             t.setValor(moeda(p.composicao().bruto()));
             t.setValorOriginal(moeda(p.composicao().bruto()));
-            t.setValorRealizado(BigDecimal.ZERO.setScale(2));
-            t.setValorAberto(moeda(p.pendente()));
-            t.setValorTotalRealizado(BigDecimal.ZERO.setScale(2));
-            t.setValorTotalAberto(moeda(p.pendente()));
-            t.setJurosRealizado(BigDecimal.ZERO.setScale(2));
-            t.setMultaRealizada(BigDecimal.ZERO.setScale(2));
-            t.setDescontoRealizado(BigDecimal.ZERO.setScale(2));
-            t.setJurosPrevisto(BigDecimal.ZERO.setScale(2));
-            t.setMultaPrevista(BigDecimal.ZERO.setScale(2));
-            t.setDescontoPrevisto(BigDecimal.ZERO.setScale(2));
+            var f = ContaAzulSettlementPolicy.conferir(p);
+            t.setDataRealizacao(f.ultimaBaixa());
+            t.setValorRealizado(f.principalPago());
+            t.setValorAberto(f.principalAberto());
+            t.setValorTotalRealizado(f.totalPago());
+            t.setValorTotalAberto(f.totalAberto());
+            t.setJurosRealizado(f.jurosPago());
+            t.setMultaRealizada(f.multaPaga());
+            t.setDescontoRealizado(f.descontoPago());
+            t.setJurosPrevisto(f.jurosAberto());
+            t.setMultaPrevista(f.multaAberta());
+            t.setDescontoPrevisto(f.descontoAberto());
             t.setOrigem(ORIGEM);
             t.setDocumentoReferencia(p.id().toLowerCase(Locale.ROOT));
             t.setSituacao(p.status());
@@ -354,21 +345,35 @@ import java.util.*;
                     && (p.evento().competencia().equals(competencia) || p.vencimento().equals(t.getDataVencimento()));
         }
 
-        private void validarVinculo(FinancialTransaction t, ContaAzulParcelDetail p) {
+        private void validarVinculo(FinancialTransaction t, ContaAzulParcelDetail p,
+                ContaAzulSettlementPolicy.Valores f) {
             LocalDate competencia = t.getDataCompetencia() == null ? t.getData() : t.getDataCompetencia();
             BigDecimal original = t.getValorOriginal() == null ? t.getValor() : t.getValorOriginal();
             if (!Objects.equals(t.getTipo(), p.evento().tipo()) || !Objects.equals(competencia, p.evento().competencia())
                     || !Objects.equals(t.getDataVencimento(), p.vencimento())
                     || t.getDescricao() == null || !t.getDescricao().trim().equalsIgnoreCase(p.descricao().trim())
-                    || original == null || original.compareTo(p.composicao().bruto()) != 0
-                    || t.getValor() == null || t.getValor().compareTo(original) != 0
-                    || t.getDataRealizacao() != null || !zero(t.getValorRealizado()) || !zero(t.getValorTotalRealizado())
-                    || t.getValorAberto() == null || t.getValorAberto().compareTo(original) != 0
-                    || t.getValorTotalAberto() == null || t.getValorTotalAberto().compareTo(original) != 0
-                    || !zero(t.getJurosRealizado()) || !zero(t.getMultaRealizada()) || !zero(t.getDescontoRealizado())
-                    || !zero(t.getJurosPrevisto()) || !zero(t.getMultaPrevista()) || !zero(t.getDescontoPrevisto())) {
-                throw conflito("O vínculo exige descrição, tipo, valor, competência e vencimento compatíveis, sem baixas ou ajustes no Excel. Confira as diferenças antes de vincular.");
+                    || original == null || original.compareTo(f.original()) != 0
+                    || t.getValor() == null || t.getValor().compareTo(original) != 0) {
+                throw conflito("O vínculo exige descrição, tipo, principal original, competência e vencimento compatíveis. Confira as diferenças antes de vincular.");
             }
+            conferirCampoVinculo("principal realizado", t.getValorRealizado(), f.principalPago());
+            conferirCampoVinculo("principal em aberto", t.getValorAberto(), f.principalAberto());
+            conferirCampoVinculo("total realizado", t.getValorTotalRealizado(), f.totalPago());
+            conferirCampoVinculo("total em aberto", t.getValorTotalAberto(), f.totalAberto());
+            conferirCampoVinculo("juros realizados", t.getJurosRealizado(), f.jurosPago());
+            conferirCampoVinculo("multa realizada", t.getMultaRealizada(), f.multaPaga());
+            conferirCampoVinculo("desconto realizado", t.getDescontoRealizado(), f.descontoPago());
+            conferirCampoVinculo("juros em aberto", t.getJurosPrevisto(), f.jurosAberto());
+            conferirCampoVinculo("multa em aberto", t.getMultaPrevista(), f.multaAberta());
+            conferirCampoVinculo("desconto em aberto", t.getDescontoPrevisto(), f.descontoAberto());
+            if (!Objects.equals(t.getDataRealizacao(), f.ultimaBaixa())) {
+                throw conflito("A data da última baixa está ausente ou difere entre o Excel e a API. Confira a origem antes de vincular; o vínculo não altera datas.");
+            }
+        }
+
+        private void conferirCampoVinculo(String campo, BigDecimal local, BigDecimal fonte) {
+            if (local == null) throw conflito("Campo " + campo + " não informado no registro Excel. Recupere os campos financeiros ausentes antes de preparar outro vínculo.");
+            if (local.compareTo(fonte) != 0) throw conflito("Campo " + campo + " diverge entre o Excel e a API. Confira as diferenças antes de vincular; o vínculo não altera valores.");
         }
 
         private Estado estado(Long cliente) {
@@ -396,7 +401,15 @@ import java.util.*;
 
         private Resumo resumo(FinancialTransaction t, List<Rateio> lista) {
             return new Resumo(t.getDescricao(), t.getTipo(), t.getDataCompetencia(), t.getDataVencimento(),
-                    moeda(t.getValor()), moeda(t.getValorRealizado()), moeda(t.getValorAberto()), lista);
+                    moeda(t.getValor()), moeda(t.getValorTotalRealizado()), moeda(t.getValorTotalAberto()), lista,
+                    new Financeiro(moeda(t.getValorRealizado()), moeda(t.getValorAberto()), moeda(t.getJurosRealizado()),
+                            moeda(t.getMultaRealizada()), moeda(t.getDescontoRealizado()), moeda(t.getJurosPrevisto()),
+                            moeda(t.getMultaPrevista()), moeda(t.getDescontoPrevisto()), t.getDataRealizacao()));
+        }
+
+        private Financeiro detalhe(ContaAzulSettlementPolicy.Valores f) {
+            return new Financeiro(f.principalPago(), f.principalAberto(), f.jurosPago(), f.multaPaga(),
+                    f.descontoPago(), f.jurosAberto(), f.multaAberta(), f.descontoAberto(), f.ultimaBaixa());
         }
 
         private Object snapshot(FinancialTransaction t, List<Rateio> lista) {

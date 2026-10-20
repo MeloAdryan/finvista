@@ -24,6 +24,13 @@ public class ContaAzulOAuthController {
     private final ClienteContextService context;
     private final SecureRandom random = new SecureRandom();
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.core.env.Environment environment;
+    @org.springframework.beans.factory.annotation.Value("${finvista.conta-azul.local-callback-relay:false}")
+    private boolean localCallbackRelay;
+    @org.springframework.beans.factory.annotation.Value("${server.port:8080}")
+    private int localPort = 8080;
+
     public ContaAzulOAuthController(ContaAzulProperties p, ContaAzulConfiguration cfg, ContaAzulOAuthService oauth, ContaAzulConnectionService connections, ClienteContextService context) {
         this.p = p;
         this.cfg = cfg;
@@ -55,6 +62,29 @@ public class ContaAzulOAuthController {
 
     @GetMapping("/callback")
     public ResponseEntity<String> callback(HttpServletRequest request, @RequestParam(name = "code", required = false) String code, @RequestParam(name = "state", required = false) String state, @RequestParam(name = "error", required = false) String error) {
+        // O dominio publico nao recebe o cookie localhost. Somente em dev,
+        // encaminha os parametros ao mesmo callback local para validar a sessao.
+        if (localCallbackRelay && environment != null
+                && environment.acceptsProfiles(org.springframework.core.env.Profiles.of("dev & !prod"))
+                && request.getServerName().equalsIgnoreCase(java.net.URI.create(p.getRedirectUri()).getHost())
+                && !"localhost".equalsIgnoreCase(request.getServerName())
+                && !"127.0.0.1".equals(request.getServerName())) {
+            if (state == null || !state.matches("[A-Za-z0-9_-]{43}")
+                    || (error == null && (code == null || code.isBlank() || code.length() > 4096))
+                    || (error != null && error.length() > 256)
+                    || localPort < 1 || localPort > 65535) {
+                throw new IllegalArgumentException("Retorno OAuth invalido. Inicie novamente pelo FinVista.");
+            }
+            String query = "state=" + java.net.URLEncoder.encode(state, StandardCharsets.UTF_8);
+            query += error != null
+                    ? "&error=" + java.net.URLEncoder.encode(error, StandardCharsets.UTF_8)
+                    : "&code=" + java.net.URLEncoder.encode(code, StandardCharsets.UTF_8);
+            return ResponseEntity.status(HttpStatus.SEE_OTHER)
+                    .location(java.net.URI.create("http://localhost:" + localPort
+                            + "/api/integracoes/conta-azul/callback?" + query))
+                    .cacheControl(CacheControl.noStore())
+                    .header("Referrer-Policy", "no-referrer").build();
+        }
         context.validarAdministrador();
         HttpSession session = request.getSession(false);
         Pendente pending = null;
