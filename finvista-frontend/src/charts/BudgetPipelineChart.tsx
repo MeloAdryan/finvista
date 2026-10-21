@@ -1,3 +1,4 @@
+import BudgetPercentageChart from "./BudgetPercentageChart";
 import { useId, useState } from "react";
 import {
   Bar,
@@ -156,6 +157,7 @@ export default function BudgetPipelineChart({
   dados,
 }: BudgetPipelineChartProps) {
   const [tabela, setTabela] = useState(false);
+  const [percentual, setPercentual] = useState(true);
   const id = useId().replace(/:/g, "");
   const planejadoId = `budget-planejado-${id}`;
   const utilizadoId = `budget-utilizado-${id}`;
@@ -189,10 +191,11 @@ export default function BudgetPipelineChart({
           <span className="ba-eyebrow">Controle orçamentário</span>
           <h2 id={`bc-title-${id}`}>Planejado × utilizado</h2>
           <p>
-            Compare os valores em reais no período completo de cada orçamento.
+            Compare cada orçamento no seu período completo. Alterne entre percentual do planejado e valores em reais.
           </p>
         </div>
         <div className="ba-actions">
+          <button type="button" onClick={() => setPercentual(v => !v)} aria-pressed={percentual}>{percentual ? "Ver em reais" : "Ver em percentual"}</button>
           <button
             type="button"
             onClick={() => setTabela((atual) => !atual)}
@@ -277,7 +280,7 @@ export default function BudgetPipelineChart({
                 </tbody>
               </table>
             </div>
-          ) : (
+          ) : percentual ? <BudgetPercentageChart dados={dados}/> : (
             <div className="bc-plot-card">
               <div className="bc-plot-heading">
                 <div className="bc-legend">
@@ -427,7 +430,7 @@ export default function BudgetPipelineChart({
             </div>
           )}
 
-          {semConsumo.length > 0 && (
+          {!percentual && semConsumo.length > 0 && (
             <div className="bc-zero">
               <strong>Consumo registrado igual a zero</strong>
               <p>
@@ -437,7 +440,7 @@ export default function BudgetPipelineChart({
               </p>
             </div>
           )}
-          <div className="bc-results">
+          {!percentual && <div className="bc-results">
             {dados.map((item) => {
               const excedente = Math.max(
                 0,
@@ -464,11 +467,10 @@ export default function BudgetPipelineChart({
                 </div>
               );
             })}
-          </div>
+          </div>}
           <p className="ba-note">
             Valores contabilizados pela data de análise, incluindo lançamentos
-            em aberto. Cores identificam planejado e utilizado; o sombreamento é
-            igual para todas as colunas. Consulte a utilização individual quando
+            em aberto. {percentual ? "Azul indica consumo até o limite; vermelho indica excedente." : "Cores identificam planejado e utilizado; o sombreamento é igual para todas as colunas."} Consulte a utilização individual quando
             os orçamentos tiverem critérios ou períodos diferentes.
           </p>
         </>

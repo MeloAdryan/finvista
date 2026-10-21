@@ -83,17 +83,22 @@ export default function FinancialAlertsPanel({
           <h2 id="financial-alerts-title">Pontos de atenção</h2>
         </div>
         {dados && (
-          <span>
-            {dados.alertas.length} de {dados.total} avisos
+          <span className="fa-count">
+            {dados.total === 0
+              ? "Nenhum aviso"
+              : `${dados.alertas.length} de ${dados.total} avisos`}
           </span>
         )}
         <Link to="/alertas">Ver central de alertas</Link>
       </div>
-      <p className="fa-note">
-        Metas e orçamentos usam seus períodos e escopos completos. O filtro de
-        categoria do painel se aplica ao aumento de despesas. Valores
-        registrados podem incluir lançamentos em aberto.
-      </p>
+      <details className="fa-method">
+        <summary>Como os alertas são avaliados</summary>
+        <p className="fa-note">
+          Metas e orçamentos usam seus períodos e escopos completos. O filtro de
+          categoria do painel se aplica ao aumento de despesas. Valores
+          registrados podem incluir lançamentos em aberto.
+        </p>
+      </details>
       {erro ? (
         <div role="status" className="fa-state">
           <p>{erro}</p>
@@ -112,9 +117,18 @@ export default function FinancialAlertsPanel({
       ) : (
         <>
           {dados.alertas.length === 0 ? (
-            <p className="fa-state">
-              Nenhum alerta pelas regras avaliadas neste período.
-            </p>
+            <div className="fa-state fa-empty">
+              <span className="fa-empty-icon" aria-hidden="true">
+                ✓
+              </span>
+              <div>
+                <strong>Nenhum alerta nas regras avaliadas</strong>
+                <p>
+                  Consulte os critérios de avaliação para entender a cobertura
+                  deste período.
+                </p>
+              </div>
+            </div>
           ) : (
             <div className="fa-grid">
               {dados.alertas.map((alerta) => {
@@ -207,7 +221,7 @@ export default function FinancialAlertsPanel({
               })}
             </div>
           )}
-          <p className="fa-note" role="status">
+          <p className="fa-note fa-comparison" role="status">
             {motivosComparacao[dados.comparacao]}
           </p>
           {dados.total > dados.alertas.length && (

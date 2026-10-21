@@ -176,3 +176,242 @@
 .executive-dashboard .fp-diagnostic p {
   overflow-wrap: anywhere;
 }
+
+/* Hierarquia visual da posição financeira, restrita ao painel executivo. */
+.executive-dashboard .fp-panel {
+  margin: 28px 0;
+  color: #18334d;
+}
+.executive-dashboard .fp-heading {
+  align-items: center;
+  margin-bottom: 18px;
+}
+.executive-dashboard .fp-eyebrow {
+  display: block;
+  margin-bottom: 7px;
+  color: #8b5b26;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.executive-dashboard .fp-heading h2 {
+  font-size: 23px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+.executive-dashboard .fp-heading p {
+  font-size: 14px;
+  color: #5c6d80;
+  line-height: 1.6;
+  margin-top: 8px;
+}
+.executive-dashboard .fp-heading button {
+  min-height: 42px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-family: inherit;
+  border-radius: 10px;
+  box-shadow: 0 2px 3px #142e4805;
+}
+.executive-dashboard .fp-grid {
+  gap: 16px;
+  align-items: stretch;
+}
+.executive-dashboard .fp-card {
+  padding: 22px;
+  border-radius: 16px;
+  border-color: #dce4ed;
+  box-shadow: 0 4px 16px #17334d04;
+}
+.executive-dashboard .fp-card-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.executive-dashboard .fp-card-heading h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+.executive-dashboard .fp-card-heading > span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #edf3f8;
+  color: #40617f;
+  font-size: 22px;
+}
+.executive-dashboard .fp-receivable .fp-card-heading > span {
+  background: #edf8f2;
+  color: #287653;
+}
+.executive-dashboard .fp-payable .fp-card-heading > span {
+  background: #fff3e8;
+  color: #a56b28;
+}
+.executive-dashboard .fp-card dl {
+  gap: 16px;
+  padding-top: 4px;
+}
+.executive-dashboard .fp-card dl > div + div {
+  border-left: 1px solid #e6ebf1;
+  padding-left: 16px;
+}
+.executive-dashboard .fp-card dt {
+  font-size: 14px;
+  color: #617185;
+  margin-bottom: 12px;
+}
+.executive-dashboard .fp-card dd {
+  font-size: clamp(21px, 2vw, 29px);
+  line-height: 1.25;
+  letter-spacing: -0.6px;
+  font-variant-numeric: tabular-nums;
+}
+.executive-dashboard .fp-card dd.fp-overdue {
+  color: #b63737;
+}
+.executive-dashboard .fp-account-total {
+  font-size: clamp(24px, 2vw, 30px);
+  line-height: 1.25;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+}
+.executive-dashboard .fp-account-total.fp-account-unavailable {
+  font-size: 21px;
+  letter-spacing: -0.2px;
+}
+.executive-dashboard .fp-card p {
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.executive-dashboard .fp-card .fp-account-subtitle {
+  margin-top: 10px;
+}
+.executive-dashboard .fp-card .fp-account-time {
+  font-size: 13px;
+  color: #63758b;
+}
+.executive-dashboard .fp-accounts-warning,
+.executive-dashboard .fp-accounts > p[role="status"] {
+  padding: 12px;
+  background: #fff7ec;
+  border-radius: 9px;
+  color: #81571f;
+}
+.executive-dashboard .fp-accounts details {
+  font-size: 14px;
+  margin-top: 12px;
+}
+.executive-dashboard .fp-account-source {
+  border-top: 1px solid #e9edf2;
+  padding-top: 9px;
+}
+.executive-dashboard .fp-account-source summary {
+  color: #586e83;
+}
+.executive-dashboard .fp-coverage-warning {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 0 0 18px;
+  border: 1px solid #ead6b5;
+  border-left: 4px solid #bd852e;
+  background: #fff9ef;
+  border-radius: 11px;
+  padding: 15px 18px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.executive-dashboard .fp-warning-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid #ad761f;
+  border-radius: 50%;
+  color: #8d611f;
+  font-weight: 700;
+}
+.executive-dashboard .fp-coverage-warning strong {
+  display: block;
+  font-size: 14px;
+}
+.executive-dashboard .fp-coverage-warning p {
+  margin: 5px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #785e35;
+}
+.executive-dashboard .fp-method,
+.executive-dashboard .fp-coverage {
+  font-size: 14px;
+  border: 1px solid #e0e7ee;
+  background: #fff;
+  border-radius: 10px;
+  margin-top: 12px;
+  padding: 4px 16px;
+}
+.executive-dashboard .fp-method summary,
+.executive-dashboard .fp-coverage summary {
+  color: #405a73;
+  cursor: pointer;
+  padding: 10px 0;
+  line-height: 1.5;
+  font-size: 14px;
+}
+.executive-dashboard .fp-note {
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 6px 0 14px;
+}
+.executive-dashboard .fp-panel summary:focus-visible {
+  outline: 3px solid #93b5d6;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.executive-dashboard .fp-panel > p[role="alert"] {
+  background: #fff0ee;
+  color: #9c332e;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+@media (max-width: 1100px) and (min-width: 901px) {
+  .executive-dashboard .fp-card {
+    padding: 18px;
+  }
+  .executive-dashboard .fp-card dl {
+    grid-template-columns: 1fr;
+  }
+  .executive-dashboard .fp-card dl > div + div {
+    border-left: 0;
+    padding-left: 0;
+    border-top: 1px solid #e6ebf1;
+    padding-top: 14px;
+  }
+}
+@media (max-width: 600px) {
+  .executive-dashboard .fp-card {
+    padding: 20px;
+  }
+  .executive-dashboard .fp-heading {
+    align-items: flex-start;
+  }
+  .executive-dashboard .fp-heading h2 {
+    font-size: 21px;
+  }
+  .executive-dashboard .fp-heading p {
+    font-size: 13px;
+  }
+  .executive-dashboard .fp-coverage-warning {
+    padding: 14px;
+  }
+}

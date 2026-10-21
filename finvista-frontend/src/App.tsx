@@ -1,13 +1,15 @@
 import marcaIcone from "./assets/brand-icon.svg";
 import logoEscuro from "./assets/logo-skyline-escuro.svg";
 import "./styles/brand-assets.css";
-import { lazy, useEffect, useState } from "react";
+import { lazy, useCallback, useEffect, useRef, useState } from "react";
 
 import { useLocation, useNavigate } from "react-router-dom";
 
 import AnalysisPeriodProvider from "./contexts/AnalysisPeriodProvider";
 
 import Login from "./pages/Login";
+import LoadingScreen from "./components/splash/LoadingScreen";
+import WelcomeScreen from "./components/splash/WelcomeScreen";
 
 import ClientSelector from "./components/ClientSelector";
 
@@ -29,6 +31,8 @@ import {
 } from "./services/financialReferenceService";
 
 import "./styles/app-layout.css";
+import "./styles/shell-navigation.css";
+import { useSidebarDrawer } from "./hooks/useSidebarDrawer";
 
 import PageBoundary from "./components/PageBoundary";
 
@@ -213,6 +217,12 @@ function App() {
   const [usuario, setUsuario] = useState<AuthUser | null>(null);
 
   const [verificandoSessao, setVerificandoSessao] = useState(true);
+  const [mostrarBoasVindas, setMostrarBoasVindas] = useState(false);
+  const focarPainel = useRef(false);
+  const continuarBoasVindas = useCallback(() => {
+    focarPainel.current = true;
+    setMostrarBoasVindas(false);
+  }, []);
 
   const [clienteAtual, setClienteAtual] = useState<Cliente | null>(null);
 
@@ -224,7 +234,7 @@ function App() {
   const paginaAtiva: PaginaAtiva =
     location.pathname === "/admin/cadastros" && usuario?.perfil === "ADMIN"
       ? "cadastros"
-      : location.pathname === "/dashboard"
+      : location.pathname === "/dashboard" || location.pathname === "/"
         ? "dashboard"
         : location.pathname === "/alertas"
           ? "alertas"
@@ -247,6 +257,10 @@ function App() {
   const [sidebarRecolhida, setSidebarRecolhida] = useState(false);
 
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
+  const { sidebarRef, mobile, drawerOpen } = useSidebarDrawer(
+    menuMobileAberto && Boolean(usuario),
+    setMenuMobileAberto,
+  );
 
   useEffect(() => {
     let ativo = true;
@@ -256,6 +270,7 @@ function App() {
         const usuarioAtual = await obterUsuarioAtual();
 
         if (ativo) {
+          setVerificandoCliente(usuarioAtual?.perfil === "ADMIN");
           setUsuario(usuarioAtual);
         }
       } catch (error) {
@@ -434,6 +449,7 @@ function App() {
     } finally {
       setClienteAtual(null);
 
+      setMostrarBoasVindas(false);
       setUsuario(null);
 
       navigate("/metas");
@@ -443,37 +459,32 @@ function App() {
   };
 
   if (verificandoSessao) {
-    return (
-      <main className="finvista-auth-loading">
-        <div className="finvista-auth-loading-brand">
-          <strong>FinVista</strong>
-
-          <span>Verificando acesso...</span>
-        </div>
-      </main>
-    );
+    return <LoadingScreen key="sessao" />;
   }
 
   if (!usuario) {
     return (
       <Login
         onLogin={(usuarioAutenticado) => {
+          setVerificandoCliente(usuarioAutenticado.perfil === "ADMIN");
+          setMostrarBoasVindas(true);
           setUsuario(usuarioAutenticado);
 
-          navigate("/metas");
+          navigate("/dashboard");
         }}
       />
     );
   }
   if (usuario.perfil === "ADMIN" && verificandoCliente) {
     return (
-      <main className="finvista-auth-loading">
-        <div className="finvista-auth-loading-brand">
-          <strong>FinVista</strong>
-
-          <span>Verificando cliente...</span>
-        </div>
-      </main>
+      <LoadingScreen
+        key="cliente"
+        messages={[
+          "Preparando seu acesso…",
+          "Carregando a empresa selecionada…",
+          "A consulta está demorando um pouco mais. Aguarde…",
+        ]}
+      />
     );
   }
 
@@ -484,15 +495,26 @@ function App() {
   ) {
     return <ClientSelector onSelecionar={selecionarClienteAdmin} />;
   }
+  if (mostrarBoasVindas) {
+    return (
+      <WelcomeScreen nome={usuario.nome} onContinue={continuarBoasVindas} />
+    );
+  }
   const usuarioAdmin = usuario.perfil === "ADMIN";
 
   return (
     <div
-      className={`finvista-app ${
+      className={`finvista-app finvista-shell-v2 ${
         sidebarRecolhida ? "finvista-app-sidebar-collapsed" : ""
       }`}
     >
       <aside
+        id="finvista-sidebar"
+        ref={sidebarRef}
+        role={drawerOpen ? "dialog" : undefined}
+        aria-modal={drawerOpen ? true : undefined}
+        aria-label={drawerOpen ? "Menu principal" : "Menu lateral"}
+        inert={mobile && !drawerOpen}
         className={`finvista-sidebar ${
           menuMobileAberto ? "finvista-sidebar-mobile-open" : ""
         }`}
@@ -516,6 +538,16 @@ function App() {
             </svg>
           </button>
 
+          <button
+            type="button"
+            className="finvista-drawer-close"
+            aria-label="Fechar menu lateral"
+            onClick={fecharMenuMobile}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
           <div className="finvista-brand">
             <img
               className="finvista-brand-image"
@@ -536,27 +568,12 @@ function App() {
 
             <a
               className={`finvista-nav-item ${
-                paginaAtiva === "metas" ? "finvista-nav-item-active" : ""
-              }`}
-              href="/metas"
-              onClick={(event) => {
-                event.preventDefault();
-
-                abrirMetas();
-              }}
-            >
-              <span className="finvista-nav-icon">
-                <GoalsIcon />
-              </span>
-
-              <span>Metas</span>
-            </a>
-
-            <a
-              className={`finvista-nav-item ${
                 paginaAtiva === "dashboard" ? "finvista-nav-item-active" : ""
               }`}
-              href="#dashboard"
+              href="/dashboard"
+              aria-label="Painel executivo"
+              title="Painel executivo"
+              aria-current={paginaAtiva === "dashboard" ? "page" : undefined}
               onClick={(event) => {
                 event.preventDefault();
 
@@ -571,14 +588,37 @@ function App() {
             </a>
 
             <a
+              className={`finvista-nav-item ${
+                paginaAtiva === "metas" ? "finvista-nav-item-active" : ""
+              }`}
+              href="/metas"
+              aria-label="Metas"
+              title="Metas"
+              aria-current={paginaAtiva === "metas" ? "page" : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+
+                abrirMetas();
+              }}
+            >
+              <span className="finvista-nav-icon">
+                <GoalsIcon />
+              </span>
+
+              <span>Metas</span>
+            </a>
+
+            <a
               className={`finvista-nav-item ${paginaAtiva === "alertas" ? "finvista-nav-item-active" : ""}`}
               href="/alertas"
+              aria-label="Central de alertas"
+              title="Central de alertas"
+              aria-current={paginaAtiva === "alertas" ? "page" : undefined}
               onClick={(event) => {
                 event.preventDefault();
                 setMenuMobileAberto(false);
                 navigate("/alertas");
               }}
-              aria-current={paginaAtiva === "alertas" ? "page" : undefined}
             >
               <span className="finvista-nav-icon">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -597,6 +637,9 @@ function App() {
                 paginaAtiva === "projecao" ? "finvista-nav-item-active" : ""
               }`}
               href="/projecao"
+              aria-label="Projeção"
+              title="Projeção"
+              aria-current={paginaAtiva === "projecao" ? "page" : undefined}
               onClick={(event) => {
                 event.preventDefault();
 
@@ -623,6 +666,9 @@ function App() {
                 paginaAtiva === "fluxo-caixa" ? "finvista-nav-item-active" : ""
               }`}
               href="/fluxo-caixa"
+              aria-label="Fluxo de caixa"
+              title="Fluxo de caixa"
+              aria-current={paginaAtiva === "fluxo-caixa" ? "page" : undefined}
               onClick={(event) => {
                 event.preventDefault();
 
@@ -651,6 +697,11 @@ function App() {
                   : ""
               }`}
               href="/centros-custo"
+              aria-label="Centros de custo"
+              title="Centros de custo"
+              aria-current={
+                paginaAtiva === "centros-custo" ? "page" : undefined
+              }
               onClick={(event) => {
                 event.preventDefault();
 
@@ -677,6 +728,9 @@ function App() {
                 paginaAtiva === "despesas" ? "finvista-nav-item-active" : ""
               }`}
               href="/despesas"
+              aria-label="Despesas"
+              title="Despesas"
+              aria-current={paginaAtiva === "despesas" ? "page" : undefined}
               onClick={(event) => {
                 event.preventDefault();
 
@@ -703,6 +757,9 @@ function App() {
                 paginaAtiva === "orcamentos" ? "finvista-nav-item-active" : ""
               }`}
               href="/orcamentos"
+              aria-label="Orçamentos"
+              title="Orçamentos"
+              aria-current={paginaAtiva === "orcamentos" ? "page" : undefined}
               onClick={(event) => {
                 event.preventDefault();
 
@@ -729,6 +786,9 @@ function App() {
                 paginaAtiva === "historico" ? "finvista-nav-item-active" : ""
               }`}
               href="/historico"
+              aria-label="Histórico"
+              title="Histórico"
+              aria-current={paginaAtiva === "historico" ? "page" : undefined}
               onClick={(event) => {
                 event.preventDefault();
 
@@ -759,7 +819,8 @@ function App() {
                 <a
                   className={`finvista-nav-item ${paginaAtiva === "cadastros" ? "finvista-nav-item-active" : ""}`}
                   href="/admin/cadastros"
-                  title="Cadastrar clientes e usuários"
+                  aria-label="Clientes e usuários"
+                  title="Clientes e usuários"
                   aria-current={
                     paginaAtiva === "cadastros" ? "page" : undefined
                   }
@@ -773,7 +834,7 @@ function App() {
                   <span className="finvista-nav-icon">
                     <ClientsIcon />
                   </span>
-                  <span>Cadastrar clientes e usuários</span>
+                  <span>Clientes e usuários</span>
                 </a>
 
                 <a
@@ -782,7 +843,12 @@ function App() {
                       ? "finvista-nav-item-active"
                       : ""
                   }`}
-                  href="#importacao"
+                  href="/importar"
+                  aria-label="Importar dados"
+                  title="Importar dados"
+                  aria-current={
+                    paginaAtiva === "importacao" ? "page" : undefined
+                  }
                   onClick={(event) => {
                     event.preventDefault();
 
@@ -800,25 +866,37 @@ function App() {
           </nav>
 
           <div className="finvista-sidebar-bottom">
-            <div className="finvista-system-status">
-              <span className="finvista-system-status-dot" />
-
-              <div>
-                <strong>Sistema operacional</strong>
-
-                <small>Dados atualizados</small>
+            <div
+              className="finvista-sidebar-user"
+              role="group"
+              aria-label={`Usuário: ${usuario.nome}`}
+              title={usuario.nome}
+            >
+              <span className="finvista-user-avatar" aria-hidden="true">
+                {usuario.nome.trim().charAt(0).toUpperCase()}
+              </span>
+              <div className="finvista-user-info">
+                <strong title={usuario.nome}>{usuario.nome}</strong>
+                <span>{usuarioAdmin ? "Administrador" : "Cliente"}</span>
               </div>
             </div>
-
-            <div className="finvista-sidebar-version">
-              FinVista
-              <span>v1.0</span>
-            </div>
+            <button
+              type="button"
+              className="finvista-sidebar-logout"
+              onClick={() => {
+                void realizarLogout();
+              }}
+              title="Sair do FinVista"
+              aria-label="Sair do FinVista"
+            >
+              <LogoutIcon />
+              <span>Sair</span>
+            </button>
           </div>
         </div>
       </aside>
 
-      {menuMobileAberto && (
+      {drawerOpen && (
         <button
           type="button"
           className="finvista-mobile-overlay"
@@ -827,7 +905,7 @@ function App() {
         />
       )}
 
-      <div className="finvista-workspace">
+      <div className="finvista-workspace" inert={drawerOpen}>
         <header className="finvista-topbar">
           <div className="finvista-topbar-left">
             <button
@@ -835,7 +913,8 @@ function App() {
               className="finvista-mobile-menu-button"
               onClick={() => setMenuMobileAberto((valorAtual) => !valorAtual)}
               aria-label={menuMobileAberto ? "Fechar menu" : "Abrir menu"}
-              aria-expanded={menuMobileAberto}
+              aria-expanded={drawerOpen}
+              aria-controls="finvista-sidebar"
             >
               <span />
 
@@ -844,10 +923,10 @@ function App() {
               <span />
             </button>
 
-            <div className="finvista-topbar-title">
-              <span className="finvista-topbar-eyebrow">FINVISTA</span>
-
-              <h1>
+            <nav className="finvista-breadcrumb" aria-label="Caminho da página">
+              <span>FinVista</span>
+              <span aria-hidden="true">›</span>
+              <span aria-current="page">
                 {paginaAtiva === "cadastros"
                   ? "Clientes e usuários"
                   : paginaAtiva === "dashboard"
@@ -869,93 +948,77 @@ function App() {
                                   : paginaAtiva === "historico"
                                     ? "Histórico"
                                     : "Importação de dados"}
-              </h1>
-            </div>
+              </span>
+            </nav>
           </div>
 
           <div className="finvista-topbar-actions">
-            <div className="finvista-topbar-user">
-              <div className="finvista-topbar-user-avatar">
-                {usuario.nome.trim().charAt(0).toUpperCase()}
-              </div>
-
-              <div className="finvista-topbar-user-info">
-                <small>
-                  {usuario.perfil === "ADMIN" ? "ADMINISTRADOR" : "CLIENTE"}
-                </small>
-
-                <strong>{usuario.nome}</strong>
-              </div>
-
-              <button
-                type="button"
-                className="finvista-topbar-logout"
-                onClick={() => {
-                  void realizarLogout();
-                }}
-                title="Sair do FinVista"
-              >
-                <LogoutIcon />
-
-                <span>Sair</span>
-              </button>
-            </div>
-
-            <div className="finvista-topbar-status">
-              <span className="finvista-topbar-status-dot" />
-
-              <div>
-                <small>AMBIENTE</small>
-
-                <strong>Dados locais</strong>
-              </div>
-            </div>
-
-            <div className="finvista-topbar-period">
-              <small>REFERÊNCIA</small>
-
-              <strong>{referenciaFinanceira?.mesAno ?? "—"}</strong>
-            </div>
-
+            <span
+              className="finvista-data-badge"
+              title="Base de dados do FinVista"
+            >
+              <i aria-hidden="true" />
+              Dados do FinVista
+            </span>
+            <span
+              className="finvista-reference-badge"
+              title="Referência financeira da empresa; os filtros permanecem em cada página"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="16" rx="2" />
+                <path d="M7 3v4M17 3v4M3 10h18" />
+              </svg>
+              <span className="finvista-reference-label">Referência:</span>{" "}
+              {referenciaFinanceira?.mesAno ?? "Não disponível"}
+            </span>
           </div>
         </header>
 
         <AnalysisPeriodProvider
           key={`${usuario.id}:${clienteAtual?.id ?? "cliente-sessao"}`}
         >
-          <main className="finvista-main">
+          <main
+            className="finvista-main"
+            tabIndex={-1}
+            ref={(element) => {
+              if (element && focarPainel.current) {
+                element.focus();
+                focarPainel.current = false;
+              }
+            }}
+          >
             <PageBoundary key={paginaAtiva}>
-            {paginaAtiva === "cadastros" && usuarioAdmin ? (
-              <AdminRegistration
-                onVoltar={() => navigate("/metas")}
-                textoVoltar="Voltar às metas"
-              />
-            ) : paginaAtiva === "dashboard" ? (
-              <Dashboard key={clienteAtual?.id ?? "sem-cliente"} />
-            ) : paginaAtiva === "alertas" ? (
-              <AlertCenter />
-            ) : paginaAtiva === "metas" ? (
-              <SpendingGoals />
-            ) : paginaAtiva === "projecao" ? (
-              <Projection />
-            ) : paginaAtiva === "fluxo-caixa" ? (
-              <CashFlow />
-            ) : paginaAtiva === "centros-custo" ? (
-              <CostCenters />
-            ) : paginaAtiva === "despesas" ? (
-              <Expenses />
-            ) : paginaAtiva === "orcamentos" ? (
-              <Budgets />
-            ) : paginaAtiva === "historico" ? (
-              <History key={clienteAtual?.id ?? "sem-cliente"} />
-            ) : usuarioAdmin ? (
-              <ImportData
-                key={clienteAtual?.id ?? "sem-cliente"}
-                cliente={clienteAtual}
-              />
-            ) : (
-              <SpendingGoals />
-            )}
+              {paginaAtiva === "cadastros" && usuarioAdmin ? (
+                <AdminRegistration
+                  onVoltar={() => navigate("/metas")}
+                  textoVoltar="Voltar às metas"
+                />
+              ) : paginaAtiva === "dashboard" ? (
+                <Dashboard key={clienteAtual?.id ?? "sem-cliente"} />
+              ) : paginaAtiva === "alertas" ? (
+                <AlertCenter />
+              ) : paginaAtiva === "metas" ? (
+                <SpendingGoals />
+              ) : paginaAtiva === "projecao" ? (
+                <Projection />
+              ) : paginaAtiva === "fluxo-caixa" ? (
+                <CashFlow />
+              ) : paginaAtiva === "centros-custo" ? (
+                <CostCenters />
+              ) : paginaAtiva === "despesas" ? (
+                <Expenses />
+              ) : paginaAtiva === "orcamentos" ? (
+                <Budgets />
+              ) : paginaAtiva === "historico" ? (
+                <History key={clienteAtual?.id ?? "sem-cliente"} />
+              ) : usuarioAdmin ? (
+                <ImportData
+                  key={clienteAtual?.id ?? "sem-cliente"}
+                  cliente={clienteAtual}
+                />
+              ) : (
+                <SpendingGoals />
+              )}
             </PageBoundary>
           </main>
         </AnalysisPeriodProvider>

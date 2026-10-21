@@ -69,10 +69,13 @@ export default function FinancialPositionPanel({
     >
       <div className="fp-heading">
         <div>
+          <span className="fp-eyebrow">Visão de saldos</span>
           <h2>Posição financeira</h2>
           <p>
-            {dados ? `Referência: ${dataBR(dados.referencia)}. ` : ""}Todos os
-            vencimentos e categorias do cliente.
+            {dados
+              ? `Referência: ${dataBR(dados.referencia)}`
+              : "Consultando posição"}{" "}
+            · Todos os vencimentos
           </p>
         </div>
         <button
@@ -90,11 +93,19 @@ export default function FinancialPositionPanel({
       </div>
       {erro && <p role="alert">{erro}</p>}
       {dados && (dados.semValorAberto > 0 || dados.semVencimento > 0) && (
-        <p className="fp-coverage-warning" role="status">
-          <strong>Posição parcial de contas a receber e a pagar.</strong> Há
-          lançamentos sem saldo em aberto ou vencimento informado. Os valores
-          abaixo incluem somente os registros com dados suficientes.
-        </p>
+        <div className="fp-coverage-warning" role="status">
+          <span className="fp-warning-icon" aria-hidden="true">
+            !
+          </span>
+          <div>
+            <strong>Posição parcial de contas a receber e a pagar</strong>
+            <p>
+              Há registros sem saldo em aberto ou vencimento. Os totais incluem
+              apenas os dados suficientes. Confira os registros fora dos totais
+              abaixo.
+            </p>
+          </div>
+        </div>
       )}
 
       <div className="fp-grid">
@@ -109,8 +120,16 @@ export default function FinancialPositionPanel({
             ["A pagar", dados?.pagar],
           ] as const
         ).map(([titulo, grupo]) => (
-          <article className="fp-card" key={titulo}>
-            <h3>{titulo}</h3>
+          <article
+            className={`fp-card ${titulo === "A receber" ? "fp-receivable" : "fp-payable"}`}
+            key={titulo}
+          >
+            <div className="fp-card-heading">
+              <h3>{titulo}</h3>
+              <span aria-hidden="true">
+                {titulo === "A receber" ? "↙" : "↗"}
+              </span>
+            </div>
             <dl>
               <div>
                 <dt>Vencidos</dt>
@@ -130,10 +149,14 @@ export default function FinancialPositionPanel({
           </article>
         ))}
       </div>
-      <p className="fp-note">
-        Valores em aberto registrados no FinVista. A vencer inclui vencimentos
-        na data de referência. Os filtros dos gráficos não alteram esta posição.
-      </p>
+      <details className="fp-method">
+        <summary>Como interpretar estes valores</summary>
+        <p className="fp-note">
+          Valores em aberto registrados no FinVista, considerando todos os
+          vencimentos e categorias do cliente. A vencer inclui vencimentos na
+          data de referência. Os filtros dos gráficos não alteram esta posição.
+        </p>
+      </details>
       {dados && (dados.semValorAberto > 0 || dados.semVencimento > 0) && (
         <details className="fp-coverage">
           <summary>

@@ -1,0 +1,371 @@
+/* Telas de carregamento e boas-vindas do FinVista (prefixo fv- para não colidir com o CSS do app). */
+.fv-screen {
+  --fv-orange: #e8892b;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  color: #fff;
+  font-family: inherit;
+  background: radial-gradient(
+    120% 90% at 50% 15%,
+    #1f3560 0%,
+    #162540 55%,
+    #0f1a30 100%
+  );
+}
+.fv-col {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.fv-logo {
+  position: relative;
+  line-height: 0;
+}
+.fv-logo svg {
+  display: block;
+}
+.fv-draw {
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 0;
+}
+
+/* ---------- carregamento ---------- */
+.fv-halo {
+  position: absolute;
+  inset: -26px;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(232, 137, 43, 0.45),
+    transparent
+  );
+  opacity: 0.4;
+  animation: fv-halo 2.4s ease-in-out infinite;
+}
+.fv-loading .fv-logo svg {
+  animation: fv-breathe 2.4s ease-in-out infinite;
+  position: relative;
+}
+.fv-loading .fv-v2 {
+  animation: fv-loop 2.4s ease-in-out infinite;
+}
+.fv-track {
+  width: 168px;
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+  margin-top: 22px;
+}
+.fv-track i {
+  display: block;
+  width: 36%;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--fv-orange);
+  animation: fv-sweep 1.4s linear infinite;
+}
+.fv-msg {
+  margin: 16px 0 0;
+  min-height: 22px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #c4d0e6;
+  animation: fv-msgin 0.5s ease-out both;
+}
+
+/* ---------- boas-vindas ---------- */
+.fv-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(70% 70% at 50% 45%, #000, transparent);
+  mask-image: radial-gradient(70% 70% at 50% 45%, #000, transparent);
+  animation: fv-fade 1.2s ease-out both;
+}
+.fv-welcome .fv-logo svg {
+  animation: fv-pop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+  position: relative;
+}
+.fv-welcome .fv-f1 {
+  animation: fv-draw 0.45s ease-out 0.75s both;
+}
+.fv-welcome .fv-f2 {
+  animation: fv-draw 0.3s ease-out 1.15s both;
+}
+.fv-welcome .fv-f3 {
+  animation: fv-draw 0.3s ease-out 1.35s both;
+}
+.fv-welcome .fv-v1 {
+  animation: fv-draw 0.45s ease-out 1.25s both;
+}
+.fv-welcome .fv-v2 {
+  animation: fv-draw 0.5s ease-out 1.65s both;
+}
+.fv-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 30px;
+  border: 2px solid var(--fv-orange);
+  opacity: 0;
+  pointer-events: none;
+  animation: fv-ring 1.2s ease-out 2.2s both;
+}
+.fv-eyebrow {
+  margin: 22px 0 2px;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+  opacity: 0.75;
+  animation: fv-rise 0.6s ease-out 2.2s both;
+}
+.fv-big {
+  margin: 0;
+  font-size: clamp(34px, 6vw, 46px);
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  animation: fv-rise 0.6s ease-out 2.4s both;
+}
+.fv-big b {
+  color: var(--fv-orange);
+  font-weight: 800;
+}
+.fv-tag {
+  margin: 8px 0 0;
+  font-size: 14px;
+  opacity: 0.8;
+  animation: fv-rise 0.6s ease-out 2.7s both;
+}
+.fv-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+  height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--fv-orange);
+  color: #2a1700;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  font-family: inherit;
+  cursor: pointer;
+  animation: fv-button-rise 0.5s ease-out both;
+}
+.fv-go:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+.fv-go span {
+  display: inline-block;
+  animation: fv-slide 1.4s ease-in-out 3.8s infinite;
+}
+
+@keyframes fv-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes fv-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes fv-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fv-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes fv-ring {
+  from {
+    opacity: 0.7;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+@keyframes fv-breathe {
+  50% {
+    transform: scale(1.05);
+  }
+}
+@keyframes fv-halo {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.1);
+  }
+}
+@keyframes fv-loop {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 1;
+  }
+  55% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  85% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+@keyframes fv-sweep {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(280%);
+  }
+}
+@keyframes fv-msgin {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fv-slide {
+  50% {
+    transform: translateX(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fv-screen * {
+    animation: none !important;
+  }
+}
+
+.fv-user {
+  margin: 20px 0 0;
+  color: #c4d0e6;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.fv-user + .fv-eyebrow {
+  margin-top: 10px;
+}
+.fv-msg {
+  max-width: 360px;
+  line-height: 1.6;
+  font-size: 14px;
+}
+.fv-retry {
+  margin-top: 18px;
+  min-height: 40px;
+  border: 1px solid #ffffff55;
+  border-radius: 8px;
+  background: transparent;
+  color: #e4ebf7;
+  padding: 8px 16px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.fv-retry:hover {
+  background: #ffffff0c;
+}
+.fv-retry:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
+.fv-go {
+  min-height: 44px;
+  box-shadow: 0 8px 24px #e8892b22;
+}
+.fv-go:hover {
+  background: #f39b44;
+}
+.fv-screen {
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}
+.fv-logo svg {
+  max-width: 100%;
+  height: auto;
+}
+@keyframes fv-button-rise {
+  from {
+    transform: translateY(10px);
+  }
+  to {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fv-screen,
+  .fv-screen * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .fv-draw {
+    stroke-dashoffset: 0 !important;
+    opacity: 1 !important;
+  }
+  .fv-track i {
+    width: 100%;
+    transform: none;
+  }
+  .fv-ring {
+    opacity: 0;
+  }
+}

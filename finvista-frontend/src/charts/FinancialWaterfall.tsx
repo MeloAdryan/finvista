@@ -1,16 +1,4 @@
 import { useId, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  LabelList,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import type { DashboardAnalysis } from "../services/dashboardAnalysisService";
 import { prepararCascata } from "../services/analysisChartData";
 import {
@@ -39,6 +27,58 @@ export default function FinancialWaterfall({
   }));
   const eixo = eixoFinanceiro(barras.flatMap((b) => b.intervalo));
   const data = (s: string) => s.split("-").reverse().join("/");
+  const diferenca =
+    (Math.round(atual * 100) - Math.round(anterior * 100)) / 100;
+  const percentual = anterior > 0 ? (diferenca / anterior) * 100 : null;
+  const numero = (n: number) =>
+    Math.abs(n).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+  const titulo =
+    diferenca === 0
+      ? "O que mudou: despesas sem variação"
+      : `O que mudou: despesas ${diferenca < 0 ? "caíram" : "aumentaram"} ${moedaFinanceira(Math.abs(diferenca))}${percentual === null ? "" : ` (${diferenca < 0 ? "−" : "+"}${numero(percentual)}%)`}`;
+  const rotuloPeriodo = (inicio: string, fim: string) => {
+    const d = new Date(`${inicio}T12:00:00`);
+    const f = new Date(`${fim}T12:00:00`);
+    const ultimoDia = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    if (
+      d.getDate() === 1 &&
+      f.getFullYear() === d.getFullYear() &&
+      f.getMonth() === d.getMonth() &&
+      f.getDate() === ultimoDia
+    )
+      return d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    return `${data(inicio)} — ${data(fim)}`;
+  };
+  const largura = Math.max(900, barras.length * 132 + 100);
+  const altura = 480;
+  const margem = { esquerda: 92, direita: 24, topo: 64, fundo: 104 };
+  const faixa = (largura - margem.esquerda - margem.direita) / barras.length;
+  const barraLargura = Math.min(76, faixa * 0.56);
+  const [minimo, maximo] = eixo.domain;
+  const y = (valor: number) =>
+    margem.topo +
+    ((maximo - valor) / (maximo - minimo || 1)) *
+      (altura - margem.topo - margem.fundo);
+  const x = (indice: number) => margem.esquerda + faixa * (indice + 0.5);
+  const escolher = (categoria: string) => {
+    if (categoria)
+      onCategoria(analise.categoria === categoria ? "" : categoria);
+  };
+  const linhasNome = (nome: string) => {
+    const palavras = nome.split(/\s+/);
+    const linhas: string[] = [];
+    let linha = "";
+    for (const palavra of palavras) {
+      if (linha && `${linha} ${palavra}`.length > 19) {
+        linhas.push(linha);
+        linha = palavra;
+      } else linha = linha ? `${linha} ${palavra}` : palavra;
+    }
+    if (linha) linhas.push(linha);
+    return linhas.length > 3
+      ? [...linhas.slice(0, 2), `${linhas[2].slice(0, 17)}…`]
+      : linhas;
+  };
   return (
     <section
       className="executive-panel wf-panel"
@@ -54,15 +94,16 @@ export default function FinancialWaterfall({
       </p>
       <div className="wf-heading">
         <div>
-          <h2 id={`wf-title-${id}`}>O que mudou nas despesas?</h2>
+          <h2 id={`wf-title-${id}`}>{titulo}</h2>
           <p>
             {data(analise.inicioAnterior)} — {data(analise.fimAnterior)} →{" "}
             {data(analise.inicio)} — {data(analise.fim)} ·{" "}
             {analise.categoria || "Todas as categorias"}
           </p>
-          <p>
-            De {moedaFinanceira(anterior)} para {moedaFinanceira(atual)}.
-            Diferença: {moedaFinanceira(atual - anterior)}.
+          <p className="wf-legend">
+            <span>● Totais</span>
+            <span>▼ Despesa diminuiu</span>
+            <span>▲ Despesa aumentou</span>
           </p>
         </div>
         <div className="wf-actions">
@@ -103,83 +144,147 @@ export default function FinancialWaterfall({
           tabIndex={0}
           aria-label="Cascata de despesas, com rolagem horizontal"
         >
-          <div
+          <svg
             className="wf-chart"
-            style={{ minWidth: Math.max(400, barras.length * 155) }}
+            width={largura}
+            height={altura}
+            style={{ minWidth: largura }}
+            viewBox={`0 0 ${largura} ${altura}`}
+            aria-labelledby={`wf-title-${id} wf-desc-${id}`}
           >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={barras}
-                margin={{ top: 35, right: 20, left: 5, bottom: 10 }}
-              >
-                <CartesianGrid vertical={false} stroke="#e4eaf1" />
-                <XAxis
-                  dataKey="nome"
-                  height={65}
-                  interval={0}
-                  tick={{ fontSize: 10, fill: "#536c86" }}
-                  tickFormatter={(v) =>
-                    String(v).length > 22
-                      ? String(v).slice(0, 21) + "…"
-                      : String(v)
-                  }
+            <desc id={`wf-desc-${id}`}>
+              De {moedaFinanceira(anterior)} para {moedaFinanceira(atual)}.
+              Categorias ordenadas por variação absoluta. Valores completos
+              disponíveis na tabela abaixo.
+            </desc>
+            {eixo.ticks.map((tick) => (
+              <g key={tick} className="wf-grid">
+                <line
+                  x1={margem.esquerda}
+                  x2={largura - margem.direita}
+                  y1={y(tick)}
+                  y2={y(tick)}
                 />
-                <YAxis
-                  width={70}
-                  domain={eixo.domain}
-                  ticks={eixo.ticks}
-                  tickFormatter={compactoFinanceiro}
-                  tick={{ fontSize: 11 }}
+                <text x={margem.esquerda - 12} y={y(tick) + 4} textAnchor="end">
+                  {compactoFinanceiro(tick)}
+                </text>
+              </g>
+            ))}
+            <line
+              className="wf-zero"
+              x1={margem.esquerda}
+              x2={largura - margem.direita}
+              y1={y(0)}
+              y2={y(0)}
+            />
+            {barras.slice(0, -1).map((_, i) => {
+              const saldo =
+                i === 0
+                  ? anterior
+                  : anterior +
+                    barras
+                      .slice(1, i + 1)
+                      .reduce((s, item) => s + item.delta, 0);
+              return (
+                <line
+                  key={i}
+                  className="wf-connector"
+                  x1={x(i) + barraLargura / 2}
+                  x2={x(i + 1) - barraLargura / 2}
+                  y1={y(saldo)}
+                  y2={y(saldo)}
                 />
-                <ReferenceLine y={0} stroke="#94a3b8" />
-                <Tooltip
-                  formatter={(_v, _n, p) => {
-                    const b = p.payload as { valor: number; total: boolean };
-                    return [
-                      moedaFinanceira(b.valor),
-                      b.total ? "Total" : "Variação",
-                    ];
-                  }}
-                />
-                <Bar
-                  dataKey="intervalo"
-                  name="Despesa"
-                  maxBarSize={64}
-                  onClick={(_entry, index) => {
-                    const b = barras[index];
-                    if (b?.categoria)
-                      onCategoria(
-                        analise.categoria === b.categoria ? "" : b.categoria,
-                      );
+              );
+            })}
+            {barras.map((b, i) => {
+              const cor = b.total
+                ? "#2e75d3"
+                : b.delta < 0
+                  ? "#16803c"
+                  : b.delta > 0
+                    ? "#ce3540"
+                    : "#64748b";
+              const nome =
+                i === 0
+                  ? rotuloPeriodo(analise.inicioAnterior, analise.fimAnterior)
+                  : i === barras.length - 1
+                    ? rotuloPeriodo(analise.inicio, analise.fim)
+                    : b.nome;
+              const texto = b.total
+                ? moedaFinanceira(b.valor)
+                : `${b.delta < 0 ? "▼" : b.delta > 0 ? "▲" : "="} ${moedaFinanceira(Math.abs(b.valor))}`;
+              const topo = y(b.intervalo[1]);
+              const base = y(b.intervalo[0]);
+              const selecionada = Boolean(
+                b.categoria && analise.categoria === b.categoria,
+              );
+              return (
+                <g
+                  key={`${b.nome}-${i}`}
+                  className={b.categoria ? "wf-category" : undefined}
+                  role={b.categoria ? "button" : undefined}
+                  tabIndex={b.categoria ? 0 : undefined}
+                  aria-label={`${nome}: ${texto}${b.categoria ? ". Filtrar painel por esta categoria" : ""}`}
+                  aria-pressed={b.categoria ? selecionada : undefined}
+                  onClick={() => escolher(b.categoria)}
+                  onKeyDown={(event) => {
+                    if (
+                      b.categoria &&
+                      (event.key === "Enter" || event.key === " ")
+                    ) {
+                      event.preventDefault();
+                      escolher(b.categoria);
+                    }
                   }}
                 >
-                  {barras.map((b, i) => (
-                    <Cell
-                      key={`${b.nome}-${i}`}
-                      fill={
-                        b.total
-                          ? "#153856"
-                          : b.delta >= 0
-                            ? "#c77d31"
-                            : "#3f806d"
-                      }
-                      cursor={b.categoria ? "pointer" : "default"}
-                    />
-                  ))}
-                  <LabelList
-                    dataKey="texto"
-                    position="top"
-                    fill="#153856"
-                    fontSize={10}
+                  <title>
+                    {nome}: {texto}
+                  </title>
+                  <rect
+                    className="wf-hit"
+                    x={x(i) - faixa / 2 + 2}
+                    y={margem.topo - 35}
+                    width={faixa - 4}
+                    height={altura - margem.topo + 25}
+                    rx={6}
                   />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+                  <rect
+                    className="wf-bar"
+                    x={x(i) - barraLargura / 2}
+                    y={topo}
+                    width={barraLargura}
+                    height={Math.max(1.5, base - topo)}
+                    fill={cor}
+                  />
+                  <text
+                    className="wf-value"
+                    x={x(i)}
+                    y={topo - 12}
+                    textAnchor="middle"
+                    fill={b.total ? "#18334d" : cor}
+                  >
+                    {texto}
+                  </text>
+                  <text
+                    className="wf-category-name"
+                    x={x(i)}
+                    y={altura - margem.fundo + 25}
+                    textAnchor="middle"
+                  >
+                    {linhasNome(nome).map((linha, indice) => (
+                      <tspan key={indice} x={x(i)} dy={indice ? 17 : 0}>
+                        {linha}
+                      </tspan>
+                    ))}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
         </div>
       )}
       <p className="wf-note">
-        Azul: totais · laranja: aumento de despesas · verde: redução. A
+        Azul: totais · vermelho: aumento de despesas · verde: redução. A
         sequência segue as maiores mudanças em valor absoluto, não a ordem
         cronológica. Clique numa categoria para aplicar o filtro ao painel.
         “Outras” preserva a soma das categorias agrupadas.

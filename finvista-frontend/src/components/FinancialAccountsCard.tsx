@@ -10,7 +10,11 @@ type Saldos = {
   desatualizado: boolean;
   mensagem: string;
   contasExcluidas: number;
-  diagnostico?: { codigo: string; etapa: string; httpStatus: number | null } | null;
+  diagnostico?: {
+    codigo: string;
+    etapa: string;
+    httpStatus: number | null;
+  } | null;
   contas: { id: string; nome: string; tipo: string; saldo: number }[];
 };
 const horario = (data: string) =>
@@ -61,17 +65,24 @@ export default function FinancialAccountsCard({
   }, [clienteId, versao]);
   return (
     <article className="fp-card fp-accounts">
-      <h3>Contas financeiras</h3>
-      <strong className="fp-account-total">
+      <div className="fp-card-heading">
+        <h3>Contas financeiras</h3>
+        <span aria-hidden="true">▤</span>
+      </div>
+      <strong
+        className={`fp-account-total ${resultado?.saldo == null ? "fp-account-unavailable" : ""}`}
+      >
         {resultado?.saldo != null
           ? brl(resultado.saldo)
           : erro || resultado
             ? "Saldo não disponível"
             : "Consultando saldos…"}
       </strong>
-      <p>Bancos, caixa e aplicações</p>
+      <p className="fp-account-subtitle">Bancos, caixa e aplicações</p>
       {resultado?.consultadoEm && (
-        <p>Consultado em {horario(resultado.consultadoEm)} (Brasília).</p>
+        <p className="fp-account-time">
+          Consultado em {horario(resultado.consultadoEm)} (Brasília).
+        </p>
       )}
       {(erro || resultado?.desatualizado) && (
         <p className="fp-accounts-warning" role="status">
@@ -100,15 +111,26 @@ export default function FinancialAccountsCard({
       {!!resultado?.contasExcluidas && (
         <p>{resultado.contasExcluidas} contas de outros tipos fora do total.</p>
       )}
-      {resultado?.diagnostico && <details className="fp-diagnostic">
-        <summary>Detalhes da consulta</summary>
-        <p>Código: {resultado.diagnostico.codigo} · Etapa: {resultado.diagnostico.etapa}
-          {resultado.diagnostico.httpStatus != null ? ` · HTTP ${resultado.diagnostico.httpStatus}` : ""}</p>
-        <p>Informe estes detalhes ao revisar a integração. Nenhuma credencial é exibida.</p>
-      </details>}
-      <p className="fp-accounts-source">
-        Fonte: Conta Azul · consultas reutilizadas por até 2 minutos.
-      </p>
+      {resultado?.diagnostico && (
+        <details className="fp-diagnostic">
+          <summary>Detalhes da consulta</summary>
+          <p>
+            Código: {resultado.diagnostico.codigo} · Etapa:{" "}
+            {resultado.diagnostico.etapa}
+            {resultado.diagnostico.httpStatus != null
+              ? ` · HTTP ${resultado.diagnostico.httpStatus}`
+              : ""}
+          </p>
+          <p>
+            Informe estes detalhes ao revisar a integração. Nenhuma credencial é
+            exibida.
+          </p>
+        </details>
+      )}
+      <details className="fp-account-source">
+        <summary>Fonte e atualização</summary>
+        <p>Fonte: Conta Azul. Consultas reutilizadas por até 2 minutos.</p>
+      </details>
     </article>
   );
 }

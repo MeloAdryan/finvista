@@ -1,0 +1,81 @@
+.executive-dashboard .mr-warning {
+  padding: 12px 15px;
+  border: 1px solid #ead5ad;
+  border-left: 3px solid #b67c27;
+  border-radius: 9px;
+  background: #fff9ef;
+  color: #79531f;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.executive-dashboard .mr-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: 18px 0;
+  font-size: 13px;
+  color: #425c75;
+}
+.mr-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.mr-legend i {
+  display: inline-block;
+  width: 15px;
+  height: 12px;
+  border-radius: 2px;
+}
+.mr-paid {
+  background: #2e75d3;
+}
+.mr-open {
+  background: repeating-linear-gradient(
+    135deg,
+    #dceafe,
+    #dceafe 3px,
+    #2e75d3 3px,
+    #2e75d3 4px
+  );
+  border: 1px solid #2e75d3;
+}
+.mr-unknown {
+  background: #9aa8b7;
+}
+.mr-expense {
+  background: #c47c32;
+}
+.executive-dashboard .mr-method {
+  border-top: 1px solid #e3eaf1;
+  padding-top: 12px;
+  color: #53687e;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.mr-method summary {
+  cursor: pointer;
+}
+.mr-method summary:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 4px;
+}
+.executive-dashboard .mr-method p {
+  font-size: 14px;
+  line-height: 1.7;
+}
+.executive-dashboard .df-monthly header > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.executive-dashboard .mr-zero {
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 12px 14px;
+  border: 1px solid #cbdff6;
+  border-radius: 9px;
+  background: #f2f7fe;
+  color: #295781;
+}
