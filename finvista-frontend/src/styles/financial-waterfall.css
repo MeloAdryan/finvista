@@ -39,13 +39,15 @@
   overflow-x: auto;
   max-width: 100%;
   border: 1px solid #e4eaf1;
-  background: #f8fafc;
+  background: #ffffff;
   border-radius: 9px;
   margin: 16px 0;
 }
 .wf-chart {
-  height: 380px;
-  width: 100%;
+  display: block;
+  height: auto;
+  max-width: none;
+  width: max(100%, 900px);
 }
 .wf-note {
   color: #64748b;
@@ -77,7 +79,83 @@
   .wf-heading {
     flex-direction: column;
   }
-  .wf-chart {
-    height: 340px;
+}
+
+.wf-heading > div:first-child {
+  min-width: 0;
+  flex: 1;
+}
+.wf-panel h2 {
+  font-size: clamp(19px, 1.7vw, 25px);
+  line-height: 1.35;
+}
+.wf-actions {
+  flex-shrink: 0;
+  max-width: 290px;
+  justify-content: flex-end;
+}
+.wf-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+.wf-legend span:first-child {
+  color: #2e75d3;
+}
+.wf-legend span:nth-child(2) {
+  color: #16803c;
+}
+.wf-legend span:nth-child(3) {
+  color: #ce3540;
+}
+.wf-grid line {
+  stroke: #e4e8ed;
+  stroke-width: 1;
+}
+.wf-grid text {
+  fill: #68788a;
+  font-size: 12px;
+}
+.wf-zero {
+  stroke: #aab5c1;
+}
+.wf-connector {
+  stroke: #b7bec5;
+  stroke-width: 1.5;
+}
+.wf-value {
+  font-size: 13px;
+  font-weight: 700;
+}
+.wf-category-name {
+  fill: #445970;
+  font-size: 12px;
+}
+.wf-hit {
+  fill: transparent;
+  stroke: transparent;
+}
+.wf-category {
+  cursor: pointer;
+  outline: none;
+}
+.wf-category:hover .wf-hit {
+  fill: #15385606;
+}
+.wf-category:focus-visible .wf-hit {
+  stroke: #2563eb;
+  stroke-width: 2;
+}
+.wf-category[aria-pressed="true"] .wf-category-name {
+  font-weight: 700;
+  text-decoration: underline;
+}
+.wf-panel summary {
+  cursor: pointer;
+}
+@media (max-width: 768px) {
+  .wf-actions {
+    justify-content: flex-start;
+    max-width: none;
   }
 }

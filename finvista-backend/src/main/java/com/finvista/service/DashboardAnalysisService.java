@@ -73,8 +73,10 @@ public class DashboardAnalysisService {
         }
         BigDecimal receita = BigDecimal.ZERO, despesa = BigDecimal.ZERO, receitaAnterior = BigDecimal.ZERO, despesaAnterior = BigDecimal.ZERO;
         Map<YearMonth, BigDecimal[]> mensal = new LinkedHashMap<>();
+        Map<YearMonth, ReceiptComposition> recebimentos = new LinkedHashMap<>();
         for (YearMonth m = YearMonth.from(inicio); !m.isAfter(YearMonth.from(fim)); m = m.plusMonths(1)) {
             mensal.put(m, new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+            recebimentos.put(m, new ReceiptComposition());
         }
         Map<String, BigDecimal[]> variacoes = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         List<Item> itens = new ArrayList<>();
@@ -104,6 +106,7 @@ public class DashboardAnalysisService {
             if (atual) {
                 if (income) {
                     receita = receita.add(valor);
+                    recebimentos.get(YearMonth.from(t.getData())).adicionar(t, valor);
                 } else {
                     despesa = despesa.add(valor);
                 }
@@ -129,7 +132,7 @@ public class DashboardAnalysisService {
         DashboardResponse indicadores = new DashboardResponse(receita, despesa, resultado, margem(receita, resultado),
                 receitaAnterior, despesaAnterior, anterior, margem(receitaAnterior, anterior), variacao(receitaAnterior, receita), variacao(despesaAnterior, despesa), variacao(anterior, resultado));
         LocalDate hoje = LocalDate.now(ZoneId.of("America/Sao_Paulo"));
-        List<Mes> meses = mensal.entrySet().stream().map(e -> new Mes(e.getKey().toString(), e.getValue()[0], e.getValue()[1], e.getValue()[0].subtract(e.getValue()[1]), e.getKey().equals(YearMonth.from(hoje)))).toList();
+        List<Mes> meses = mensal.entrySet().stream().map(e -> new Mes(e.getKey().toString(), e.getValue()[0], e.getValue()[1], e.getValue()[0].subtract(e.getValue()[1]), e.getKey().equals(YearMonth.from(hoje)), recebimentos.get(e.getKey()).resumo())).toList();
         List<Variacao> mudancas = variacoes.entrySet().stream().map(e -> new Variacao(e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[1].subtract(e.getValue()[0])))
                 .filter(v -> v.diferenca().signum() != 0).sorted(Comparator.comparing((Variacao v) -> v.diferenca().abs()).reversed()).toList();
         return new DashboardAnalysisResponse(clienteId, inicio, fim, inicioAnterior, fimAnterior, hoje, filtro, indicadores, List.copyOf(categorias), meses, mudancas, List.copyOf(itens), new Registros(receitasAtual, despesasAtual, receitasAntes, despesasAntes));

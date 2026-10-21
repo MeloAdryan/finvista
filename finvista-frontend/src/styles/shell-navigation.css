@@ -1,0 +1,681 @@
+.finvista-app.finvista-shell-v2 {
+  --shell-navy: #0f2a47;
+  --shell-navy-deep: #0b2038;
+  --shell-accent: #e08a2b;
+  --shell-blue: #2a78d6;
+  --shell-ink: #0f2a47;
+  --shell-muted: #5b6b82;
+  --shell-bg: #f3f5f9;
+  --shell-line: #e3e8f0;
+  display: grid;
+  grid-template-columns: 272px minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--shell-bg);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  font-size: 14px;
+  color: var(--shell-ink);
+}
+.finvista-shell-v2 .finvista-sidebar {
+  width: 272px;
+  min-height: 0;
+  height: 100vh;
+  height: 100dvh;
+  padding: 0;
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 100;
+  overflow: visible;
+  background: linear-gradient(165deg, #0f2a47 0%, #0b2038 100%);
+  box-shadow: 4px 0 24px #0814262e;
+  border: 0;
+  color: #c9d6e8;
+  transform: none;
+  transition: width 0.18s ease;
+}
+.finvista-shell-v2 .finvista-sidebar-inner {
+  height: 100%;
+  min-height: 0;
+  padding: 24px 16px 0;
+  display: flex;
+  align-items: stretch;
+  flex-direction: column;
+  position: relative;
+  overflow: visible;
+  width: 100%;
+  gap: 0;
+}
+.finvista-shell-v2 .finvista-brand {
+  flex-shrink: 0;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 12px;
+  margin: 0 0 20px;
+}
+.finvista-shell-v2 .finvista-brand .finvista-brand-image {
+  display: block;
+  width: 210px;
+  max-width: 100%;
+  height: auto;
+}
+.finvista-shell-v2 .finvista-brand .finvista-brand-icon {
+  display: none;
+}
+.finvista-shell-v2 .finvista-sidebar-divider {
+  height: 1px;
+  min-height: 1px;
+  flex-shrink: 0;
+  background: #ffffff14;
+  margin: 0 8px 16px;
+  border: 0;
+  width: auto;
+}
+.finvista-shell-v2 .finvista-navigation {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 0 16px;
+  gap: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #49617d transparent;
+}
+.finvista-shell-v2 .finvista-navigation-label {
+  display: block;
+  height: auto;
+  max-height: none;
+  opacity: 1;
+  padding: 8px 14px 10px;
+  margin: 0;
+  color: #8fa6c4;
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  white-space: normal;
+  flex-shrink: 0;
+}
+.finvista-shell-v2 .finvista-navigation-group {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #ffffff14;
+}
+.finvista-shell-v2 .finvista-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 44px;
+  width: 100%;
+  padding: 10px 14px;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  color: #c9d6e8;
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 500;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  flex-shrink: 0;
+  transform: none;
+}
+.finvista-shell-v2 .finvista-nav-item > span:last-child {
+  display: block;
+  opacity: 1;
+  overflow: visible;
+  white-space: normal;
+  width: auto;
+}
+.finvista-shell-v2 .finvista-nav-item:hover {
+  background: #ffffff0f;
+  color: #fff;
+  transform: none;
+  border: 0;
+  box-shadow: none;
+}
+.finvista-shell-v2 .finvista-nav-item-active,
+.finvista-shell-v2 .finvista-nav-item[aria-current="page"] {
+  background: #ffffff1a;
+  color: white;
+  font-weight: 600;
+  box-shadow: none;
+  border: 0;
+}
+.finvista-shell-v2 .finvista-nav-item-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  background: var(--shell-accent);
+  border-radius: 3px;
+}
+.finvista-shell-v2 .finvista-nav-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  padding: 0;
+  box-shadow: none;
+}
+.finvista-shell-v2 .finvista-nav-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.finvista-shell-v2 .finvista-nav-item-active .finvista-nav-icon {
+  color: var(--shell-accent);
+}
+.finvista-shell-v2 .finvista-sidebar-toggle {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  top: 34px;
+  right: -14px;
+  left: auto;
+  bottom: auto;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 1px solid #dfe6ef;
+  border-radius: 50%;
+  background: white;
+  color: #284564;
+  box-shadow: 0 2px 8px #08142629;
+  z-index: 3;
+  transform: none;
+}
+.finvista-shell-v2 .finvista-sidebar-toggle svg {
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.finvista-shell-v2 .finvista-sidebar-bottom {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  position: relative;
+  inset: auto;
+  margin: 0 -16px;
+  padding: 18px 20px 20px;
+  border-top: 1px solid #ffffff14;
+  background: #081c3226;
+  width: auto;
+}
+.finvista-shell-v2 .finvista-sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  justify-content: flex-start;
+}
+.finvista-shell-v2 .finvista-user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: #21466e;
+  color: white;
+  border: 2px solid #577293;
+  font-size: 16px;
+  font-weight: 700;
+}
+.finvista-shell-v2 .finvista-user-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.finvista-shell-v2 .finvista-user-info strong {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.finvista-shell-v2 .finvista-user-info > span {
+  font-size: 12px;
+  color: #9eb3ce;
+}
+.finvista-shell-v2 .finvista-sidebar-logout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 40px;
+  border: 1px solid #ffffff24;
+  border-radius: 8px;
+  background: #ffffff08;
+  color: #c9d6e8;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 8px 12px;
+  width: 100%;
+  margin: 0;
+  box-shadow: none;
+  transform: none;
+}
+.finvista-shell-v2 .finvista-sidebar-logout:hover {
+  background: #ffffff0f;
+  color: #fff;
+}
+.finvista-shell-v2 .finvista-sidebar-logout svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.finvista-shell-v2 .finvista-workspace {
+  grid-column: 2;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--shell-bg);
+}
+.finvista-shell-v2 .finvista-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 16px;
+  min-height: 72px;
+  padding: 16px 28px;
+  background: #fff;
+  border: 0;
+  box-shadow: 0 1px 0 #0f2a4714;
+  backdrop-filter: none;
+}
+.finvista-shell-v2 .finvista-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+.finvista-shell-v2 .finvista-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: #6a7b91;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.finvista-shell-v2 .finvista-breadcrumb > span:last-child {
+  color: #163655;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.finvista-shell-v2 .finvista-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex-shrink: 0;
+  margin: 0;
+}
+.finvista-shell-v2 .finvista-data-badge,
+.finvista-shell-v2 .finvista-reference-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 1px solid #e3e8f0;
+  border-radius: 24px;
+  color: #405a76;
+  font-size: 13px;
+  background: #fff;
+  white-space: nowrap;
+}
+.finvista-shell-v2 .finvista-data-badge i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3e77b9;
+}
+.finvista-shell-v2 .finvista-reference-badge svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: #6d819a;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.finvista-shell-v2 .finvista-reference-label {
+  color: #718198;
+}
+.finvista-shell-v2 .finvista-main {
+  width: 100%;
+  max-width: 1328px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  min-width: 0;
+  flex: 1;
+}
+.finvista-shell-v2 .finvista-footer {
+  padding: 18px 24px;
+  margin-top: auto;
+}
+.finvista-shell-v2 .finvista-mobile-menu-button,
+.finvista-shell-v2 .finvista-drawer-close {
+  display: none;
+}
+.finvista-shell-v2
+  :is(
+    .finvista-nav-item,
+    .finvista-sidebar-logout,
+    .finvista-sidebar-toggle,
+    .finvista-mobile-menu-button,
+    .finvista-drawer-close
+  ):focus-visible {
+  outline: 2px solid #82b7f4;
+  outline-offset: 3px;
+}
+.finvista-shell-v2 .finvista-main :is(input, select, textarea):focus-visible {
+  outline: 2px solid #2a78d6;
+  outline-offset: 2px;
+}
+.finvista-shell-v2
+  .finvista-main
+  :is(
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="search"],
+    input[type="date"],
+    select
+  ) {
+  min-height: 40px;
+  border-radius: 8px;
+}
+@media (min-width: 901px) {
+  .finvista-app.finvista-shell-v2.finvista-app-sidebar-collapsed {
+    grid-template-columns: 80px minmax(0, 1fr);
+  }
+  .finvista-shell-v2.finvista-app-sidebar-collapsed .finvista-sidebar {
+    width: 80px;
+  }
+  .finvista-shell-v2.finvista-app-sidebar-collapsed .finvista-sidebar-inner {
+    padding: 24px 12px 0;
+  }
+  .finvista-shell-v2.finvista-app-sidebar-collapsed .finvista-brand {
+    padding: 0;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .finvista-shell-v2.finvista-app-sidebar-collapsed
+    .finvista-brand
+    .finvista-brand-image {
+    display: none;
+  }
+  .finvista-shell-v2.finvista-app-sidebar-collapsed
+    .finvista-brand
+    .finvista-brand-icon {
+    display: block;
+    width: 38px;
+    height: 38px;
+  }
+  .finvista-shell-v2.finvista-app-sidebar-collapsed .finvista-nav-item {
+    justify-content: center;
+    padding: 12px;
+    width: 100%;
+    min-height: 44px;
+    gap: 0;
+  }
+  .finvista-shell-v2.finvista-app-sidebar-collapsed
+    .finvista-nav-item
+    > span:last-child {
+    display: none;
+  }
+  .finvista-shell-v2.finvista-app-sidebar-collapsed .finvista-navigation-label {
+    font-size: 0;
+    letter-spacing: 0;
+    padding: 0;
+    height: 8px;
+    min-height: 8px;
+    margin: 4px 0;
+    overflow: hidden;
+  }
+  .finvista-shell-v2.finvista-app-sidebar-collapsed .finvista-navigation-group {
+    border-top: 1px solid #ffffff14;
+    padding: 0;
+    margin-top: 16px;
+  }
+  .finvista-shell-v2.finvista-app-sidebar-collapsed .finvista-sidebar-bottom {
+    margin: 0 -12px;
+    padding: 16px 12px;
+    gap: 12px;
+    display: flex;
+  }
+  .finvista-shell-v2.finvista-app-sidebar-collapsed .finvista-user-info {
+    display: none;
+  }
+  .finvista-shell-v2.finvista-app-sidebar-collapsed .finvista-sidebar-user {
+    justify-content: center;
+  }
+  .finvista-shell-v2.finvista-app-sidebar-collapsed .finvista-user-avatar {
+    width: 36px;
+    height: 36px;
+  }
+  .finvista-shell-v2.finvista-app-sidebar-collapsed .finvista-sidebar-logout {
+    padding: 8px;
+    min-height: 40px;
+  }
+  .finvista-shell-v2.finvista-app-sidebar-collapsed
+    .finvista-sidebar-logout
+    > span {
+    display: none;
+  }
+}
+@media (max-width: 1100px) {
+  .finvista-shell-v2 .finvista-data-badge {
+    display: none;
+  }
+  .finvista-shell-v2 .finvista-topbar {
+    padding: 16px 24px;
+  }
+}
+@media (max-width: 900px) {
+  .finvista-app.finvista-shell-v2,
+  .finvista-app.finvista-shell-v2.finvista-app-sidebar-collapsed {
+    display: block;
+  }
+  .finvista-shell-v2 .finvista-sidebar,
+  .finvista-shell-v2.finvista-app-sidebar-collapsed .finvista-sidebar {
+    width: min(320px, calc(100vw - 48px));
+    height: 100vh;
+    height: 100dvh;
+    transform: translateX(-105%);
+    visibility: hidden;
+    transition:
+      transform 0.2s ease,
+      visibility 0.2s;
+    z-index: 100;
+  }
+  .finvista-shell-v2 .finvista-sidebar.finvista-sidebar-mobile-open {
+    transform: translateX(0);
+    visibility: visible;
+  }
+  .finvista-shell-v2 .finvista-sidebar-toggle {
+    display: none;
+  }
+  .finvista-shell-v2 .finvista-drawer-close {
+    position: absolute;
+    right: 12px;
+    top: 12px;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 6px;
+    border: 1px solid #ffffff26;
+    border-radius: 50%;
+    background: #ffffff0a;
+    color: #c9d6e8;
+    cursor: pointer;
+  }
+  .finvista-shell-v2 .finvista-drawer-close svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+  }
+  .finvista-shell-v2 .finvista-brand {
+    padding: 0 10px;
+    min-height: 54px;
+    margin-bottom: 20px;
+    padding-right: 24px;
+  }
+  .finvista-shell-v2 .finvista-brand .finvista-brand-image {
+    width: 210px;
+    max-width: 100%;
+  }
+  .finvista-shell-v2 .finvista-sidebar-inner {
+    padding-top: 24px;
+  }
+  .finvista-shell-v2 .finvista-mobile-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: #08142680;
+    z-index: 90;
+    backdrop-filter: none;
+    cursor: pointer;
+  }
+  .finvista-shell-v2 .finvista-mobile-menu-button {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 8px;
+    border: 1px solid #dbe3ed;
+    border-radius: 8px;
+    background: white;
+    box-shadow: none;
+    transform: none;
+  }
+  .finvista-shell-v2 .finvista-mobile-menu-button span {
+    display: block;
+    width: 17px;
+    height: 2px;
+    background: #264767;
+    border-radius: 2px;
+    margin: 0;
+  }
+  .finvista-shell-v2 .finvista-topbar {
+    min-height: 64px;
+    padding: 12px 16px;
+    gap: 12px;
+  }
+  .finvista-shell-v2 .finvista-main {
+    padding: 24px 16px;
+  }
+  .finvista-shell-v2 .finvista-topbar-left {
+    gap: 10px;
+  }
+  .finvista-shell-v2 .finvista-reference-badge {
+    font-size: 12px;
+    padding: 7px 10px;
+    gap: 6px;
+  }
+  .finvista-shell-v2 .finvista-reference-label {
+    display: none;
+  }
+  .finvista-shell-v2 .finvista-footer {
+    padding: 16px;
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 600px) {
+  .finvista-shell-v2 .finvista-breadcrumb {
+    font-size: 13px;
+    gap: 6px;
+  }
+  .finvista-shell-v2 .finvista-breadcrumb > span:not(:last-child) {
+    display: none;
+  }
+  .finvista-shell-v2 .finvista-reference-badge svg {
+    display: none;
+  }
+  .finvista-shell-v2 .finvista-reference-badge {
+    max-width: 155px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .finvista-shell-v2 .finvista-reference-badge {
+    display: block;
+  }
+  .finvista-shell-v2 .finvista-topbar-actions {
+    gap: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .finvista-shell-v2 .finvista-sidebar,
+  .finvista-shell-v2 .finvista-nav-item {
+    transition: none;
+  }
+}

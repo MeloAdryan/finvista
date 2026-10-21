@@ -11,7 +11,15 @@ public record DashboardAnalysisResponse(
 
     public record Registros(int receitasAtual, int despesasAtual, int receitasAnterior, int despesasAnterior) {}
 
-    public record Mes(String periodo, BigDecimal receita, BigDecimal despesa, BigDecimal resultado, boolean emAndamento) {}
+    public record Mes(String periodo, BigDecimal receita, BigDecimal despesa, BigDecimal resultado,
+            boolean emAndamento, Recebimentos recebimentos) {
+        public Mes(String periodo, BigDecimal receita, BigDecimal despesa, BigDecimal resultado, boolean emAndamento) {
+            this(periodo, receita, despesa, resultado, emAndamento, null);
+        }
+    }
+
+    public record Recebimentos(BigDecimal recebido, BigDecimal emAberto, BigDecimal semDetalhamento,
+            int registrosSemDetalhamento) {}
 
     public record Variacao(String categoria, BigDecimal anterior, BigDecimal atual, BigDecimal diferenca) {}
 

@@ -22,6 +22,12 @@ export interface DashboardAnalysis {
     despesa: number;
     resultado: number;
     emAndamento: boolean;
+    recebimentos?: {
+      recebido: number;
+      emAberto: number;
+      semDetalhamento: number;
+      registrosSemDetalhamento: number;
+    } | null;
   }[];
   variacoes: {
     categoria: string;
