@@ -1,3 +1,4 @@
+import ContaAzulCoveragePanel from "../components/ContaAzulCoveragePanel";
 import ContaAzulConnectionPanel from "../components/ContaAzulConnectionPanel";
 import ContaAzulAutoPanel from "../components/ContaAzulAutoPanel";
 import ContaAzulFinancialPanel from "../components/ContaAzulFinancialPanel";
@@ -225,6 +226,7 @@ function ImportData({ cliente }: { cliente: Cliente | null }) {
         <ContaAzulAutoPanel key={`automacao-${cliente?.id ?? "nenhum"}`} cliente={cliente} />
       </div>
       <div id="import-area-consulta" hidden={area !== "consulta"}>
+        {cliente && <ContaAzulCoveragePanel key={`cobertura-${cliente.id}`} clienteId={cliente.id} />}
         <ContaAzulFinancialPanel key={`consulta-${cliente?.id ?? "nenhum"}`} cliente={cliente} />
       </div>
       <div id="import-area-arquivo" hidden={area !== "arquivo"}>
@@ -235,7 +237,7 @@ function ImportData({ cliente }: { cliente: Cliente | null }) {
           aria-pressed={modo === "conta-azul"}
           onClick={() => setModo("conta-azul")}
         >
-          Contas Conta Azul
+          Conta Azul
         </button>
         <button
           type="button"

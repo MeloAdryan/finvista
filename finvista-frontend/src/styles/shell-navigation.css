@@ -88,8 +88,20 @@
   overflow-x: hidden;
   padding: 0 0 16px;
   gap: 4px;
-  scrollbar-width: thin;
-  scrollbar-color: #49617d transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  touch-action: pan-y pinch-zoom;
+  overscroll-behavior-y: contain;
+}
+.finvista-shell-v2 .finvista-navigation::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.finvista-shell-v2 .finvista-navigation-dragging,
+.finvista-shell-v2 .finvista-navigation-dragging * {
+  cursor: grabbing;
+  user-select: none;
 }
 .finvista-shell-v2 .finvista-navigation-label {
   display: block;

@@ -1,16 +1,26 @@
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
   type Dispatch,
   type SetStateAction,
 } from "react";
+import { useMouseDragScroll } from "./useMouseDragScroll";
 
 export function useSidebarDrawer(
   open: boolean,
   setOpen: Dispatch<SetStateAction<boolean>>,
 ) {
-  const sidebarRef = useRef<HTMLElement>(null);
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  const [sidebarElement, setSidebarElement] = useState<HTMLElement | null>(
+    null,
+  );
+  const bindSidebarRef = useCallback((element: HTMLElement | null) => {
+    sidebarRef.current = element;
+    setSidebarElement(element);
+  }, []);
+  useMouseDragScroll(sidebarElement);
   const [mobile, setMobile] = useState(
     () => window.matchMedia("(max-width: 900px)").matches,
   );
@@ -80,5 +90,5 @@ export function useSidebarDrawer(
       if (opener?.isConnected) opener.focus();
     };
   }, [drawerOpen, setOpen]);
-  return { sidebarRef, mobile, drawerOpen };
+  return { sidebarRef: bindSidebarRef, mobile, drawerOpen };
 }

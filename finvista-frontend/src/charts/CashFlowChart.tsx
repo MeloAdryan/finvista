@@ -27,17 +27,25 @@ import {
 } from "../services/financialVisualization";
 import "../styles/financial-evolution.css";
 interface Props {
+  realizado?: boolean;
   dados: CashFlowData[];
   periodo: PeriodoFluxoCaixa;
   carregando: boolean;
   onPeriodoChange: (periodo: PeriodoFluxoCaixa) => void;
 }
 export default function CashFlowChart({
+  realizado = false,
   dados,
   periodo,
   carregando,
   onPeriodoChange,
 }: Props) {
+  const rotuloReceita = realizado
+    ? "Recebimentos líquidos conferidos"
+    : "Receita registrada";
+  const rotuloDespesa = realizado
+    ? "Pagamentos líquidos conferidos"
+    : "Despesa registrada";
   const [historico, setHistorico] = useState(false);
   const [tabela, setTabela] = useState(false);
   const meses = prepararEvolucao(dados);
@@ -57,8 +65,8 @@ export default function CashFlowChart({
     exportarFinanceiro("evolucao-financeira.csv", [
       [
         "Mês",
-        "Receita registrada",
-        "Despesa registrada",
+        rotuloReceita,
+        rotuloDespesa,
         "Resultado mensal",
         "Resultado acumulado no período",
         "Acumulado com histórico",
@@ -79,10 +87,15 @@ export default function CashFlowChart({
       <div className="fe-heading">
         <div>
           <span className="fe-eyebrow">Evolução financeira</span>
-          <h1 id="fe-cash-title">Receitas, despesas e resultados</h1>
+          <h1 id="fe-cash-title">
+            {realizado
+              ? "Caixa realizado por data de pagamento"
+              : "Evolução por competência"}
+          </h1>
           <p>
-            Valores registrados pela data de análise, incluindo lançamentos em
-            aberto. Não representa somente pagamentos e recebimentos.
+            {realizado
+              ? "Somente baixas conferidas, agrupadas pela data de pagamento, com juros, multas e descontos. Valores sem detalhamento não são estimados."
+              : "Valores registrados por competência, incluindo lançamentos em aberto. Não representa somente pagamentos e recebimentos."}
           </p>
         </div>
         <div className="fe-actions">
@@ -110,13 +123,17 @@ export default function CashFlowChart({
           </p>
           <div className="fe-summary">
             <div>
-              Receita registrada<strong>{moedaFinanceira(entradas)}</strong>
+              {rotuloReceita}
+              <strong>{moedaFinanceira(entradas)}</strong>
             </div>
             <div>
-              Despesa registrada<strong>{moedaFinanceira(saidas)}</strong>
+              {rotuloDespesa}
+              <strong>{moedaFinanceira(saidas)}</strong>
             </div>
             <div>
-              Resultado no período
+              {realizado
+                ? "Movimento líquido conferido no período"
+                : "Resultado no período"}
               <strong>{moedaFinanceira(entradas - saidas)}</strong>
             </div>
           </div>
@@ -137,8 +154,8 @@ export default function CashFlowChart({
                 <thead>
                   <tr>
                     <th>Mês</th>
-                    <th>Receita</th>
-                    <th>Despesa</th>
+                    <th>{rotuloReceita}</th>
+                    <th>{rotuloDespesa}</th>
                     <th>Resultado mensal</th>
                     <th>Acumulado no período</th>
                     <th>Acumulado com histórico</th>
@@ -179,7 +196,7 @@ export default function CashFlowChart({
                     <ReferenceLine y={0} stroke="#94a3b8" />
                     <Bar
                       dataKey="entradas"
-                      name="Receita registrada"
+                      name={rotuloReceita}
                       fill="#3f806d"
                       maxBarSize={34}
                     >
@@ -192,7 +209,7 @@ export default function CashFlowChart({
                     </Bar>
                     <Bar
                       dataKey="saidas"
-                      name="Despesa registrada"
+                      name={rotuloDespesa}
                       fill="#c77d31"
                       maxBarSize={34}
                     >
@@ -222,8 +239,8 @@ export default function CashFlowChart({
                 </ResponsiveContainer>
               </div>
               <div className="fe-legend">
-                <span>Verde: receita registrada</span>
-                <span>Laranja: despesa registrada</span>
+                <span>Verde: {rotuloReceita.toLowerCase()}</span>
+                <span>Laranja: {rotuloDespesa.toLowerCase()}</span>
                 <span>Azul: resultado mensal</span>
               </div>
               <div className="fe-heading">
@@ -293,11 +310,9 @@ export default function CashFlowChart({
             </div>
           </div>
           <p className="fe-note">
-            O acumulado no intervalo parte de zero. O acumulado com histórico
-            inclui o resultado registrado antes do intervalo; nenhum dos dois é
-            um saldo bancário confirmado. Colunas claras identificam o mês em
-            andamento ou meses futuros cadastrados e incluem o mês completo.
-            “Todo o período” pode incluir lançamentos futuros.
+            {realizado
+              ? "O acumulado soma apenas as baixas conferidas e não inclui saldo bancário inicial. O mês atual considera somente pagamentos até hoje. Registros sem detalhamento podem alterar estes totais; não são tratados como zero recebido ou pago."
+              : "O acumulado no intervalo parte de zero. O acumulado com histórico inclui o resultado registrado antes do intervalo; nenhum dos dois é um saldo bancário confirmado. Colunas claras identificam o mês em andamento ou meses futuros cadastrados e incluem o mês completo. Todo o período pode incluir lançamentos futuros."}
           </p>
         </>
       )}

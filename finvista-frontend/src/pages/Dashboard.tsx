@@ -418,6 +418,12 @@ function Dashboard() {
         </article>
       </section>
 
+      <aside className="fp-coverage-warning" role="note">
+        <strong>Cobertura dos dados:</strong> os gráficos usam competência; a
+        automação consulta vencimentos. Concluir uma varredura não garante que
+        toda a competência foi importada. Revise pendências e use “Conferir
+        cobertura por competência” em Importar dados antes de fechar o período.
+      </aside>
       <FinancialPositionPanel
         key={analise.clienteId}
         clienteId={analise.clienteId}
