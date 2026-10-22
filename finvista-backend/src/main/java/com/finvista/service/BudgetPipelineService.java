@@ -38,8 +38,6 @@ public class BudgetPipelineService {
         this.expenseAllocationService = expenseAllocationService;
     }
 
-    // Compatibilidade com testes existentes que verificam dados legados sem rateios.
-    // O Spring utiliza o construtor de quatro dependências acima.
     public BudgetPipelineService(
             BudgetRepository budgetRepository,
             FinancialTransactionRepository financialTransactionRepository,
@@ -48,15 +46,6 @@ public class BudgetPipelineService {
         this(budgetRepository, financialTransactionRepository, clienteContextService, null);
     }
 
-    /**
-     * Lista os orçamentos pertencentes ao cliente atual.
-     *
-     * Usuário comum:
-     * utiliza o cliente associado ao próprio usuário.
-     *
-     * ADMIN:
-     * utiliza o cliente selecionado na sessão.
-     */
     @Transactional(readOnly = true)
     public List<BudgetPipelineResponse> listar() {
 
@@ -71,12 +60,6 @@ public class BudgetPipelineService {
                 .toList();
     }
 
-    /**
-     * Cadastra um orçamento para o cliente atual.
-     *
-     * O cliente nunca é aceito diretamente do frontend.
-     * Ele é determinado pelo contexto autenticado.
-     */
     @Transactional
     public BudgetPipelineResponse cadastrar(
             BudgetRequest request
@@ -84,8 +67,8 @@ public class BudgetPipelineService {
 
         validar(request);
 
-        Cliente cliente =
-                clienteContextService.getClienteAtual();
+        Cliente cliente
+                = clienteContextService.getClienteAtual();
 
         Budget budget = new Budget(
                 request.nome().trim(),
@@ -102,8 +85,8 @@ public class BudgetPipelineService {
 
         budget.setCliente(cliente);
 
-        Budget salvo =
-                budgetRepository.save(budget);
+        Budget salvo
+                = budgetRepository.save(budget);
 
         return criarResposta(salvo);
     }
@@ -126,11 +109,11 @@ public class BudgetPipelineService {
             );
         }
 
-        Long clienteId =
-                budget.getCliente().getId();
+        Long clienteId
+                = budget.getCliente().getId();
 
-        List<FinancialTransaction> despesas =
-                financialTransactionRepository
+        List<FinancialTransaction> despesas
+                = financialTransactionRepository
                         .findByClienteIdAndTipoAndDataBetweenOrderByDataAsc(
                                 clienteId,
                                 TIPO_DESPESA,
@@ -140,23 +123,23 @@ public class BudgetPipelineService {
 
         List<ExpenseAllocationService.Parte> partes = expenseAllocationService != null
                 ? expenseAllocationService.dividir(clienteId, despesas)
-                : despesas.stream()
-                    .map(despesa -> new ExpenseAllocationService.Parte(
-                            despesa.getCategoria(), despesa.getCentroCusto(),
-                            despesa.getValor() == null ? BigDecimal.ZERO : despesa.getValor()))
-                    .toList();
+                : despesas.stream().filter(FinancialStatusPolicy::ativo)
+                        .map(despesa -> new ExpenseAllocationService.Parte(
+                                despesa.getCategoria(), despesa.getCentroCusto(),
+                                despesa.getValor() == null ? BigDecimal.ZERO : despesa.getValor()))
+                        .toList();
 
         BigDecimal valorUtilizado = partes.stream()
                 .filter(parte -> correspondeAoOrcamento(budget, parte))
                 .map(ExpenseAllocationService.Parte::valor)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal valorDisponivel =
-                budget.getValorPlanejado()
+        BigDecimal valorDisponivel
+                = budget.getValorPlanejado()
                         .subtract(valorUtilizado);
 
-        BigDecimal percentualUtilizado =
-                calcularPercentualUtilizado(
+        BigDecimal percentualUtilizado
+                = calcularPercentualUtilizado(
                         budget.getValorPlanejado(),
                         valorUtilizado
                 );
@@ -180,19 +163,19 @@ public class BudgetPipelineService {
             ExpenseAllocationService.Parte parte
     ) {
 
-        boolean centroCustoCorresponde =
-                normalizarOpcional(budget.getCentroCusto()) == null
-                        || iguaisIgnorandoMaiusculas(
-                                budget.getCentroCusto(),
-                                parte.centroCusto()
-                        );
+        boolean centroCustoCorresponde
+                = normalizarOpcional(budget.getCentroCusto()) == null
+                || iguaisIgnorandoMaiusculas(
+                        budget.getCentroCusto(),
+                        parte.centroCusto()
+                );
 
-        boolean categoriaCorresponde =
-                normalizarOpcional(budget.getCategoria()) == null
-                        || iguaisIgnorandoMaiusculas(
-                                budget.getCategoria(),
-                                parte.categoria()
-                        );
+        boolean categoriaCorresponde
+                = normalizarOpcional(budget.getCategoria()) == null
+                || iguaisIgnorandoMaiusculas(
+                        budget.getCategoria(),
+                        parte.categoria()
+                );
 
         return centroCustoCorresponde
                 && categoriaCorresponde;
@@ -253,12 +236,6 @@ public class BudgetPipelineService {
         return valor.trim();
     }
 
-    /**
-     * Resolve o cliente efetivamente utilizado pelo FinVista.
-     *
-     * Usuário comum -> cliente vinculado.
-     * ADMIN -> cliente selecionado na sessão.
-     */
     private Long obterClienteIdAtual() {
 
         return clienteContextService
@@ -286,9 +263,9 @@ public class BudgetPipelineService {
 
         if (request.valorPlanejado() == null
                 || request.valorPlanejado()
-                .compareTo(
-                        BigDecimal.ZERO
-                ) <= 0) {
+                        .compareTo(
+                                BigDecimal.ZERO
+                        ) <= 0) {
 
             throw new IllegalArgumentException(
                     "O valor planejado deve ser maior que zero."

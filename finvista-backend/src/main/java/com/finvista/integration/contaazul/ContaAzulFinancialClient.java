@@ -14,7 +14,6 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-
 @Component
 public class ContaAzulFinancialClient {
 
@@ -62,14 +61,25 @@ public class ContaAzulFinancialClient {
     }
 
     public Pagina consultar(String acesso, Tipo tipo, LocalDate inicio, LocalDate fim, int pagina) {
+        return consultar(acesso, tipo, inicio, fim, pagina, false, inicio, fim);
+    }
+
+    public Pagina consultarPorCompetencia(String acesso, Tipo tipo, LocalDate inicio, LocalDate fim, LocalDate vencimentoInicio, LocalDate vencimentoFim, int pagina) {
+        return consultar(acesso, tipo, inicio, fim, pagina, true, vencimentoInicio, vencimentoFim);
+    }
+
+    private Pagina consultar(String acesso, Tipo tipo, LocalDate inicio, LocalDate fim, int pagina, boolean competencia, LocalDate vencimentoInicio, LocalDate vencimentoFim) {
         try {
             String endpoint = BASE + "/v1/financeiro/eventos-financeiros/" + tipo.segmento + "/buscar";
-            var uri = org.springframework.web.util.UriComponentsBuilder.fromUriString(endpoint)
+            var builder = org.springframework.web.util.UriComponentsBuilder.fromUriString(endpoint)
                     .queryParam("pagina", pagina).queryParam("tamanho_pagina", TAMANHO)
-                    .queryParam("data_vencimento_de", inicio).queryParam("data_vencimento_ate", fim)
-                    .build().toUri();
+                    .queryParam("data_vencimento_de", vencimentoInicio).queryParam("data_vencimento_ate", vencimentoFim);
+            if (competencia) {
+                builder.queryParam("data_competencia_de", inicio).queryParam("data_competencia_ate", fim);
+            }
+            var uri = builder.build().toUri();
             Pagina result = http.get().uri(uri).headers(h -> h.setBearerAuth(acesso)).retrieve().body(Pagina.class);
-            validar(result, inicio, fim);
+            validar(result, inicio, fim, competencia);
             return result;
         } catch (RestClientResponseException e) {
             int code = e.getStatusCode().value();
@@ -87,16 +97,17 @@ public class ContaAzulFinancialClient {
         }
     }
 
-    private void validar(Pagina p, LocalDate inicio, LocalDate fim) {
+    private void validar(Pagina p, LocalDate inicio, LocalDate fim, boolean competencia) {
         if (p == null || p.totalItens() == null || p.totalItens() < 0 || p.itens() == null || p.itens().size() > TAMANHO || p.itens().size() > p.totalItens()) {
             throw new IllegalArgumentException();
-        } 
+        }
         var ids = new HashSet<String>();
         for (Parcela item : p.itens()) {
             if (item == null || item.id() == null || item.id().isBlank() || !ids.add(item.id())) {
                 throw new IllegalArgumentException();
             }
-            if (item.vencimento() != null && (item.vencimento().isBefore(inicio) || item.vencimento().isAfter(fim))) {
+            LocalDate dataFiltro = competencia ? item.competencia() : item.vencimento();
+            if (dataFiltro != null && (dataFiltro.isBefore(inicio) || dataFiltro.isAfter(fim))) {
                 throw new IllegalArgumentException();
             }
             if (item.categorias() != null && item.categorias().stream().anyMatch(java.util.Objects::isNull)) {

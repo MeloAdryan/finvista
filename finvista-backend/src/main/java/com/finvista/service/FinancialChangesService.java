@@ -62,7 +62,7 @@ public class FinancialChangesService {
 
         // Totais e quantidades continuam contando lançamentos, não parcelas.
         for (FinancialTransaction registro : registros) {
-            if (registro.getData() == null || registro.getValor() == null
+            if (!FinancialStatusPolicy.ativo(registro) || registro.getData() == null || registro.getValor() == null
                     || registro.getTipo() == null
                     || !"DESPESA".equalsIgnoreCase(registro.getTipo().trim())) {
                 continue;
@@ -126,5 +126,4 @@ public class FinancialChangesService {
                 : expenseAllocationService.dividir(clienteId, despesas);
     }
 
-    
 }

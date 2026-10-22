@@ -40,7 +40,7 @@ public class FinancialPositionService {
                 continue;
             }
             String situacao = item.getSituacao() == null ? "" : item.getSituacao().trim().toUpperCase(Locale.ROOT);
-            if (situacao.startsWith("CANCELAD")) {
+            if (FinancialStatusPolicy.cancelado(situacao)) {
                 continue;
             }
             BigDecimal aberto = item.getValorTotalAberto() != null

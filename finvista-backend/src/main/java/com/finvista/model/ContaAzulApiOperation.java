@@ -67,6 +67,14 @@ public class ContaAzulApiOperation {
         return depois;
     }
 
+    public String getOrigemSnapshot() {
+        return origemSnapshot;
+    }
+
+    public Instant getConcluidoEm() {
+        return concluidoEm;
+    }
+
     public Long getLancamentoId() {
         return lancamentoId;
     }

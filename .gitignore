@@ -16,6 +16,7 @@ Thumbs.db
 !.env.example
 
 # Backend
+finvista-backend/.env.local
 finvista-backend/target/
 
 # Frontend

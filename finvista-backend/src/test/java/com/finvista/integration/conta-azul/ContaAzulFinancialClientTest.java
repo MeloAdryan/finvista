@@ -119,4 +119,13 @@ class ContaAzulFinancialClientTest {
         assertFalse(e.getMessage().contains("private-token"));
         server.verify();
     }
+
+    @Test
+    void competenciaPodeTerVencimentoForaDoIntervalo() {
+        String endpoint = ContaAzulFinancialClient.BASE + "/v1/financeiro/eventos-financeiros/contas-a-pagar/buscar?pagina=1&tamanho_pagina=100&data_vencimento_de=2027-01-01&data_vencimento_ate=2027-12-31&data_competencia_de=2026-10-01&data_competencia_ate=2026-10-31";
+        server.expect(requestTo(endpoint)).andExpect(method(HttpMethod.GET)).andRespond(withSuccess("{\"itens_totais\":1,\"itens\":[{\"id\":\"teste\",\"data_competencia\":\"2026-10-10\",\"data_vencimento\":\"2027-01-05\"}]}", MediaType.APPLICATION_JSON));
+        var r = client.consultarPorCompetencia("token", ContaAzulFinancialClient.Tipo.DESPESA, inicio, fim, LocalDate.parse("2027-01-01"), LocalDate.parse("2027-12-31"), 1);
+        assertEquals(LocalDate.parse("2027-01-05"), r.itens().get(0).vencimento());
+        server.verify();
+    }
 }

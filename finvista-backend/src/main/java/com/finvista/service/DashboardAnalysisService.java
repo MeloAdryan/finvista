@@ -60,7 +60,7 @@ public class DashboardAnalysisService {
         Long clienteId = contexto.getClienteAtualId();
         LocalDate primeiro = inicio, ultimo = fim, limiteAnterior = inicioAnterior;
         List<FinancialTransaction> registros = repository.findByClienteIdAndDataBetweenOrderByDataAsc(clienteId, inicioAnterior, fim)
-                .stream().filter(t -> t.getData() != null && !t.getData().isBefore(limiteAnterior) && !t.getData().isAfter(ultimo)
+                .stream().filter(t -> FinancialStatusPolicy.ativo(t) && t.getData() != null && !t.getData().isBefore(limiteAnterior) && !t.getData().isAfter(ultimo)
                         && t.getValor() != null && ("RECEITA".equals(tipo(t)) || "DESPESA".equals(tipo(t))))
                 .sorted(Comparator.comparing(FinancialTransaction::getData).thenComparing(FinancialTransaction::getId, Comparator.nullsLast(Comparator.naturalOrder()))).toList();
         Map<FinancialTransaction, List<ExpenseAllocationService.Parte>> partes = rateios.dividirDetalhado(clienteId, registros).stream()

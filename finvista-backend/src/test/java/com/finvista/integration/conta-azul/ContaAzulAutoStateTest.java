@@ -330,17 +330,16 @@ class ContaAzulAutoStateTest {
         assertEquals("Identidade local exige revisão.", atual().mensagem);
     }
 
-
     @Test
     void periodoMovelExigeNovaAutorizacaoECalculaDatasNoServidor() {
-        var pedido = new Configurar(7L, true, LocalDate.of(2000,1,1), LocalDate.of(2000,1,2), 30, false, false, false, true);
+        var pedido = new Configurar(7L, true, LocalDate.of(2000, 1, 1), LocalDate.of(2000, 1, 2), 30, false, false, false, true);
         assertThrows(IllegalArgumentException.class, () -> state.configurar(pedido));
         assertNull(config.periodoMovel);
         state.configurar(new Configurar(7L, true, pedido.inicio(), pedido.fim(), 30, false, true, false, true));
         assertEquals(Boolean.TRUE, config.periodoMovel);
-        assertEquals(LocalDate.of(2026,10,17).minusDays(90), config.inicio);
-        assertEquals(LocalDate.of(2026,10,17).plusDays(90), config.fim);
-        assertTrue(state.status(7L,1).configuracao().periodoMovel());
+        assertEquals(LocalDate.of(2026, 10, 17).minusDays(90), config.inicio);
+        assertEquals(LocalDate.of(2026, 10, 17).plusDays(90), config.fim);
+        assertTrue(state.status(7L, 1).configuracao().periodoMovel());
     }
 
     @Test
@@ -378,19 +377,39 @@ class ContaAzulAutoStateTest {
         when(clock.withZone(any())).thenAnswer(i -> Clock.fixed(agora, i.getArgument(0)));
         config.periodoMovel = true;
         state.assumir(7L);
-        assertEquals(LocalDate.of(2026,12,31).minusDays(90), atual().inicio);
-        assertEquals(LocalDate.of(2026,12,31).plusDays(90), atual().fim);
+        assertEquals(LocalDate.of(2026, 12, 31).minusDays(90), atual().inicio);
+        assertEquals(LocalDate.of(2026, 12, 31).plusDays(90), atual().fim);
     }
 
     @Test
     void contratosAntigosContinuamComPeriodoFixo() throws Exception {
         var json = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
-        String payload = json.writeValueAsString(Map.of("clienteId",7,"habilitada",true,"inicio","2026-10-01","fim","2026-10-31","intervaloMinutos",30,"incluirNovas",false,"confirmado",true,"confirmoHistorico",false));
+        String payload = json.writeValueAsString(Map.of("clienteId", 7, "habilitada", true, "inicio", "2026-10-01", "fim", "2026-10-31", "intervaloMinutos", 30, "incluirNovas", false, "confirmado", true, "confirmoHistorico", false));
         var pedido = json.readValue(payload, Configurar.class);
         assertFalse(pedido.periodoMovel());
         state.configurar(pedido);
         assertEquals(Boolean.FALSE, config.periodoMovel);
-        assertEquals(LocalDate.of(2026,10,1), config.inicio);
+        assertEquals(LocalDate.of(2026, 10, 1), config.inicio);
+    }
+
+    @Test
+    void abrePendenciaAntigaMesmoComNovaExecucaoSemPendencias() {
+        var reserva = comItem();
+        state.pendencia(reserva, state.proximo(reserva).id, "Conferência anterior");
+        var antiga = execucoes.get(reserva.execucaoId());
+        var nova = new ContaAzulAutoRun();
+        nova.id = UUID.randomUUID();
+        nova.clienteId = 7L;
+        nova.criadoEm = agora.plusSeconds(1800);
+        nova.status = "EM_ANDAMENTO";
+        execucoes.put(nova.id, nova);
+        var r = state.revisar(7L, antiga.id, 1);
+        assertEquals(1, r.total());
+        assertEquals(id, r.pendencias().get(0).parcelaId());
+        assertEquals(0, state.status(7L, 1).totalPendencias());
+        assertThrows(IllegalArgumentException.class, () -> state.revisar(8L, antiga.id, 1));
+        assertThrows(ResponseStatusException.class, () -> state.revisar(7L, UUID.randomUUID(), 1));
+        assertThrows(IllegalArgumentException.class, () -> state.revisar(7L, antiga.id, 0));
     }
 
 }

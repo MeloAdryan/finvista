@@ -20,6 +20,7 @@ public class ExpenseAllocationService {
     public record Parte(String categoria, String centroCusto, BigDecimal valor) {
 
     }
+
     public record ParteDetalhada(FinancialTransaction lancamento, Parte parte) {}
 
     private final FinancialAllocationRepository repository;
@@ -42,10 +43,13 @@ public class ExpenseAllocationService {
         Map<Long, List<FinancialAllocation>> porLancamento = ids.isEmpty() ? Map.of()
                 : repository.findByLancamentoClienteIdAndLancamentoIdInOrderByLancamentoIdAscBlocoAsc(clienteId, ids)
                         .stream().filter(r -> r.getLancamento() != null
-                        && selecionados.contains(r.getLancamento().getId()))
+                                && selecionados.contains(r.getLancamento().getId()))
                         .collect(Collectors.groupingBy(r -> r.getLancamento().getId()));
         List<ParteDetalhada> resultado = new ArrayList<>();
         for (FinancialTransaction despesa : despesas) {
+            if (!FinancialStatusPolicy.ativo(despesa)) {
+                continue;
+            }
             List<FinancialAllocation> rateios = despesa.getId() == null ? List.of()
                     : porLancamento.getOrDefault(despesa.getId(), List.of());
             if (rateios.isEmpty()) {
@@ -79,7 +83,7 @@ public class ExpenseAllocationService {
     }
 
     public static List<Parte> legado(List<FinancialTransaction> despesas) {
-        return despesas.stream().map(ExpenseAllocationService::parteLegada).toList();
+        return despesas.stream().filter(FinancialStatusPolicy::ativo).map(ExpenseAllocationService::parteLegada).toList();
     }
 
     private static Parte parteLegada(FinancialTransaction t) {

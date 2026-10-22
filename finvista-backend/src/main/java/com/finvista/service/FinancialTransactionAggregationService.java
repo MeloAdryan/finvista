@@ -81,7 +81,7 @@ public FinancialTransactionAggregationService(
 
         for (FinancialTransaction lancamento : lancamentos) {
 
-            if (lancamento.getData() == null
+            if (!FinancialStatusPolicy.ativo(lancamento) || lancamento.getData() == null
                     || lancamento.getValor() == null
                     || lancamento.getTipo() == null) {
 

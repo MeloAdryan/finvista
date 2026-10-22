@@ -20,6 +20,16 @@ public class ContaAzulAutoController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(estado.status(clienteId, paginaPendencias));
     }
 
+    @GetMapping("/execucoes")
+    public ResponseEntity<Historico> historico(@RequestParam Long clienteId, @RequestParam(defaultValue = "1") int pagina) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(estado.historico(clienteId, pagina));
+    }
+
+    @GetMapping("/execucoes/{id}/pendencias")
+    public ResponseEntity<Revisao> revisar(@RequestParam Long clienteId, @PathVariable java.util.UUID id, @RequestParam(defaultValue = "1") int pagina) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(estado.revisar(clienteId, id, pagina));
+    }
+
     @PostMapping
     public ResponseEntity<Status> configurar(@RequestBody Configurar pedido) {
         estado.configurar(pedido);

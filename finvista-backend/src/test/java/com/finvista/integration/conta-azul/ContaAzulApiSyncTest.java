@@ -17,7 +17,7 @@ import static org.mockito.Mockito.*;
 
 class ContaAzulApiSyncTest {
 
-    
+
 
           private static final String ID = "9986f173-f531-4660-96ae-04b71c879264";
         private final FinancialTransactionRepository tx = mock(FinancialTransactionRepository.class);
@@ -442,7 +442,7 @@ class ContaAzulApiSyncTest {
             assertThrows(Exception.class, () -> json.readValue("{\"clienteId\":7,\"valor\":1}", Pedido.class));
             assertThrows(Exception.class, () -> json.readValue("{\"clienteId\":7,\"lancamentoId\":1}", Confirmacao.class));
         }
-    
+
         @Test
         void baixaSemDetalhamentoNaoAlteraRegistroLocalAutomaticamente() {
             var base = parcela("DESPESA", "50");
@@ -483,7 +483,7 @@ class ContaAzulApiSyncTest {
             var composicao = new ContaAzulParcelDetail.Composicao(bruto, liquido, j, BigDecimal.ZERO, d, BigDecimal.ZERO);
             var evento = new ContaAzulParcelDetail.Evento("evento-teste", "DESPESA", LocalDate.parse("2026-09-21"),
                     new ContaAzulParcelDetail.Condicao(quantidade), List.of(new ContaAzulParcelDetail.Rateio(
-                    "cat", "Categoria", liquido, bruto, List.of())));
+                            "cat", "Categoria", liquido, bruto, List.of())));
             var baixas = pago.signum() == 0 ? List.<ContaAzulParcelDetail.Baixa>of() : List.of(new ContaAzulParcelDetail.Baixa(
                     "baixa-1", id, LocalDate.parse("2026-10-19"), new ContaAzulParcelDetail.Composicao(
                     pp, pago, jp, BigDecimal.ZERO, dp, BigDecimal.ZERO)));
@@ -497,7 +497,8 @@ class ContaAzulApiSyncTest {
             var p = liquidada(ID, "RECEBIDO_PARCIAL", "50", "5", "0", "20", "2", "0", 1);
             var result = service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), p, false);
             var t = records.get(0);
-            assertEquals(r.lancamentoId(), result.lancamentoId()); assertEquals(1, records.size());
+            assertEquals(r.lancamentoId(), result.lancamentoId());
+            assertEquals(1, records.size());
             assertEquals(new BigDecimal("20.00"), t.getValorRealizado());
             assertEquals(new BigDecimal("30.00"), t.getValorAberto());
             assertEquals(new BigDecimal("22.00"), t.getValorTotalRealizado());
@@ -506,184 +507,248 @@ class ContaAzulApiSyncTest {
             assertEquals(new BigDecimal("3.00"), t.getJurosPrevisto());
             assertEquals(LocalDate.parse("2026-10-19"), t.getDataRealizacao());
             assertEquals(new BigDecimal("50.00"), rows.get(0).getValorCategoria());
-            assertEquals("SEM_ALTERACAO", service.aplicarAutomatico(cliente,3L,UUID.randomUUID(),p,false).acao());
+            assertEquals("SEM_ALTERACAO", service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), p, false).acao());
         }
 
         @Test
         void quitacaoComDescontoEEstornoAtualizamSemDuplicar() {
-            var p = liquidada(ID,"QUITADO","100","0","5","100","0","5",1);
-            service.aplicarAutomatico(cliente,3L,UUID.randomUUID(),p,true);
-            var t=records.get(0); var identity=t.getId();
-            assertEquals(new BigDecimal("100.00"),t.getValorRealizado());
-            assertEquals(new BigDecimal("95.00"),t.getValorTotalRealizado());
-            assertEquals(new BigDecimal("5.00"),t.getDescontoRealizado());
-            service.aplicarAutomatico(cliente,3L,UUID.randomUUID(),liquidada(ID,"PENDENTE","100","0","0","0","0","0",1),false);
-            assertEquals(identity,t.getId()); assertNull(t.getDataRealizacao());
-            assertEquals(new BigDecimal("0.00"),t.getValorTotalRealizado());
-            assertEquals(new BigDecimal("100.00"),t.getValorTotalAberto());
+            var p = liquidada(ID, "QUITADO", "100", "0", "5", "100", "0", "5", 1);
+            service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), p, true);
+            var t = records.get(0);
+            var identity = t.getId();
+            assertEquals(new BigDecimal("100.00"), t.getValorRealizado());
+            assertEquals(new BigDecimal("95.00"), t.getValorTotalRealizado());
+            assertEquals(new BigDecimal("5.00"), t.getDescontoRealizado());
+            service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), liquidada(ID, "PENDENTE", "100", "0", "0", "0", "0", "0", 1), false);
+            assertEquals(identity, t.getId());
+            assertNull(t.getDataRealizacao());
+            assertEquals(new BigDecimal("0.00"), t.getValorTotalRealizado());
+            assertEquals(new BigDecimal("100.00"), t.getValorTotalAberto());
         }
 
         @Test
         void parcelasDistintasDoMesmoEventoMantemIdsETotaisIndependentes() {
-            var a=liquidada(ID,"PENDENTE","50","0","0","0","0","0",2);
-            String id2="9986f173-f531-4660-96ae-04b71c879265";
-            var b=liquidada(id2,"PENDENTE","75","0","0","0","0","0",2);
-            service.aplicarAutomatico(cliente,3L,UUID.randomUUID(),a,true);
-            service.aplicarAutomatico(cliente,3L,UUID.randomUUID(),b,true);
-            assertEquals(2,records.size());
-            assertEquals(new BigDecimal("125.00"),records.stream().map(FinancialTransaction::getValor).reduce(BigDecimal.ZERO,BigDecimal::add));
-            assertEquals("SEM_ALTERACAO",service.aplicarAutomatico(cliente,3L,UUID.randomUUID(),b,false).acao());
+            var a = liquidada(ID, "PENDENTE", "50", "0", "0", "0", "0", "0", 2);
+            String id2 = "9986f173-f531-4660-96ae-04b71c879265";
+            var b = liquidada(id2, "PENDENTE", "75", "0", "0", "0", "0", "0", 2);
+            service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), a, true);
+            service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), b, true);
+            assertEquals(2, records.size());
+            assertEquals(new BigDecimal("125.00"), records.stream().map(FinancialTransaction::getValor).reduce(BigDecimal.ZERO, BigDecimal::add));
+            assertEquals("SEM_ALTERACAO", service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), b, false).acao());
         }
 
         @Test
         void previaMostraComponentesERecusaBaixaAlteradaAposConferencia() {
-            var p=liquidada(ID,"RECEBIDO_PARCIAL","50","5","0","20","2","0",1);
-            when(source.consultar("test-token",ID)).thenReturn(p);
-            var previa=service.preparar(ID,7L);
-            assertEquals(new BigDecimal("20.00"),previa.depois().financeiro().principalPago());
-            assertEquals(new BigDecimal("22.00"),previa.depois().pago());
-            when(source.consultar("test-token",ID)).thenReturn(liquidada(ID,"RECEBIDO_PARCIAL","50","5","0","30","3","0",1));
-            assertThrows(ResponseStatusException.class,()->aplicar(previa)); semGravacao();
+            var p = liquidada(ID, "RECEBIDO_PARCIAL", "50", "5", "0", "20", "2", "0", 1);
+            when(source.consultar("test-token", ID)).thenReturn(p);
+            var previa = service.preparar(ID, 7L);
+            assertEquals(new BigDecimal("20.00"), previa.depois().financeiro().principalPago());
+            assertEquals(new BigDecimal("22.00"), previa.depois().pago());
+            when(source.consultar("test-token", ID)).thenReturn(liquidada(ID, "RECEBIDO_PARCIAL", "50", "5", "0", "30", "3", "0", 1));
+            assertThrows(ResponseStatusException.class, () -> aplicar(previa));
+            semGravacao();
         }
 
         @Test
         void confirmacaoIndividualGravaQuitacaoConferidaUmaUnicaVez() {
-            var paga=liquidada(ID,"QUITADO","100","0","5","100","0","5",1);
-            when(source.consultar("test-token",ID)).thenReturn(paga);
-            var previa=service.preparar(ID,7L);
-            var r=aplicar(previa);
-            assertEquals(r,aplicar(previa)); assertEquals(1,records.size());
-            assertEquals(new BigDecimal("95.00"),records.get(0).getValorTotalRealizado());
-            assertEquals(new BigDecimal("0.00"),records.get(0).getValorTotalAberto());
-            assertEquals(1,operations.size());
+            var paga = liquidada(ID, "QUITADO", "100", "0", "5", "100", "0", "5", 1);
+            when(source.consultar("test-token", ID)).thenReturn(paga);
+            var previa = service.preparar(ID, 7L);
+            var r = aplicar(previa);
+            assertEquals(r, aplicar(previa));
+            assertEquals(1, records.size());
+            assertEquals(new BigDecimal("95.00"), records.get(0).getValorTotalRealizado());
+            assertEquals(new BigDecimal("0.00"), records.get(0).getValorTotalAberto());
+            assertEquals(1, operations.size());
         }
 
         @Test
         void jurosNosCentrosNaoInflamPrincipalOuRepetemValorDaCategoria() {
-            var base=liquidada(ID,"PENDENTE","50","5","0","0","0","0",2);
-            var centros=List.of(new ContaAzulParcelDetail.Centro("a","A",new BigDecimal("22"),new BigDecimal("20")),
-                    new ContaAzulParcelDetail.Centro("b","B",new BigDecimal("33"),new BigDecimal("30")));
-            var evento=new ContaAzulParcelDetail.Evento(base.evento().id(),base.evento().tipo(),base.evento().competencia(),
-                    base.evento().condicao(),List.of(new ContaAzulParcelDetail.Rateio("cat","Categoria",new BigDecimal("55"),new BigDecimal("50"),centros)));
-            var p=new ContaAzulParcelDetail(ID,base.descricao(),base.status(),base.vencimento(),base.liquido(),base.pago(),base.pendente(),base.composicao(),evento,null,null,List.of());
-            service.aplicarAutomatico(cliente,3L,UUID.randomUUID(),p,true);
-            assertEquals(new BigDecimal("50.00"),rows.stream().map(FinancialAllocation::getValorCategoria).reduce(BigDecimal.ZERO,BigDecimal::add));
-            assertEquals(new BigDecimal("55.00"),records.get(0).getValorTotalAberto());
-            assertEquals(new BigDecimal("5.00"),records.get(0).getJurosPrevisto());
+            var base = liquidada(ID, "PENDENTE", "50", "5", "0", "0", "0", "0", 2);
+            var centros = List.of(new ContaAzulParcelDetail.Centro("a", "A", new BigDecimal("22"), new BigDecimal("20")),
+                    new ContaAzulParcelDetail.Centro("b", "B", new BigDecimal("33"), new BigDecimal("30")));
+            var evento = new ContaAzulParcelDetail.Evento(base.evento().id(), base.evento().tipo(), base.evento().competencia(),
+                    base.evento().condicao(), List.of(new ContaAzulParcelDetail.Rateio("cat", "Categoria", new BigDecimal("55"), new BigDecimal("50"), centros)));
+            var p = new ContaAzulParcelDetail(ID, base.descricao(), base.status(), base.vencimento(), base.liquido(), base.pago(), base.pendente(), base.composicao(), evento, null, null, List.of());
+            service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), p, true);
+            assertEquals(new BigDecimal("50.00"), rows.stream().map(FinancialAllocation::getValorCategoria).reduce(BigDecimal.ZERO, BigDecimal::add));
+            assertEquals(new BigDecimal("55.00"), records.get(0).getValorTotalAberto());
+            assertEquals(new BigDecimal("5.00"), records.get(0).getJurosPrevisto());
         }
 
         private FinancialTransaction excelComBaixas(ContaAzulParcelDetail p) {
-            service.aplicarAutomatico(cliente,3L,UUID.randomUUID(),p,true);
-            var t=records.get(0); t.setOrigem("CONTA_AZUL_EXCEL");t.setDocumentoReferencia("historico-excel");
+            service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), p, true);
+            var t = records.get(0);
+            t.setOrigem("CONTA_AZUL_EXCEL");
+            t.setDocumentoReferencia("historico-excel");
             t.setObservacoes("Preservar observacao e rateios");
-            operations.clear(); clearInvocations(tx,allocations,audit,source);
-            when(source.consultar("test-token",ID)).thenReturn(p);
+            operations.clear();
+            clearInvocations(tx, allocations, audit, source);
+            when(source.consultar("test-token", ID)).thenReturn(p);
             return t;
         }
 
         @Test
         void vinculoDeBaixaParcialPreservaTodosOsCamposExcetoOrigemEReferencia() {
-            var p=liquidada(ID,"RECEBIDO_PARCIAL","100","5","2","40","2","1",2);
-            var t=excelComBaixas(p);var id=t.getId();var alocacoesAntes=List.copyOf(rows);
-            var previa=service.prepararVinculo(ID,7L,id);semGravacao();
-            assertEquals(previa.antes(),previa.depois());
-            assertTrue(previa.avisos().stream().anyMatch(a->a.contains("automação autorizada")));
-            var r=aplicar(previa);var a=service.auditoria(r.operacaoId(),7L);
-            var antes=(com.fasterxml.jackson.databind.node.ObjectNode)a.antes().deepCopy();
-            var depois=(com.fasterxml.jackson.databind.node.ObjectNode)a.depois().deepCopy();
-            for(String campo:List.of("origem","documentoReferencia")){antes.remove(campo);depois.remove(campo);}
-            assertEquals(antes,depois);assertEquals(id,t.getId());assertEquals(alocacoesAntes,rows);
-            assertEquals("CONTA_AZUL_API",t.getOrigem());assertEquals(ID,t.getDocumentoReferencia());
-            assertEquals(1,records.size());
-            verify(allocations,never()).deleteByLancamentoIdAndLancamentoClienteId(anyLong(),anyLong());
-            verify(allocations,never()).saveAll(anyList());
-            assertEquals(r,aplicar(previa));assertEquals(1,operations.size());
+            var p = liquidada(ID, "RECEBIDO_PARCIAL", "100", "5", "2", "40", "2", "1", 2);
+            var t = excelComBaixas(p);
+            var id = t.getId();
+            var alocacoesAntes = List.copyOf(rows);
+            var previa = service.prepararVinculo(ID, 7L, id);
+            semGravacao();
+            assertEquals(previa.antes(), previa.depois());
+            assertTrue(previa.avisos().stream().anyMatch(a -> a.contains("automação autorizada")));
+            var r = aplicar(previa);
+            var a = service.auditoria(r.operacaoId(), 7L);
+            var antes = (com.fasterxml.jackson.databind.node.ObjectNode) a.antes().deepCopy();
+            var depois = (com.fasterxml.jackson.databind.node.ObjectNode) a.depois().deepCopy();
+            for (String campo : List.of("origem", "documentoReferencia")) {
+                antes.remove(campo);
+                depois.remove(campo);
+            }
+            assertEquals(antes, depois);
+            assertEquals(id, t.getId());
+            assertEquals(alocacoesAntes, rows);
+            assertEquals("CONTA_AZUL_API", t.getOrigem());
+            assertEquals(ID, t.getDocumentoReferencia());
+            assertEquals(1, records.size());
+            verify(allocations, never()).deleteByLancamentoIdAndLancamentoClienteId(anyLong(), anyLong());
+            verify(allocations, never()).saveAll(anyList());
+            assertEquals(r, aplicar(previa));
+            assertEquals(1, operations.size());
         }
 
         @Test
         void vinculoQuitadoComDescontoProtegeHistoricoExcel() {
-            var p=liquidada(ID,"QUITADO","100","0","5","100","0","5",1);
-            var t=excelComBaixas(p);var r=aplicar(service.prepararVinculo(ID,7L,t.getId()));
-            assertEquals(new BigDecimal("95.00"),t.getValorTotalRealizado());
-            when(audit.findByClienteIdAndAcaoOrderByConcluidoEmAsc(7L,"VINCULAR_EXCEL"))
+            var p = liquidada(ID, "QUITADO", "100", "0", "5", "100", "0", "5", 1);
+            var t = excelComBaixas(p);
+            var r = aplicar(service.prepararVinculo(ID, 7L, t.getId()));
+            assertEquals(new BigDecimal("95.00"), t.getValorTotalRealizado());
+            when(audit.findByClienteIdAndAcaoOrderByConcluidoEmAsc(7L, "VINCULAR_EXCEL"))
                     .thenReturn(List.of(operations.get(r.operacaoId())));
-            var guard=new com.finvista.service.ContaAzulOriginGuard(audit,json);
-            var antigo=new FinancialTransaction(t.getData(),t.getDescricao(),t.getTipo(),t.getValor(),null,null,
-                    "CONTA_AZUL_EXCEL","historico-excel");
+            var guard = new com.finvista.service.ContaAzulOriginGuard(audit, json);
+            var antigo = new FinancialTransaction(t.getData(), t.getDescricao(), t.getTipo(), t.getValor(), null, null,
+                    "CONTA_AZUL_EXCEL", "historico-excel");
             antigo.setDataVencimento(t.getDataVencimento());
-            assertTrue(guard.proteger(antigo,t,guard.historico(7L)));
+            assertTrue(guard.proteger(antigo, t, guard.historico(7L)));
         }
 
-        private record CampoFinanceiro(java.util.function.Function<FinancialTransaction,BigDecimal> ler,
-                java.util.function.BiConsumer<FinancialTransaction,BigDecimal> escrever) {}
+        private record CampoFinanceiro(java.util.function.Function<FinancialTransaction, BigDecimal> ler,
+                java.util.function.BiConsumer<FinancialTransaction, BigDecimal> escrever) {}
+
         private List<CampoFinanceiro> camposVinculo() {
             return List.of(
-                new CampoFinanceiro(FinancialTransaction::getValorRealizado,FinancialTransaction::setValorRealizado),
-                new CampoFinanceiro(FinancialTransaction::getValorAberto,FinancialTransaction::setValorAberto),
-                new CampoFinanceiro(FinancialTransaction::getValorTotalRealizado,FinancialTransaction::setValorTotalRealizado),
-                new CampoFinanceiro(FinancialTransaction::getValorTotalAberto,FinancialTransaction::setValorTotalAberto),
-                new CampoFinanceiro(FinancialTransaction::getJurosRealizado,FinancialTransaction::setJurosRealizado),
-                new CampoFinanceiro(FinancialTransaction::getMultaRealizada,FinancialTransaction::setMultaRealizada),
-                new CampoFinanceiro(FinancialTransaction::getDescontoRealizado,FinancialTransaction::setDescontoRealizado),
-                new CampoFinanceiro(FinancialTransaction::getJurosPrevisto,FinancialTransaction::setJurosPrevisto),
-                new CampoFinanceiro(FinancialTransaction::getMultaPrevista,FinancialTransaction::setMultaPrevista),
-                new CampoFinanceiro(FinancialTransaction::getDescontoPrevisto,FinancialTransaction::setDescontoPrevisto));
+                    new CampoFinanceiro(FinancialTransaction::getValorRealizado, FinancialTransaction::setValorRealizado),
+                    new CampoFinanceiro(FinancialTransaction::getValorAberto, FinancialTransaction::setValorAberto),
+                    new CampoFinanceiro(FinancialTransaction::getValorTotalRealizado, FinancialTransaction::setValorTotalRealizado),
+                    new CampoFinanceiro(FinancialTransaction::getValorTotalAberto, FinancialTransaction::setValorTotalAberto),
+                    new CampoFinanceiro(FinancialTransaction::getJurosRealizado, FinancialTransaction::setJurosRealizado),
+                    new CampoFinanceiro(FinancialTransaction::getMultaRealizada, FinancialTransaction::setMultaRealizada),
+                    new CampoFinanceiro(FinancialTransaction::getDescontoRealizado, FinancialTransaction::setDescontoRealizado),
+                    new CampoFinanceiro(FinancialTransaction::getJurosPrevisto, FinancialTransaction::setJurosPrevisto),
+                    new CampoFinanceiro(FinancialTransaction::getMultaPrevista, FinancialTransaction::setMultaPrevista),
+                    new CampoFinanceiro(FinancialTransaction::getDescontoPrevisto, FinancialTransaction::setDescontoPrevisto));
         }
 
         @Test
         void vinculoComBaixaRecusaDivergenciaEmCadaComponenteFinanceiro() {
-            var t=excelComBaixas(liquidada(ID,"RECEBIDO_PARCIAL","100","5","2","40","2","1",1));
-            for(var campo:camposVinculo()) {
-                var valor=campo.ler().apply(t);campo.escrever().accept(t,valor.add(new BigDecimal("0.01")));
-                assertThrows(ResponseStatusException.class,()->service.prepararVinculo(ID,7L,t.getId()));
-                campo.escrever().accept(t,valor);
+            var t = excelComBaixas(liquidada(ID, "RECEBIDO_PARCIAL", "100", "5", "2", "40", "2", "1", 1));
+            for (var campo : camposVinculo()) {
+                var valor = campo.ler().apply(t);
+                campo.escrever().accept(t, valor.add(new BigDecimal("0.01")));
+                assertThrows(ResponseStatusException.class, () -> service.prepararVinculo(ID, 7L, t.getId()));
+                campo.escrever().accept(t, valor);
             }
-            assertEquals("CONTA_AZUL_EXCEL",t.getOrigem());semGravacao();
+            assertEquals("CONTA_AZUL_EXCEL", t.getOrigem());
+            semGravacao();
         }
 
         @Test
         void vinculoComBaixaRecusaCamposAusentesMesmoQuandoFonteInformaZero() {
-            var t=excelComBaixas(liquidada(ID,"RECEBIDO_PARCIAL","100","5","2","40","2","1",1));
-            for(var campo:camposVinculo()) {
-                var valor=campo.ler().apply(t);campo.escrever().accept(t,null);
-                var erro=assertThrows(ResponseStatusException.class,()->service.prepararVinculo(ID,7L,t.getId()));
+            var t = excelComBaixas(liquidada(ID, "RECEBIDO_PARCIAL", "100", "5", "2", "40", "2", "1", 1));
+            for (var campo : camposVinculo()) {
+                var valor = campo.ler().apply(t);
+                campo.escrever().accept(t, null);
+                var erro = assertThrows(ResponseStatusException.class, () -> service.prepararVinculo(ID, 7L, t.getId()));
                 assertTrue(erro.getReason().contains("não informado"));
-                campo.escrever().accept(t,valor);
+                campo.escrever().accept(t, valor);
             }
             semGravacao();
         }
 
         @Test
         void vinculoComBaixaExigeUltimaDataConferidaSemPreencherAutomaticamente() {
-            var t=excelComBaixas(liquidada(ID,"QUITADO","100","0","5","100","0","5",1));
-            for(var data:Arrays.asList(null,LocalDate.parse("2026-10-18"))) {
+            var t = excelComBaixas(liquidada(ID, "QUITADO", "100", "0", "5", "100", "0", "5", 1));
+            for (var data : Arrays.asList(null, LocalDate.parse("2026-10-18"))) {
                 t.setDataRealizacao(data);
-                assertThrows(ResponseStatusException.class,()->service.prepararVinculo(ID,7L,t.getId()));
-                assertEquals(data,t.getDataRealizacao());
+                assertThrows(ResponseStatusException.class, () -> service.prepararVinculo(ID, 7L, t.getId()));
+                assertEquals(data, t.getDataRealizacao());
             }
             semGravacao();
         }
 
         @Test
         void mudancaNasBaixasAposPreviaDeVinculoExigeNovaConferencia() {
-            var t=excelComBaixas(liquidada(ID,"RECEBIDO_PARCIAL","100","5","0","40","2","0",1));
-            var previa=service.prepararVinculo(ID,7L,t.getId());
-            when(source.consultar("test-token",ID)).thenReturn(liquidada(ID,"RECEBIDO_PARCIAL","100","5","0","60","3","0",1));
-            assertThrows(ResponseStatusException.class,()->aplicar(previa));
-            assertEquals("CONTA_AZUL_EXCEL",t.getOrigem());semGravacao();
+            var t = excelComBaixas(liquidada(ID, "RECEBIDO_PARCIAL", "100", "5", "0", "40", "2", "0", 1));
+            var previa = service.prepararVinculo(ID, 7L, t.getId());
+            when(source.consultar("test-token", ID)).thenReturn(liquidada(ID, "RECEBIDO_PARCIAL", "100", "5", "0", "60", "3", "0", 1));
+            assertThrows(ResponseStatusException.class, () -> aplicar(previa));
+            assertEquals("CONTA_AZUL_EXCEL", t.getOrigem());
+            semGravacao();
         }
 
         @Test
         void aposVinculoDeParcialAutomacaoQuitaMesmoRegistroSemNovaInclusao() {
-            var t=excelComBaixas(liquidada(ID,"RECEBIDO_PARCIAL","100","5","0","40","2","0",1));
-            aplicar(service.prepararVinculo(ID,7L,t.getId()));var id=t.getId();
-            var r=service.aplicarAutomatico(cliente,3L,UUID.randomUUID(),
-                    liquidada(ID,"QUITADO","100","5","0","100","5","0",1),false);
-            assertEquals(id,r.lancamentoId());assertEquals("ATUALIZAR",r.acao());assertEquals(1,records.size());
-            assertEquals(new BigDecimal("105.00"),t.getValorTotalRealizado());
-            assertEquals(new BigDecimal("0.00"),t.getValorTotalAberto());
+            var t = excelComBaixas(liquidada(ID, "RECEBIDO_PARCIAL", "100", "5", "0", "40", "2", "0", 1));
+            aplicar(service.prepararVinculo(ID, 7L, t.getId()));
+            var id = t.getId();
+            var r = service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(),
+                    liquidada(ID, "QUITADO", "100", "5", "0", "100", "5", "0", 1), false);
+            assertEquals(id, r.lancamentoId());
+            assertEquals("ATUALIZAR", r.acao());
+            assertEquals(1, records.size());
+            assertEquals(new BigDecimal("105.00"), t.getValorTotalRealizado());
+            assertEquals(new BigDecimal("0.00"), t.getValorTotalAberto());
         }
 
-}
+        @Test
+        void cancelamentoConfirmadoAtualizaSomenteVinculoApiSemApagarValores() {
+            var p = parcela("RECEITA", "50");
+            var inserida = service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), p, true);
+            var t = records.get(0);
+            var cancelada = new ContaAzulParcelDetail(p.id(), p.descricao(), "CANCELADO", p.vencimento(), p.liquido(), p.pago(), p.pendente(), p.composicao(), p.evento(), p.perda(), p.renegociacao(), p.baixas());
+            var resultado = service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), cancelada, true);
+            assertEquals("ATUALIZAR", resultado.acao());
+            assertEquals("CANCELADO", t.getSituacao());
+            assertEquals(new BigDecimal("50.00"), t.getValor());
+            assertEquals(inserida.lancamentoId(), resultado.lancamentoId());
+            assertEquals(1, records.size());
+            assertEquals("SEM_ALTERACAO", service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), cancelada, true).acao());
+        }
 
-    
+        @Test
+        void cancelamentoSemVinculoNaoCriaLancamento() {
+            var p = parcela("RECEITA", "50");
+            var cancelada = new ContaAzulParcelDetail(p.id(), p.descricao(), "CANCELADO", p.vencimento(), p.liquido(), p.pago(), p.pendente(), p.composicao(), p.evento());
+            assertThrows(ResponseStatusException.class, () -> service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), cancelada, true));
+            assertTrue(records.isEmpty());
+        }
+
+        @Test
+        void mudancaDeDataIntermediariaRenovaSnapshotMesmoSemMudarTotais() {
+            var p = parcela("RECEITA", "100");
+            var c30 = new ContaAzulParcelDetail.Composicao(new BigDecimal("30.00"), new BigDecimal("30.00"), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+            var c40 = new ContaAzulParcelDetail.Composicao(new BigDecimal("40.00"), new BigDecimal("40.00"), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+            var a = new ContaAzulParcelDetail.Baixa("a", ID, LocalDate.parse("2026-09-01"), c30);
+            var b = new ContaAzulParcelDetail.Baixa("b", ID, LocalDate.parse("2026-09-10"), c30);
+            var c = new ContaAzulParcelDetail.Baixa("c", ID, LocalDate.parse("2026-10-10"), c40);
+            var quitada = new ContaAzulParcelDetail(ID, p.descricao(), "QUITADO", p.vencimento(), new BigDecimal("100.00"), new BigDecimal("100.00"), BigDecimal.ZERO, p.composicao(), p.evento(), null, null, List.of(a, b, c));
+            service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), quitada, true);
+            when(audit.findFirstByClienteIdAndLancamentoIdOrderByConcluidoEmDescIdDesc(eq(7L), anyLong())).thenAnswer(i -> operations.values().stream().findFirst());
+            var alterada = new ContaAzulParcelDetail(ID, p.descricao(), "QUITADO", p.vencimento(), new BigDecimal("100.00"), new BigDecimal("100.00"), BigDecimal.ZERO, p.composicao(), p.evento(), null, null, List.of(a, new ContaAzulParcelDetail.Baixa("b", ID, LocalDate.parse("2026-10-01"), c30), c));
+            assertEquals("ATUALIZAR", service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), alterada, true).acao());
+            assertEquals(2, operations.size());
+            assertEquals(1, records.size());
+        }
+    }

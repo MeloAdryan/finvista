@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS conta_azul_auto_config (
     cliente_id BIGINT PRIMARY KEY REFERENCES clientes(id) ON DELETE CASCADE,
     habilitada BOOLEAN NOT NULL DEFAULT FALSE,
     incluir_novas BOOLEAN NOT NULL DEFAULT FALSE,
+    periodo_movel BOOLEAN DEFAULT FALSE,
     inicio DATE NOT NULL,
     fim DATE NOT NULL,
     intervalo_minutos INTEGER NOT NULL,
@@ -19,6 +20,8 @@ CREATE TABLE IF NOT EXISTS conta_azul_auto_config (
     CONSTRAINT ck_conta_azul_auto_periodo CHECK (fim>=inicio AND fim-inicio<=365),
     CONSTRAINT ck_conta_azul_auto_intervalo CHECK (intervalo_minutos IN (30,60,360,1440))
 );
+
+ALTER TABLE conta_azul_auto_config ADD COLUMN IF NOT EXISTS periodo_movel BOOLEAN DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS conta_azul_auto_execucoes (
     id UUID PRIMARY KEY,

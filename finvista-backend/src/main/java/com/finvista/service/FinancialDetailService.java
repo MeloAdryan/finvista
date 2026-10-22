@@ -36,12 +36,12 @@ public class FinancialDetailService {
         }
         YearMonth periodo = mes == null ? referencia.obterMesReferencia() : mes;
         Long clienteId = contexto.getClienteAtualId();
-        
+
         List<FinancialTransaction> lancamentos = repository
                 .findByClienteIdAndDataBetweenOrderByDataAsc(clienteId, periodo.atDay(1), periodo.atEndOfMonth())
-                .stream().filter(t -> t.getData() != null && periodo.equals(YearMonth.from(t.getData()))
-                && t.getValor() != null && t.getTipo() != null
-                && normalizado.equals(t.getTipo().trim().toUpperCase(Locale.ROOT)))
+                .stream().filter(t -> FinancialStatusPolicy.ativo(t) && t.getData() != null && periodo.equals(YearMonth.from(t.getData()))
+                        && t.getValor() != null && t.getTipo() != null
+                        && normalizado.equals(t.getTipo().trim().toUpperCase(Locale.ROOT)))
                 .sorted(Comparator.comparing(FinancialTransaction::getData)
                         .thenComparing(FinancialTransaction::getId, Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
@@ -52,8 +52,8 @@ public class FinancialDetailService {
         long deslocamento = (long) pagina * tamanho;
         List<FinancialDetailResponse.Item> itens = lancamentos.stream().skip(deslocamento).limit(tamanho)
                 .map(t -> new FinancialDetailResponse.Item(t.getId(), t.getData(), t.getDataVencimento(),
-                t.getDataRealizacao(), t.getDescricao(), t.getSituacao(), t.getValor(),
-                t.getValorOriginal(), t.getValorRealizado(), t.getValorAberto(), t.getOrigem()))
+                        t.getDataRealizacao(), t.getDescricao(), t.getSituacao(), t.getValor(),
+                        t.getValorOriginal(), t.getValorRealizado(), t.getValorAberto(), t.getOrigem()))
                 .toList();
         String explicacao = "Soma do valor contabilizado dos lançamentos de " + normalizado
                 + " pela data de análise entre " + periodo.atDay(1) + " e " + periodo.atEndOfMonth()
