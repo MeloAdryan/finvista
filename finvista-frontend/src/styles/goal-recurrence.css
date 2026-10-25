@@ -8,7 +8,7 @@
 .meta-resumo-periodos {
   margin-block: 12px 18px;
   line-height: 1.6;
-  color: #526a87;
+  color: var(--fv-dark-muted, #526a87);
   font-size: 0.875rem;
 }
 
@@ -20,9 +20,9 @@
 .meta-recorrencia-previa {
   margin-block: 18px;
   padding: 16px;
-  border: 1px solid #cbd9e9;
+  border: 1px solid var(--fv-dark-border, #cbd9e9);
   border-radius: 10px;
-  background: #f7fafc;
+  background: var(--fv-dark-surface, #f7fafc);
   min-width: 0;
 }
 
@@ -54,7 +54,7 @@
 .meta-previa-tabela th,
 .meta-previa-tabela td {
   padding: 10px;
-  border-bottom: 1px solid #dce5f0;
+  border-bottom: 1px solid var(--fv-dark-border, #dce5f0);
   text-align: left;
   white-space: nowrap;
 }
@@ -62,14 +62,14 @@
 .meta-previa-tabela th {
   position: sticky;
   top: 0;
-  background: #eef3f9;
+  background: var(--fv-dark-canvas, #eef3f9);
 }
 
 .meta-serie-periodo {
   padding: 12px;
   margin-block: 12px;
   border-radius: 8px;
-  background: #f4f7fb;
+  background: var(--fv-dark-surface, #f4f7fb);
   font-size: 0.875rem;
 }
 
@@ -84,10 +84,10 @@
   min-width: 0;
   padding: 10px;
   font: inherit;
-  border: 1px solid #c4d4e7;
+  border: 1px solid var(--fv-dark-border, #c4d4e7);
   border-radius: 6px;
   color: inherit;
-  background: #fff;
+  background: var(--fv-dark-surface, #fff);
 }
 
 .meta-serie-periodo small {

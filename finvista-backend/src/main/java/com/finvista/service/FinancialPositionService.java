@@ -29,8 +29,8 @@ public class FinancialPositionService {
 
     FinancialPositionResponse consultar(LocalDate hoje) {
         Long clienteId = contexto.getClienteAtualId();
-        BigDecimal[] receber = {BigDecimal.ZERO, BigDecimal.ZERO};
-        BigDecimal[] pagar = {BigDecimal.ZERO, BigDecimal.ZERO};
+        BigDecimal[] receber = {BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
+        BigDecimal[] pagar = {BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
         int semValor = 0, semVencimento = 0;
         Map<String, Resumo> cobertura = new TreeMap<>();
 
@@ -61,10 +61,13 @@ public class FinancialPositionService {
             BigDecimal[] grupo = tipo.equals("RECEITA") ? receber : pagar;
             int indice = item.getDataVencimento().isBefore(hoje) ? 0 : 1;
             grupo[indice] = grupo[indice].add(aberto);
+            if (item.getDataVencimento().equals(hoje)) {
+                grupo[2] = grupo[2].add(aberto);
+            }
         }
         return new FinancialPositionResponse(clienteId, hoje,
-                new FinancialPositionResponse.Grupo(receber[0], receber[1]),
-                new FinancialPositionResponse.Grupo(pagar[0], pagar[1]), semValor, semVencimento, cobertura.entrySet().stream().map(e -> new FinancialPositionResponse.Cobertura(
+                new FinancialPositionResponse.Grupo(receber[0], receber[1], receber[2], receber[1].subtract(receber[2])),
+                new FinancialPositionResponse.Grupo(pagar[0], pagar[1], pagar[2], pagar[1].subtract(pagar[2])), semValor, semVencimento, cobertura.entrySet().stream().map(e -> new FinancialPositionResponse.Cobertura(
                         e.getKey(), e.getValue().semValor, e.getValue().semVencimento, e.getValue().primeira, e.getValue().ultima)).toList());
     }
 

@@ -222,7 +222,7 @@ public class ContaAzulApiSyncService {
         }
         var ultima = operacoes.findFirstByClienteIdAndLancamentoIdOrderByConcluidoEmDescIdDesc(t.getCliente().getId(), t.getId());
         if (ultima.isEmpty()) {
-            return false;
+            return true;
         }
         try {
             var anterior = json.readValue(ultima.get().getOrigemSnapshot(), ContaAzulParcelDetail.class);

@@ -14,7 +14,7 @@
   text-align: left;
 }
 .metas-page .meta-card-top small {
-  color: #60758e;
+  color: var(--fv-dark-muted, #60758e);
   display: block;
   margin-top: 8px;
   line-height: 1.6;
@@ -25,12 +25,12 @@
   font-size: 12px;
 }
 .metas-page .meta-temporal-encerrada {
-  background: #efeeeb !important;
-  color: #585853 !important;
+  background: var(--fv-dark-canvas, #efeeeb) !important;
+  color: var(--fv-dark-muted, #585853) !important;
 }
 .metas-page .meta-temporal-em_andamento {
-  background: #edf4fa !important;
-  color: #345b7c !important;
+  background: var(--fv-dark-canvas, #edf4fa) !important;
+  color: var(--fv-dark-muted, #345b7c) !important;
 }
 .metas-page .meta-valores strong {
   overflow: visible;
@@ -41,17 +41,17 @@
   font-size: 15px;
 }
 .metas-page .meta-risk-excedida .meta-valores > div:nth-child(n + 2) {
-  background: #fff0ef;
-  color: #9f2828;
+  background: var(--fv-dark-danger-soft, #fff0ef);
+  color: var(--fv-dark-danger, #9f2828);
 }
 .metas-page .meta-risk-excedida .meta-valores > div:nth-child(n + 2) strong,
 .metas-page .meta-risk-excedida .meta-valores > div:nth-child(n + 2) span {
-  color: #9f2828;
+  color: var(--fv-dark-danger, #9f2828);
 }
 .metas-page .metas-primary-button {
-  background: #f3a13c;
-  color: #182d49;
-  border-color: #e99429;
+  background: var(--fv-dark-warning-fill, #f3a13c);
+  color: var(--fv-dark-text, #182d49);
+  border-color: var(--fv-dark-warning, #e99429);
   min-height: 36px;
   box-shadow: none;
 }
@@ -60,7 +60,7 @@
   min-height: 36px;
 }
 .metas-page button:focus-visible {
-  outline: 2px solid #db8a27;
+  outline: 2px solid var(--fv-dark-warning, #db8a27);
   outline-offset: 3px;
 }
 .meta-type-segment {
@@ -72,12 +72,12 @@
 .meta-type-segment legend {
   font-size: 13px;
   font-weight: 700;
-  color: #475467;
+  color: var(--fv-dark-muted, #475467);
   margin-bottom: 8px;
 }
 .meta-type-segment > div {
   display: flex;
-  background: #edf1f7;
+  background: var(--fv-dark-canvas, #edf1f7);
   border-radius: 8px;
   padding: 3px;
 }
@@ -98,14 +98,14 @@
   padding: 9px;
   text-align: center;
   border-radius: 6px;
-  color: #173955;
+  color: var(--fv-dark-text, #173955);
 }
 .meta-type-segment input:checked + span {
-  background: #1b304e;
+  background: var(--fv-dark-primary, #1b304e);
   color: white;
 }
 .meta-type-segment input:focus-visible + span {
-  outline: 2px solid #db8a27;
+  outline: 2px solid var(--fv-dark-warning, #db8a27);
   outline-offset: 2px;
 }
 @media (max-width: 600px) {

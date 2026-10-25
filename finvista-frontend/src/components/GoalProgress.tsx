@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { FinancialViewContext } from "../contexts/financialViewContext";
 import GoalEvolution from "./GoalEvolution";
 import GoalUsageGauge from "./GoalUsageGauge";
 import GoalDetailDialog from "./GoalDetailDialog";
@@ -38,6 +39,7 @@ export default function GoalProgress({
   resumo?: boolean;
   evolucaoEmDialogo?: boolean;
 }) {
+  const viewFilter = useContext(FinancialViewContext);
   const [aberto, setAberto] = useState(automatico);
   const [expandido, setExpandido] = useState(false);
   const ampliar = () => {
@@ -52,7 +54,12 @@ export default function GoalProgress({
     if (!aberto) return;
     const controller = new AbortController();
     let ativo = true;
-    obterAcompanhamento(meta.id, controller.signal)
+    obterAcompanhamento(
+      meta.id,
+      controller.signal,
+      viewFilter ?? undefined,
+      meta,
+    )
       .then((d) => {
         if (ativo) {
           setDados(d);
@@ -69,7 +76,7 @@ export default function GoalProgress({
       ativo = false;
       controller.abort();
     };
-  }, [aberto, meta.id, meta.gastoAtual, meta.dataReferencia, tentativa]);
+  }, [aberto, meta, viewFilter, tentativa]);
   const uso = Number(meta.percentualUtilizado) || 0,
     alerta = Number(meta.percentualAlerta) || 0;
   const ritmo = dados?.ritmoIdealPercentual ?? ritmoMeta(meta);
@@ -98,7 +105,9 @@ export default function GoalProgress({
         {meta.situacaoTemporal === "FUTURA"
           ? "Planejamento futuro · "
           : meta.situacaoTemporal === "ENCERRADA"
-            ? "Resultado final · "
+            ? viewFilter
+              ? "Resultado no recorte · "
+              : "Resultado final · "
             : ""}
         {risco}
       </p>

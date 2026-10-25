@@ -1,3 +1,5 @@
+import { expensesForFilter } from "./financialPageAdapters";
+import type { ViewFilter } from "./financialViewService";
 import { API_URL } from "../config/api";
 import type { CostBehavior, CostNature } from "./costCenterService";
 export interface ExpenseFilters {
@@ -41,7 +43,9 @@ export interface ExpenseAnalysis {
 export async function getExpenseAnalysis(
   filtros: ExpenseFilters,
   signal: AbortSignal,
+  viewFilter?: ViewFilter,
 ): Promise<ExpenseAnalysis> {
+  if (viewFilter) return expensesForFilter(viewFilter, filtros, signal);
   const params = new URLSearchParams();
   Object.entries(filtros).forEach(([k, v]) => {
     if (v) params.set(k, v);

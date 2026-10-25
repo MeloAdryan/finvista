@@ -1,3 +1,5 @@
+import { FinancialChartPaint } from "../components/FinancialChartPaint";
+import { useChartAppearance } from "../services/chartAppearance";
 import { useId, useState } from "react";
 import type { DashboardAnalysis } from "../services/dashboardAnalysisService";
 import { prepararCascata } from "../services/analysisChartData";
@@ -16,7 +18,9 @@ export default function FinancialWaterfall({
   analise: DashboardAnalysis;
   onCategoria: (nome: string) => void;
 }) {
+  const appearance = useChartAppearance();
   const [todas, setTodas] = useState(false);
+  const [mostrarSemBase, setMostrarSemBase] = useState(false);
   const id = useId();
   const anterior = analise.indicadores.despesaMesAnterior ?? 0,
     atual = analise.indicadores.despesa;
@@ -32,8 +36,10 @@ export default function FinancialWaterfall({
   const percentual = anterior > 0 ? (diferenca / anterior) * 100 : null;
   const numero = (n: number) =>
     Math.abs(n).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
-  const titulo =
-    diferenca === 0
+  const semBase = analise.registros?.despesasAnterior === 0;
+  const titulo = semBase
+    ? "Comparação indisponível: sem registros no período anterior"
+    : diferenca === 0
       ? "O que mudou: despesas sem variação"
       : `O que mudou: despesas ${diferenca < 0 ? "caíram" : "aumentaram"} ${moedaFinanceira(Math.abs(diferenca))}${percentual === null ? "" : ` (${diferenca < 0 ? "−" : "+"}${numero(percentual)}%)`}`;
   const rotuloPeriodo = (inicio: string, fim: string) => {
@@ -84,6 +90,7 @@ export default function FinancialWaterfall({
       className="executive-panel wf-panel"
       aria-labelledby={`wf-title-${id}`}
     >
+      <FinancialChartPaint id={appearance.id} />
       <p className="ax-note">
         {descreverRegistros(
           analise.registros?.despesasAtual,
@@ -133,6 +140,24 @@ export default function FinancialWaterfall({
           )}
         </div>
       </div>
+      {semBase && (
+        <div className="wf-missing-base" role="status">
+          <p>
+            Não há registros no período anterior. A cascata usa somente os
+            registros disponíveis e não comprova aumento real das despesas.
+          </p>
+          <button
+            type="button"
+            aria-expanded={mostrarSemBase}
+            aria-controls={`wf-scroll-${id}`}
+            onClick={() => setMostrarSemBase(!mostrarSemBase)}
+          >
+            {mostrarSemBase
+              ? "Recolher gráfico sem base de comparação"
+              : "Exibir gráfico sem base de comparação"}
+          </button>
+        </div>
+      )}
       {!cascata.conciliado ? (
         <p role="alert">
           Os dados da comparação não conciliam com o total. Confira o
@@ -140,6 +165,8 @@ export default function FinancialWaterfall({
         </p>
       ) : (
         <div
+          hidden={semBase && !mostrarSemBase}
+          id={`wf-scroll-${id}`}
           className="wf-scroll"
           tabIndex={0}
           aria-label="Cascata de despesas, com rolagem horizontal"
@@ -254,7 +281,7 @@ export default function FinancialWaterfall({
                     y={topo}
                     width={barraLargura}
                     height={Math.max(1.5, base - topo)}
-                    fill={cor}
+                    fill={appearance.fill(cor)}
                   />
                   <text
                     className="wf-value"

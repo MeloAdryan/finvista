@@ -1,3 +1,10 @@
+import FinancialLedgerPanel from "../components/FinancialLedgerPanel";
+import { useContext } from "react";
+import {
+  FinancialViewContext,
+  FinancialViewUpdateContext,
+} from "../contexts/financialViewContext";
+import { criterionNames, viewRange } from "../services/financialViewService";
 import { useEffect, useState } from "react";
 import {
   getCashFlow,
@@ -12,6 +19,8 @@ import "../styles/financial-evolution.css";
 import "../styles/financial-integrity.css";
 
 export default function CashFlow() {
+  const viewFilter = useContext(FinancialViewContext);
+  const updateView = useContext(FinancialViewUpdateContext);
   const [modo, setModo] = useState<"realizado" | "competencia">("realizado");
   const [cobertura, setCobertura] = useState<RealizedCashFlow | null>(null);
   const [dados, setDados] = useState<CashFlowData[]>([]);
@@ -19,6 +28,38 @@ export default function CashFlow() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [tentativa, setTentativa] = useState(0);
+  const realized = viewFilter
+    ? viewFilter.criterio === "BAIXA" || viewFilter.criterio === "BAIXA_EXTRATO"
+    : modo === "realizado";
+  function setBasis(next: "realizado" | "competencia") {
+    setModo(next);
+    if (viewFilter && updateView)
+      updateView({
+        ...viewFilter,
+        criterio: next === "realizado" ? "BAIXA" : "COMPETENCIA",
+        situacao: "TODAS",
+      });
+  }
+  function setWindow(next: PeriodoFluxoCaixa) {
+    setPeriodo(next);
+    if (!viewFilter || !updateView) return;
+    if (next === "todos") {
+      updateView({ ...viewFilter, periodo: "TODOS" });
+      return;
+    }
+    const end =
+      viewRange(viewFilter)?.fim ?? new Date().toISOString().slice(0, 10);
+    const [year, month] = end.split("-").map(Number);
+    const start = new Date(Date.UTC(year, month - Number(next), 1, 12))
+      .toISOString()
+      .slice(0, 10);
+    updateView({
+      ...viewFilter,
+      periodo: "PERSONALIZADO",
+      inicio: start,
+      fim: end,
+    });
+  }
   useEffect(() => {
     let ativo = true;
     const controller = new AbortController();
@@ -28,11 +69,16 @@ export default function CashFlow() {
       setCobertura(null);
       setDados([]);
       try {
-        const caixa =
-          modo === "realizado"
-            ? await getRealizedCashFlow(periodo, controller.signal)
-            : null;
-        const resposta = caixa ? caixa.meses : await getCashFlow(periodo);
+        const caixa = realized
+          ? await getRealizedCashFlow(
+              periodo,
+              controller.signal,
+              viewFilter ?? undefined,
+            )
+          : null;
+        const resposta = caixa
+          ? caixa.meses
+          : await getCashFlow(periodo, viewFilter ?? undefined);
         if (ativo) {
           setDados(resposta);
           setCobertura(caixa);
@@ -54,7 +100,7 @@ export default function CashFlow() {
       ativo = false;
       controller.abort();
     };
-  }, [periodo, tentativa, modo]);
+  }, [periodo, tentativa, modo, realized, viewFilter]);
   return (
     <div className="dashboard fe-page">
       <div
@@ -64,15 +110,19 @@ export default function CashFlow() {
       >
         <button
           type="button"
-          aria-pressed={modo === "realizado"}
-          onClick={() => setModo("realizado")}
+          aria-pressed={realized}
+          onClick={() => setBasis("realizado")}
         >
-          Caixa realizado
+          Baixas financeiras
         </button>
         <button
           type="button"
-          aria-pressed={modo === "competencia"}
-          onClick={() => setModo("competencia")}
+          aria-pressed={
+            viewFilter
+              ? viewFilter.criterio === "COMPETENCIA"
+              : modo === "competencia"
+          }
+          onClick={() => setBasis("competencia")}
         >
           Competência
         </button>
@@ -89,7 +139,7 @@ export default function CashFlow() {
           <strong>
             {cobertura.parcial
               ? "Caixa com detalhamento parcial"
-              : "Baixas locais conferidas"}
+              : "Movimentos financeiros no critério selecionado"}
           </strong>
           <p>
             Na base local: {cobertura.lancamentosConferidos} lançamentos com
@@ -98,10 +148,10 @@ export default function CashFlow() {
             {cobertura.baixasNoPeriodo} baixas.
           </p>
           <p>
-            Os totais cobrem apenas as baixas conferidas da base local, sem
-            saldo bancário inicial. Não certificam que todas as parcelas do
-            Conta Azul foram importadas. Registros sem detalhamento e
-            cancelamentos com pagamentos precisam de revisão.
+            O gráfico usa a fonte e o critério selecionados e não inclui saldo
+            bancário inicial ou transferências. Não certifica que todas as
+            parcelas do Conta Azul foram importadas. Registros sem detalhamento
+            e cancelamentos com pagamentos precisam de revisão.
           </p>
         </aside>
       )}
@@ -121,11 +171,22 @@ export default function CashFlow() {
       ) : (
         <CashFlowChart
           key={modo}
-          realizado={modo === "realizado"}
+          realizado={realized}
           dados={dados}
           periodo={periodo}
           carregando={carregando}
-          onPeriodoChange={setPeriodo}
+          onPeriodoChange={setWindow}
+          filtroAplicado={!!viewFilter}
+          criterioLabel={
+            viewFilter ? criterionNames[viewFilter.criterio] : undefined
+          }
+        />
+      )}
+      {viewFilter?.criterio === "BAIXA" && (
+        <FinancialLedgerPanel
+          key={JSON.stringify(viewFilter) + tentativa}
+          filter={viewFilter}
+          revision={tentativa}
         />
       )}
     </div>

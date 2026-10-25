@@ -1,3 +1,5 @@
+import { FinancialChartPaint } from "../components/FinancialChartPaint";
+import { useChartAppearance } from "../services/chartAppearance";
 import { useState } from "react";
 import {
   Area,
@@ -25,6 +27,7 @@ export default function ProjectionChart({
 }: {
   dados: ProjectionPlanning;
 }) {
+  const appearance = useChartAppearance();
   const [tabela, setTabela] = useState(false);
   const ultimo = dados.meses.at(-1);
   const mensal = eixoFinanceiro(
@@ -93,6 +96,7 @@ export default function ProjectionChart({
     ]);
   return (
     <section className="fe-card">
+      <FinancialChartPaint id={appearance.id} />
       <div className="fe-heading">
         <div>
           <h2>Resultados da simulação</h2>
@@ -186,26 +190,30 @@ export default function ProjectionChart({
                 <Tooltip formatter={(v) => moedaFinanceira(Number(v))} />
                 <ReferenceLine y={0} stroke="#94a3b8" />
                 <Bar
+                  isAnimationActive={false}
                   dataKey="receitaRegistrada"
                   name="Receita registrada"
                   stackId="receita"
-                  fill="#3f806d"
+                  fill={appearance.fill("#3f806d")}
                   maxBarSize={32}
                 />
                 <Bar
+                  isAnimationActive={false}
                   dataKey="receitaComplementar"
                   name="Receita complementar simulada"
                   stackId="receita"
-                  fill="#b1d5c9"
+                  fill={appearance.fill("#b1d5c9")}
                   maxBarSize={32}
                 />
                 <Bar
+                  isAnimationActive={false}
                   dataKey="despesaRegistrada"
                   name="Despesa registrada"
-                  fill="#c77d31"
+                  fill={appearance.fill("#c77d31")}
                   maxBarSize={32}
                 />
                 <Line
+                  isAnimationActive={false}
                   type="linear"
                   dataKey="resultadoMensal"
                   name="Resultado mensal simulado"
@@ -253,14 +261,16 @@ export default function ProjectionChart({
                 />
                 <ReferenceLine y={0} stroke="#94a3b8" />
                 <Area
+                  isAnimationActive={false}
                   type="linear"
                   dataKey="faixa"
                   name="Faixa conservador → otimista"
                   stroke="none"
-                  fill="#bfd5f4"
+                  fill={appearance.area("#bfd5f4")}
                   fillOpacity={0.6}
                 />
                 <Line
+                  isAnimationActive={false}
                   type="linear"
                   dataKey="saldoBase"
                   name="Saldo simulado base"

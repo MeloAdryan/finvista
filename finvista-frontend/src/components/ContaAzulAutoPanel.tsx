@@ -1,3 +1,5 @@
+import ContaAzulReconciliationPanel from "./ContaAzulReconciliationPanel";
+import ContaAzulSourceReview from "./ContaAzulSourceReview";
 import ContaAzulRunReview from "./ContaAzulRunReview";
 import { useEffect, useRef, useState } from "react";
 import type { Cliente } from "../services/clientService";
@@ -42,6 +44,7 @@ export default function ContaAzulAutoPanel({
   const [inicio, setInicio] = useState("");
   const [fim, setFim] = useState("");
   const [intervalo, setIntervalo] = useState(30);
+  const [completa, setCompleta] = useState(false);
   const [movel, setMovel] = useState(false);
   const [novas, setNovas] = useState(false);
   const [confirmado, setConfirmado] = useState(false);
@@ -88,6 +91,7 @@ export default function ContaAzulAutoPanel({
           setIntervalo(value.configuracao.intervaloMinutos);
           setNovas(value.configuracao.incluirNovas);
           setMovel(Boolean(value.configuracao.periodoMovel));
+          setCompleta(Boolean(value.configuracao.sincronizacaoCompleta));
           inicializado.current = true;
         }
         setErro("");
@@ -134,7 +138,8 @@ export default function ContaAzulAutoPanel({
                 incluirNovas: novas,
                 confirmado,
                 confirmoHistorico: historico,
-                periodoMovel: movel,
+                periodoMovel: completa ? false : movel,
+                sincronizacaoCompleta: completa,
               },
               controller.signal,
             )
@@ -190,9 +195,11 @@ export default function ContaAzulAutoPanel({
         <div className="ca-auto-overview">
           <div>
             <span>
-              {status.configuracao.periodoMovel
-                ? "Período móvel · por vencimento"
-                : "Período autorizado · por vencimento"}
+              {status.configuracao.sincronizacaoCompleta
+                ? "Sincronização ampla da empresa"
+                : status.configuracao.periodoMovel
+                  ? "Período móvel · por vencimento"
+                  : "Período autorizado · por vencimento"}
             </span>
             <strong>
               {data(status.configuracao.inicio)} a{" "}
@@ -236,6 +243,27 @@ export default function ContaAzulAutoPanel({
           CONTA_AZUL_AUTO_ENABLED antes de ativar esta empresa.
         </p>
       )}
+      {status?.configuracao.sincronizacaoCompleta && (
+        <p>
+          Para acompanhar automaticamente pagamentos e recebimentos nos
+          gráficos, selecione “Baixa — API” no critério de data. “Baixa —
+          extrato importado” continua sendo a leitura dos arquivos enviados,
+          usada para conferência.
+        </p>
+      )}
+      {cliente && atual && status?.configuracao.sincronizacaoCompleta && (
+        <ContaAzulSourceReview
+          key={`${cliente.id}:${atual.id}`}
+          clienteId={cliente.id}
+          execucaoId={atual.id}
+        />
+      )}
+      {cliente && status?.configuracao.sincronizacaoCompleta && (
+        <ContaAzulReconciliationPanel
+          key={`conferencia-${cliente.id}`}
+          clienteId={cliente.id}
+        />
+      )}
       <details
         className="ca-auto-settings"
         key={status?.configuracao.alteradoEm || "nova"}
@@ -251,6 +279,28 @@ export default function ContaAzulAutoPanel({
           apenas para ativar ou alterar a configuração.
         </p>
         <label className="ca-auto-check">
+          <input
+            type="checkbox"
+            checked={completa}
+            disabled={busy}
+            onChange={(e) => {
+              setCompleta(e.target.checked);
+              setConfirmado(false);
+              setHistorico(false);
+            }}
+          />
+          Sincronizar o financeiro da empresa: histórico e futuro, parcelas,
+          baixas, transferências e saldos iniciais.
+        </label>
+        {completa && (
+          <p>
+            Os filtros das páginas não limitam esta coleta. Faixa técnica
+            suportada: 1900 a 2200. Parcelas antigas vinculadas também são
+            reconsultadas. Novas parcelas dependem da autorização de inclusão
+            abaixo; impedimentos ficam para conferência.
+          </p>
+        )}
+        <label className="ca-auto-check" hidden={completa}>
           <input
             type="checkbox"
             checked={movel}
@@ -270,9 +320,11 @@ export default function ContaAzulAutoPanel({
           dias.
         </label>
         <p>
-          {movel
-            ? "Cada nova varredura recalcula as datas pelo horário de Brasília. Uma varredura em andamento mantém o período com que começou."
-            : "Período fixo de até 366 dias. Vencimentos fora dele não serão consultados."}
+          {completa
+            ? "As datas abaixo não filtram a sincronização ampla. Transferências e saldos iniciais são preservados separadamente das receitas e despesas."
+            : movel
+              ? "Cada nova varredura recalcula as datas pelo horário de Brasília. Uma varredura em andamento mantém o período com que começou."
+              : "Período fixo de até 366 dias. Vencimentos fora dele não serão consultados."}
         </p>
         <div className="ca-auto-fields">
           <label>
@@ -280,7 +332,7 @@ export default function ContaAzulAutoPanel({
             <input
               type="date"
               value={inicio}
-              disabled={busy || movel}
+              disabled={busy || movel || completa}
               onChange={(e) => {
                 setInicio(e.target.value);
                 setConfirmado(false);
@@ -294,7 +346,7 @@ export default function ContaAzulAutoPanel({
               type="date"
               value={fim}
               min={inicio}
-              disabled={busy || movel}
+              disabled={busy || movel || completa}
               onChange={(e) => {
                 setFim(e.target.value);
                 setConfirmado(false);
@@ -341,9 +393,9 @@ export default function ContaAzulAutoPanel({
               disabled={busy}
               onChange={(e) => setHistorico(e.target.checked)}
             />
-            Revisei o histórico desta empresa no período escolhido e autorizo
-            novas inclusões. A ausência de correspondência não comprova que uma
-            parcela seja nova.
+            Revisei o histórico desta empresa no escopo da sincronização e
+            autorizo novas inclusões. A ausência de correspondência não comprova
+            que uma parcela seja nova.
           </label>
         )}
         <label className="ca-auto-check">
@@ -353,9 +405,11 @@ export default function ContaAzulAutoPanel({
             disabled={busy}
             onChange={(e) => setConfirmado(e.target.checked)}
           />
-          {movel
-            ? "Autorizo as execuções periódicas para esta empresa no período móvel, acompanhando o calendário, conforme as opções acima."
-            : "Autorizo as execuções periódicas para esta empresa e este período, conforme as opções acima."}
+          {completa
+            ? "Autorizo as execuções periódicas para sincronizar o financeiro desta empresa na faixa de 1900 a 2200, incluindo parcelas antigas, baixas, transferências e saldos iniciais, conforme as opções acima."
+            : movel
+              ? "Autorizo as execuções periódicas para esta empresa no período móvel, acompanhando o calendário, conforme as opções acima."
+              : "Autorizo as execuções periódicas para esta empresa e este período, conforme as opções acima."}
         </label>
         <div className="ca-auto-actions">
           <button

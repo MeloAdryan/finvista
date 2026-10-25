@@ -1,10 +1,10 @@
 .ca-connection {
   padding: 20px;
   margin: 18px 0;
-  background: #fff;
-  border: 1px solid #d7e2ef;
+  background: var(--fv-dark-surface, #fff);
+  border: 1px solid var(--fv-dark-border, #d7e2ef);
   border-radius: 12px;
-  color: #163550;
+  color: var(--fv-dark-text, #163550);
 }
 .ca-connection-top {
   display: flex;
@@ -22,8 +22,8 @@
   margin: 8px 0;
 }
 .ca-connection-badge {
-  background: #edf2f7;
-  color: #38546e;
+  background: var(--fv-dark-canvas, #edf2f7);
+  color: var(--fv-dark-muted, #38546e);
   padding: 6px 10px;
   border-radius: 20px;
   font-size: 12px;
@@ -36,10 +36,10 @@
 }
 .ca-connection button {
   min-height: 36px;
-  border: 1px solid #b9cde2;
+  border: 1px solid var(--fv-dark-border, #b9cde2);
   border-radius: 6px;
-  background: #f5f8fc;
-  color: #153650;
+  background: var(--fv-dark-surface, #f5f8fc);
+  color: var(--fv-dark-text, #153650);
   padding: 7px 12px;
   cursor: pointer;
 }
@@ -48,11 +48,11 @@
   cursor: default;
 }
 .ca-connection button:focus-visible {
-  outline: 2px solid #d98525;
+  outline: 2px solid var(--fv-dark-warning, #d98525);
   outline-offset: 3px;
 }
 .ca-connection-error {
-  color: #a32424;
+  color: var(--fv-dark-danger, #a32424);
 }
 @media (max-width: 600px) {
   .ca-connection-top {

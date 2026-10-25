@@ -1,3 +1,4 @@
+import { getFinancialView, type ViewFilter } from "./financialViewService";
 import { apiFetch } from "../config/http";
 import { API_URL } from "../config/api";
 
@@ -23,7 +24,9 @@ export interface CreateBudgetData {
   dataFim: string;
 }
 
-export async function getBudgetPipeline(): Promise<BudgetPipelineData[]> {
+export async function getBudgetPipeline(
+  viewFilter?: ViewFilter,
+): Promise<BudgetPipelineData[]> {
   const response = await apiFetch(`${API_URL}/api/orcamentos`, {
     method: "GET",
     credentials: "include",
@@ -33,7 +36,24 @@ export async function getBudgetPipeline(): Promise<BudgetPipelineData[]> {
     throw new Error("Erro ao carregar os orçamentos");
   }
 
-  return response.json();
+  const configs: BudgetPipelineData[] = await response.json();
+  if (!viewFilter) return configs;
+  const source = await getFinancialView(
+    viewFilter,
+    new AbortController().signal,
+  );
+  return configs
+    .filter((c) => source.orcamentos.some((b) => b.id === c.id))
+    .map((c) => {
+      const b = source.orcamentos.find((b) => b.id === c.id)!;
+      const spent = Number(b.consumoPeriodo);
+      return {
+        ...c,
+        valorUtilizado: spent,
+        valorDisponivel: Math.round((c.valorPlanejado - spent) * 100) / 100,
+        percentualUtilizado: Number(b.percentual ?? 0),
+      };
+    });
 }
 
 export async function createBudget(

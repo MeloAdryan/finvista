@@ -1,3 +1,5 @@
+import ContaAzulStatementPanel from "../components/ContaAzulStatementPanel";
+import { inspectStatement, type Statement } from "../services/contaAzulStatementService";
 import ContaAzulCoveragePanel from "../components/ContaAzulCoveragePanel";
 import ContaAzulConnectionPanel from "../components/ContaAzulConnectionPanel";
 import ContaAzulAutoPanel from "../components/ContaAzulAutoPanel";
@@ -27,10 +29,15 @@ type EstadoImportacao =
   | "concluido";
 
 function ImportData({ cliente }: { cliente: Cliente | null }) {
+  return <ImportDataWorkspace key={cliente?.id ?? "nenhum"} cliente={cliente} />;
+}
+
+function ImportDataWorkspace({ cliente }: { cliente: Cliente | null }) {
   const [modo, setModo] = useState<"conta-azul" | "padrao">("conta-azul");
   const [area, setArea] = useState<"automacao" | "consulta" | "arquivo">("automacao");
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const [statement, setStatement] = useState<Statement | null>(null);
   const [arquivo, setArquivo] = useState<File | null>(null);
 
   const [estado, setEstado] = useState<EstadoImportacao>("inicial");
@@ -54,6 +61,7 @@ function ImportData({ cliente }: { cliente: Cliente | null }) {
   }
 
   function selecionarArquivo(file: File) {
+    setStatement(null);
     setErro(null);
     setResultado(null);
     setLancamentos([]);
@@ -97,6 +105,12 @@ function ImportData({ cliente }: { cliente: Cliente | null }) {
       setEstado("analisando");
       setErro(null);
 
+      const extrato = await inspectStatement(arquivo);
+      if (extrato) {
+        setStatement(extrato);
+        setEstado("arquivo-selecionado");
+        return;
+      }
       const extensao = extensaoArquivo(arquivo);
 
       const resposta =
@@ -154,6 +168,7 @@ function ImportData({ cliente }: { cliente: Cliente | null }) {
   }
 
   function limparImportacao() {
+    setStatement(null);
     setArquivo(null);
     setLancamentos([]);
     setResultado(null);
@@ -248,7 +263,7 @@ function ImportData({ cliente }: { cliente: Cliente | null }) {
         </button>
       </div>
       <div style={{ display: modo === "conta-azul" ? "block" : "none" }}>
-        <ContaAzulImport cliente={cliente} />
+        <ContaAzulImport key={cliente?.id ?? "nenhum"} cliente={cliente} />
       </div>
       <div style={{ display: modo === "padrao" ? "block" : "none" }}>
         <section className="import-card">
@@ -319,7 +334,8 @@ function ImportData({ cliente }: { cliente: Cliente | null }) {
             </div>
           )}
 
-          {arquivo && estado === "arquivo-selecionado" && (
+          {statement && <ContaAzulStatementPanel key={statement.arquivo} statement={statement} file={arquivo!} cliente={cliente} />}
+          {arquivo && !statement && estado === "arquivo-selecionado" && (
             <div className="import-actions">
               <button
                 type="button"

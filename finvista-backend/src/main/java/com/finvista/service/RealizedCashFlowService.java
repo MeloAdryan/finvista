@@ -61,31 +61,10 @@ public class RealizedCashFlowService {
             }
             var o = atuais.get(t.getId());
             try {
-                if (o == null || ambiguos.contains(t.getId()) || !"CONTA_AZUL_API".equals(t.getOrigem())) {
-                    throw new IllegalArgumentException();
+                var audited = AuditedSettlementReader.read(t, o, ambiguos.contains(t.getId()), json, hoje);
+                for (var baixa : audited.pagamentos()) {
+                    movimentos.add(new Movimento(baixa.data(), baixa.liquido(), "RECEITA".equals(t.getTipo())));
                 }
-                var p = json.readValue(o.getOrigemSnapshot(), ContaAzulParcelDetail.class);
-                if (p.evento() == null || p.id() == null || !p.id().equalsIgnoreCase(t.getDocumentoReferencia())
-                        || !p.evento().tipo().equals(t.getTipo()) || !Objects.equals(p.evento().competencia(), t.getDataCompetencia())
-                        || !Objects.equals(p.status(), t.getSituacao())) {
-                    throw new IllegalArgumentException();
-                }
-                var v = ContaAzulSettlementPolicy.conferir(p);
-                if (t.getValor() == null || t.getValor().compareTo(v.original()) != 0
-                        || t.getValorTotalRealizado() == null || t.getValorTotalRealizado().compareTo(v.totalPago()) != 0
-                        || t.getValorRealizado() == null || t.getValorRealizado().compareTo(v.principalPago()) != 0
-                        || t.getValorTotalAberto() == null || t.getValorTotalAberto().compareTo(v.totalAberto()) != 0) {
-                    throw new IllegalArgumentException();
-                }
-                List<Movimento> parcela = new ArrayList<>();
-                for (var baixa : p.baixas() == null ? List.<ContaAzulParcelDetail.Baixa>of() : p.baixas()) {
-                    if (baixa.data().isAfter(hoje) || baixa.data().isBefore(LocalDate.of(2000, 1, 1))) {
-                        throw new IllegalArgumentException();
-                    }
-                    var c = baixa.composicao();
-                    parcela.add(new Movimento(baixa.data(), c.bruto().add(c.juros()).add(c.multa()).subtract(c.desconto()), "RECEITA".equals(t.getTipo())));
-                }
-                movimentos.addAll(parcela);
                 conhecidos++;
             } catch (Exception e) {
                 // Registro desconhecido não vira zero de caixa nem é alocado na competência.
@@ -107,7 +86,7 @@ public class RealizedCashFlowService {
         for (var m : movimentos) {
             if (m.data().isBefore(inicio)) {
                 saldo = saldo.add(m.receita() ? m.valor() : m.valor().negate());
-            }else if (!m.data().isAfter(fim)) {
+            } else if (!m.data().isAfter(fim)) {
                 var a = meses.get(YearMonth.from(m.data()));
                 a[m.receita() ? 0 : 1] = a[m.receita() ? 0 : 1].add(m.valor());
                 baixas++;

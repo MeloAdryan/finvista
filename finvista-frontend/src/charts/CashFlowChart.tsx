@@ -1,3 +1,5 @@
+import { FinancialChartPaint } from "../components/FinancialChartPaint";
+import { useChartAppearance } from "../services/chartAppearance";
 import { useState } from "react";
 import {
   Bar,
@@ -27,6 +29,8 @@ import {
 } from "../services/financialVisualization";
 import "../styles/financial-evolution.css";
 interface Props {
+  filtroAplicado?: boolean;
+  criterioLabel?: string;
   realizado?: boolean;
   dados: CashFlowData[];
   periodo: PeriodoFluxoCaixa;
@@ -34,12 +38,15 @@ interface Props {
   onPeriodoChange: (periodo: PeriodoFluxoCaixa) => void;
 }
 export default function CashFlowChart({
+  filtroAplicado = false,
+  criterioLabel,
   realizado = false,
   dados,
   periodo,
   carregando,
   onPeriodoChange,
 }: Props) {
+  const appearance = useChartAppearance();
   const rotuloReceita = realizado
     ? "Recebimentos líquidos conferidos"
     : "Receita registrada";
@@ -84,18 +91,23 @@ export default function CashFlowChart({
     ]);
   return (
     <section className="fe-card" aria-labelledby="fe-cash-title">
+      <FinancialChartPaint id={appearance.id} />
       <div className="fe-heading">
         <div>
           <span className="fe-eyebrow">Evolução financeira</span>
           <h1 id="fe-cash-title">
-            {realizado
-              ? "Caixa realizado por data de pagamento"
-              : "Evolução por competência"}
+            {criterioLabel
+              ? `Fluxo de caixa — ${criterioLabel}`
+              : realizado
+                ? "Caixa realizado por data de pagamento"
+                : "Evolução por competência"}
           </h1>
           <p>
-            {realizado
-              ? "Somente baixas conferidas, agrupadas pela data de pagamento, com juros, multas e descontos. Valores sem detalhamento não são estimados."
-              : "Valores registrados por competência, incluindo lançamentos em aberto. Não representa somente pagamentos e recebimentos."}
+            {criterioLabel
+              ? "Valores pelo critério e período selecionados, agrupados por mês. O recorte pode abranger parte de um mês."
+              : realizado
+                ? "Somente baixas conferidas, agrupadas pela data de pagamento, com juros, multas e descontos. Valores sem detalhamento não são estimados."
+                : "Valores registrados por competência, incluindo lançamentos em aberto. Não representa somente pagamentos e recebimentos."}
           </p>
         </div>
         <div className="fe-actions">
@@ -103,7 +115,7 @@ export default function CashFlowChart({
             <button
               type="button"
               key={p}
-              aria-pressed={periodo === p}
+              aria-pressed={!filtroAplicado && periodo === p}
               disabled={carregando}
               onClick={() => onPeriodoChange(p)}
             >
@@ -195,9 +207,10 @@ export default function CashFlowChart({
                     <Tooltip formatter={(v) => moedaFinanceira(Number(v))} />
                     <ReferenceLine y={0} stroke="#94a3b8" />
                     <Bar
+                      isAnimationActive={false}
                       dataKey="entradas"
                       name={rotuloReceita}
-                      fill="#3f806d"
+                      fill={appearance.fill("#3f806d")}
                       maxBarSize={34}
                     >
                       {meses.map((m) => (
@@ -208,9 +221,10 @@ export default function CashFlowChart({
                       ))}
                     </Bar>
                     <Bar
+                      isAnimationActive={false}
                       dataKey="saidas"
                       name={rotuloDespesa}
-                      fill="#c77d31"
+                      fill={appearance.fill("#c77d31")}
                       maxBarSize={34}
                     >
                       {meses.map((m) => (
@@ -221,6 +235,7 @@ export default function CashFlowChart({
                       ))}
                     </Bar>
                     <Line
+                      isAnimationActive={false}
                       type="linear"
                       dataKey="resultado"
                       name="Resultado mensal"
@@ -275,6 +290,7 @@ export default function CashFlowChart({
                     <Tooltip formatter={(v) => moedaFinanceira(Number(v))} />
                     <ReferenceLine y={0} stroke="#94a3b8" />
                     <Line
+                      isAnimationActive={false}
                       type="linear"
                       dataKey={
                         historico ? "acumuladoHistorico" : "acumuladoPeriodo"

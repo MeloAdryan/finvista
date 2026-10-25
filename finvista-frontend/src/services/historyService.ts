@@ -1,3 +1,5 @@
+import { historyForFilter } from "./financialPageAdapters";
+import type { ViewFilter } from "./financialViewService";
 import { API_URL } from "../config/api";
 
 export interface HistoryData {
@@ -12,7 +14,9 @@ export async function getHistory(
   inicio?: string,
   fim?: string,
   signal?: AbortSignal,
+  viewFilter?: ViewFilter,
 ): Promise<HistoryData[]> {
+  if (viewFilter) return historyForFilter(viewFilter, signal);
   const parametros = new URLSearchParams();
 
   if (inicio) {

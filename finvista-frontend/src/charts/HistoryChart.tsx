@@ -13,9 +13,9 @@ import type { HistoryData } from "../services/historyService";
 import "../styles/history.css";
 
 const series = [
-  { key: "receita", nome: "Receita", cor: "#3e806c" },
-  { key: "despesa", nome: "Despesa", cor: "#c47c32" },
-  { key: "resultado", nome: "Resultado", cor: "#3869c8" },
+  { key: "receita", nome: "Receita", cor: "var(--fv-chart-blue)" },
+  { key: "despesa", nome: "Despesa", cor: "var(--fv-chart-orange)" },
+  { key: "resultado", nome: "Resultado", cor: "var(--fv-chart-success)" },
 ] as const;
 export default function HistoryChart({ dados }: { dados: HistoryData[] }) {
   const [visiveis, setVisiveis] = useState<string[]>(series.map((s) => s.key));

@@ -6,20 +6,20 @@
 
 .meta-excluir {
   padding: 9px 14px;
-  border: 1px solid #b42318;
+  border: 1px solid var(--fv-dark-danger, #b42318);
   border-radius: 8px;
-  background: #fff;
-  color: #a11d15;
+  background: var(--fv-dark-surface, #fff);
+  color: var(--fv-dark-danger, #a11d15);
   font: inherit;
   cursor: pointer;
 }
 
 .meta-excluir:hover:not(:disabled) {
-  background: #fff1f0;
+  background: var(--fv-dark-surface, #fff1f0);
 }
 
 .meta-excluir:focus-visible {
-  outline: 3px solid #b42318;
+  outline: 3px solid var(--fv-dark-danger, #b42318);
   outline-offset: 3px;
 }
 
@@ -35,8 +35,8 @@
 .meta-exclusao-status:not(:empty) {
   padding: 12px 16px;
   margin-block-end: 16px;
-  border: 1px solid #8ec9b0;
+  border: 1px solid var(--fv-dark-border, #8ec9b0);
   border-radius: 8px;
-  background: #edf8f2;
-  color: #145539;
+  background: var(--fv-dark-success-soft, #edf8f2);
+  color: var(--fv-dark-text, #145539);
 }

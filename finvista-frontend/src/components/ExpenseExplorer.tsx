@@ -1,3 +1,5 @@
+import { useContext } from "react";
+import { FinancialViewContext, FinancialViewUpdateContext } from "../contexts/financialViewContext";
 import { useEffect, useState, type FormEvent } from "react";
 import {
   getExpenseAnalysis,
@@ -20,6 +22,8 @@ export default function ExpenseExplorer({
   prioridade?: "centros" | "categorias";
   revision?: number;
 }) {
+  const viewFilter=useContext(FinancialViewContext);
+  const updateView=useContext(FinancialViewUpdateContext);
   const { periodo, atualizarPeriodo } = useAnalysisPeriod();
   const [filtros, setFiltros] = useState<ExpenseFilters>(() => ({
     ...periodo,
@@ -43,7 +47,7 @@ export default function ExpenseExplorer({
     async function carregar() {
       setLoading(true);
       try {
-        const d = await getExpenseAnalysis(filtros, c.signal);
+        const d = await getExpenseAnalysis(filtros, c.signal, viewFilter ?? undefined);
         if (ativo) {
           setDados(d);
           atualizarPeriodo({
@@ -69,13 +73,15 @@ export default function ExpenseExplorer({
       ativo = false;
       c.abort();
     };
-  }, [filtros, revision, tentativa, atualizarPeriodo]);
+  }, [filtros, revision, tentativa, atualizarPeriodo, viewFilter]);
   function aplicar(e: FormEvent) {
     e.preventDefault();
     if (!draft.inicio || !draft.fim || draft.fim < draft.inicio) {
       setErro("Informe as duas datas em ordem válida.");
       return;
     }
+    if(viewFilter && updateView && (draft.inicio!==dados?.inicio || draft.fim!==dados?.fim))
+      updateView({...viewFilter,periodo:"PERSONALIZADO",inicio:draft.inicio,fim:draft.fim});
     setFiltros({ ...draft });
   }
   function selecionar(tipo: "centroCusto" | "categoria", nome: string) {

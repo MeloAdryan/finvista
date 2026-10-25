@@ -1,9 +1,9 @@
 .ca-parcel-detail {
-  border: 1px solid #ccdae8;
+  border: 1px solid var(--fv-dark-border, #ccdae8);
   border-radius: 10px;
   padding: 18px;
   margin-top: 18px;
-  background: #f8fafc;
+  background: var(--fv-dark-surface, #f8fafc);
 }
 .ca-parcel-detail-header {
   display: flex;
@@ -17,7 +17,7 @@
 }
 .ca-parcel-detail-id {
   overflow-wrap: anywhere;
-  color: #5f7388;
+  color: var(--fv-dark-muted, #5f7388);
 }
 .ca-parcel-detail-values {
   display: grid;
@@ -26,13 +26,13 @@
 }
 .ca-parcel-detail-values div {
   padding: 12px;
-  background: white;
-  border: 1px solid #e0e7f0;
+  background: var(--fv-dark-surface, white);
+  border: 1px solid var(--fv-dark-border, #e0e7f0);
   border-radius: 7px;
 }
 .ca-parcel-detail dt {
   font-size: 12px;
-  color: #5f7388;
+  color: var(--fv-dark-muted, #5f7388);
 }
 .ca-parcel-detail dd {
   margin: 6px 0 0;
@@ -43,8 +43,8 @@
 .ca-parcel-detail-category {
   padding: 12px;
   margin-top: 10px;
-  background: #fff;
-  border: 1px solid #e0e7f0;
+  background: var(--fv-dark-surface, #fff);
+  border: 1px solid var(--fv-dark-border, #e0e7f0);
   border-radius: 7px;
 }
 .ca-parcel-detail ul {
@@ -53,7 +53,7 @@
   padding-left: 20px;
 }
 .ca-parcel-detail-error {
-  color: #a32424;
+  color: var(--fv-dark-danger, #a32424);
 }
 @media (max-width: 650px) {
   .ca-parcel-detail-values {

@@ -9,33 +9,41 @@
 }
 .bc-summary > div {
   padding: 18px;
-  border: 1px solid #dce6ef;
+  border: 1px solid var(--fv-dark-border, #dce6ef);
   border-radius: 9px;
-  background: linear-gradient(180deg, #fff, #f5f8fc);
-  border-left: 3px solid #244968;
+  background: linear-gradient(
+    180deg,
+    var(--fv-dark-surface, #fff),
+    var(--fv-dark-surface, #f5f8fc)
+  );
+  border-left: 3px solid var(--fv-dark-border, #244968);
   min-width: 0;
   text-align: center;
 }
 .bc-summary > div:nth-child(2) {
-  border-left-color: #c27c37;
+  border-left-color: var(--fv-dark-warning, #c27c37);
 }
 .bc-summary > div:nth-child(3) {
-  border-left-color: #5080a8;
+  border-left-color: var(--fv-dark-info, #5080a8);
 }
 .bc-summary span {
   font-size: 11px;
-  color: #64748b;
+  color: var(--fv-dark-muted, #64748b);
 }
 .bc-summary strong {
   display: block;
   font-size: 19px;
   margin-top: 9px;
-  color: #153856;
+  color: var(--fv-dark-text, #153856);
   overflow-wrap: anywhere;
 }
 .bc-plot-card {
-  background: linear-gradient(180deg, #f8fafd, #f2f6fa);
-  border: 1px solid #dce6ef;
+  background: linear-gradient(
+    180deg,
+    var(--fv-dark-surface, #f8fafd),
+    var(--fv-dark-canvas, #f2f6fa)
+  );
+  border: 1px solid var(--fv-dark-border, #dce6ef);
   border-radius: 12px;
   padding: 18px 12px 10px;
   box-shadow: inset 0 1px 0 #fff;
@@ -52,7 +60,7 @@
   flex-wrap: wrap;
   gap: 18px;
   font-size: 12px;
-  color: #153856;
+  color: var(--fv-dark-text, #153856);
 }
 .bc-legend span {
   display: flex;
@@ -67,14 +75,14 @@
   box-shadow: 0 2px 3px rgba(21, 56, 86, 0.13);
 }
 .bc-planned-dot {
-  background: #244968;
+  background: var(--fv-dark-primary, #244968);
 }
 .bc-used-dot {
-  background: #c78039;
+  background: var(--fv-dark-warning-fill, #c78039);
 }
 .bc-highlight {
-  background: #fff;
-  border: 1px solid #dce6ef;
+  background: var(--fv-dark-surface, #fff);
+  border: 1px solid var(--fv-dark-border, #dce6ef);
   border-radius: 8px;
   padding: 10px 14px;
   text-align: right;
@@ -84,11 +92,11 @@
 .bc-highlight small {
   display: block;
   font-size: 10px;
-  color: #64748b;
+  color: var(--fv-dark-muted, #64748b);
 }
 .bc-highlight strong {
   display: block;
-  color: #a76528;
+  color: var(--fv-dark-warning, #a76528);
   font-size: 12px;
   margin: 5px 0;
   overflow-wrap: anywhere;
@@ -100,7 +108,7 @@
   max-width: 100%;
 }
 .bc-scroll:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--fv-dark-info, #2563eb);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -111,14 +119,14 @@
 }
 .bc-hint {
   font-size: 11px;
-  color: #64748b;
+  color: var(--fv-dark-muted, #64748b);
   text-align: center;
   line-height: 1.6;
   padding: 0 12px;
 }
 .bc-zero {
-  background: #f5f8fc;
-  border: 1px solid #dce6ef;
+  background: var(--fv-dark-surface, #f5f8fc);
+  border: 1px solid var(--fv-dark-border, #dce6ef);
   border-radius: 8px;
   padding: 12px 15px;
   margin-top: 16px;
@@ -127,7 +135,7 @@
 }
 .bc-zero p {
   margin: 5px 0 0;
-  color: #64748b;
+  color: var(--fv-dark-muted, #64748b);
 }
 .bc-results {
   display: grid;
@@ -136,7 +144,7 @@
   margin-top: 16px;
 }
 .bc-results > div {
-  border: 1px solid #dce6ef;
+  border: 1px solid var(--fv-dark-border, #dce6ef);
   border-radius: 8px;
   padding: 12px;
   display: flex;
@@ -149,25 +157,25 @@
   overflow-wrap: anywhere;
 }
 .bc-results span {
-  color: #64748b;
+  color: var(--fv-dark-muted, #64748b);
   font-size: 11px;
 }
 .bc-results b {
-  color: #153856;
+  color: var(--fv-dark-text, #153856);
 }
 .bc-result-exceeded b,
 .bc-result-exceeded span:last-child {
-  color: #b42318;
+  color: var(--fv-dark-danger, #b42318);
 }
 .bc-tooltip {
-  background: #fff;
-  border: 1px solid #c9d7e5;
+  background: var(--fv-dark-surface, #fff);
+  border: 1px solid var(--fv-dark-border, #c9d7e5);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(21, 56, 86, 0.15);
   padding: 14px;
   max-width: 320px;
   font-size: 12px;
-  color: #153856;
+  color: var(--fv-dark-text, #153856);
 }
 .bc-tooltip > strong,
 .bc-tooltip > small {
@@ -176,7 +184,7 @@
 .bc-tooltip > small {
   margin-top: 5px;
   line-height: 1.5;
-  color: #64748b;
+  color: var(--fv-dark-muted, #64748b);
 }
 .bc-tooltip dl {
   margin: 10px 0;
@@ -186,7 +194,7 @@
   justify-content: space-between;
   gap: 18px;
   padding: 5px 0;
-  border-bottom: 1px solid #edf1f6;
+  border-bottom: 1px solid var(--fv-dark-border, #edf1f6);
 }
 .bc-tooltip dd {
   margin: 0;
@@ -194,7 +202,7 @@
   white-space: nowrap;
 }
 .bc-tooltip dt {
-  color: #64748b;
+  color: var(--fv-dark-muted, #64748b);
 }
 @media (max-width: 600px) {
   .bc-summary {

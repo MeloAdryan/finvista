@@ -104,6 +104,8 @@ public class ExcelImportService {
                     Map<String, Integer> colunas
                             = mapearColunas(cabecalho);
 
+                    if(ContaAzulStatementService.isStatement(colunas.keySet())) throw new IllegalArgumentException(ContaAzulStatementService.IMPORT_GUIDANCE);
+
                     TipoLayout tipoLayout
                             = identificarLayout(colunas);
 

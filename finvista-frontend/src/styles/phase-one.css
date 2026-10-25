@@ -40,7 +40,7 @@
 
 .finvista-app button:focus-visible,
 .finvista-app a:focus-visible {
-  outline: 3px solid #315f87;
+  outline: 3px solid var(--fv-dark-info, #315f87);
   outline-offset: 3px;
 }
 
@@ -159,12 +159,12 @@
     gap: 12px;
     margin-top: 18px;
     padding-top: 16px;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--fv-dark-border, #e2e8f0);
   }
 
   .finvista-main .expense-mobile-controls p {
     margin: 0;
-    color: #667085;
+    color: var(--fv-dark-muted, #667085);
     font-size: 12px;
     text-align: center;
   }
@@ -173,10 +173,10 @@
     width: 100%;
     min-height: 44px;
     padding: 12px 16px;
-    border: 1px solid #315f87;
+    border: 1px solid var(--fv-dark-info, #315f87);
     border-radius: 10px;
-    background: #f5f8fb;
-    color: #173a5e;
+    background: var(--fv-dark-surface, #f5f8fb);
+    color: var(--fv-dark-text, #173a5e);
     font: inherit;
     font-size: 14px;
     font-weight: 700;
@@ -184,7 +184,7 @@
   }
 
   .finvista-main .expense-mobile-toggle:focus-visible {
-    outline: 3px solid #315f87;
+    outline: 3px solid var(--fv-dark-info, #315f87);
     outline-offset: 3px;
   }
 }

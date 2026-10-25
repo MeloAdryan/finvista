@@ -1,4 +1,7 @@
 import { API_URL } from "../config/api";
+import { goalTimelineForFilter } from "./financialPageAdapters";
+import type { ViewFilter } from "./financialViewService";
+import type { SpendingGoal } from "./spendingGoalService";
 export interface GoalTimeline {
   id: number;
   inicio: string;
@@ -24,7 +27,11 @@ export interface GoalTimeline {
 export async function obterAcompanhamento(
   id: number,
   signal: AbortSignal,
+  viewFilter?: ViewFilter,
+  meta?: SpendingGoal,
 ): Promise<GoalTimeline> {
+  if (viewFilter && meta)
+    return goalTimelineForFilter(viewFilter, meta, signal);
   const response = await fetch(
     `${API_URL}/api/metas-gastos/${id}/acompanhamento`,
     { credentials: "include", signal, cache: "no-store" },

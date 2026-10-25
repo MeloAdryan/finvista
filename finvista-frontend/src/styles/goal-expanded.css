@@ -72,7 +72,7 @@
   cursor: zoom-in;
 }
 .goal-progress-new button.goal-dial-trigger:hover {
-  background: #f6f8fb;
+  background: var(--fv-dark-surface, #f6f8fb);
 }
 .goal-dial svg {
   display: block;
@@ -81,7 +81,7 @@
   overflow: visible;
 }
 .goal-dial svg text {
-  fill: #5b6779;
+  fill: var(--fv-dark-muted, #5b6779);
   font-size: 12px;
   font-weight: 500;
 }
@@ -91,7 +91,7 @@
 }
 .goal-dial-caption > span {
   font-size: 13px;
-  color: #5b6779;
+  color: var(--fv-dark-muted, #5b6779);
 }
 .goal-dial-caption strong {
   font-size: 26px;
@@ -101,13 +101,13 @@
 .goal-dial-caption small {
   font-size: 12px;
   line-height: 1.5;
-  color: #5b6779;
+  color: var(--fv-dark-muted, #5b6779);
 }
 .gp-evolution-title {
   font-size: 18px;
   line-height: 1.4;
   margin: 20px 0 12px;
-  color: #173955;
+  color: var(--fv-dark-text, #173955);
 }
 .goal-progress-new .gp-chart {
   height: 320px;
@@ -125,10 +125,10 @@
   max-height: none;
   margin: auto;
   padding: 0;
-  border: 1px solid #d9e3ed;
+  border: 1px solid var(--fv-dark-border, #d9e3ed);
   border-radius: 16px;
-  background: white;
-  color: #173955;
+  background: var(--fv-dark-surface, white);
+  color: var(--fv-dark-text, #173955);
   box-shadow: 0 24px 64px rgba(15, 32, 51, 0.18);
   overflow: auto;
 }
@@ -143,8 +143,8 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  background: white;
-  border-bottom: 1px solid #e6e9ee;
+  background: var(--fv-dark-surface, white);
+  border-bottom: 1px solid var(--fv-dark-border, #e6e9ee);
   padding: 20px 24px;
 }
 .goal-detail-header > div {
@@ -153,13 +153,13 @@
 .goal-detail-header span {
   font-size: 12px;
   letter-spacing: 0.06em;
-  color: #5b6779;
+  color: var(--fv-dark-muted, #5b6779);
 }
 .goal-detail-header h2 {
   margin: 8px 0;
   font-size: 26px;
   line-height: 1.3;
-  color: #173955;
+  color: var(--fv-dark-text, #173955);
   text-align: left;
 }
 .goal-detail-header p {

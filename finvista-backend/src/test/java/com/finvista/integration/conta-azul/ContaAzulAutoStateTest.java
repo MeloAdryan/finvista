@@ -412,4 +412,61 @@ class ContaAzulAutoStateTest {
         assertThrows(IllegalArgumentException.class, () -> state.revisar(7L, antiga.id, 0));
     }
 
+
+    @Test
+    void modoCompletoNaoUsaPeriodoDoDashboardNemJanelaMovel() {
+        state.configurar(new Configurar(7L,true,LocalDate.of(2026,9,1),LocalDate.of(2026,9,30),30,true,true,true,true,true));
+        assertEquals(Boolean.TRUE,config.sincronizacaoCompleta);
+        assertEquals(Boolean.FALSE,config.periodoMovel);
+        assertEquals(ContaAzulFullScope.INICIO,config.inicio);
+        assertEquals(ContaAzulFullScope.FIM,config.fim);
+        assertTrue(state.status(7L,1).configuracao().sincronizacaoCompleta());
+    }
+
+    @Test
+    void modoCompletoReconsultaVinculoAntigoMesmoSemVencimento() {
+        config.sincronizacaoCompleta=true;
+        var t=new FinancialTransaction();t.setOrigem("CONTA_AZUL_API");t.setDocumentoReferencia(id);t.setTipo("RECEITA");
+        when(tx.findByClienteIdAndOrigemOrderByIdAsc(7L,"CONTA_AZUL_API")).thenReturn(List.of(t));
+        var reserva=state.assumir(7L);
+        assertTrue(state.cursor(reserva).completa());
+        assertEquals(ContaAzulFullScope.INICIO,state.cursor(reserva).inicio());
+        assertEquals(id,state.proximo(reserva).parcelaId);
+    }
+
+    @Test
+    void modoCompletoExigeTransferenciasESaldosAntesDeConcluir() throws Exception {
+        var archive=mock(ContaAzulSourceCaptureRepository.class);
+        var mapper=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        ReflectionTestUtils.setField(state,"fontes",archive);ReflectionTestUtils.setField(state,"json",mapper);
+        config.sincronizacaoCompleta=true;var reserva=state.assumir(7L);
+        state.pagina(reserva,new ContaAzulFinancialClient.Pagina(0,List.of()));
+        state.pagina(reserva,new ContaAzulFinancialClient.Pagina(0,List.of()));
+        assertEquals(2,state.cursor(reserva).etapa());
+        assertThrows(ContaAzulAutoState.ReservaPerdida.class,()->state.devolver(reserva,true));
+        var body=mapper.readTree("{\"itens_totais\":0,\"itens\":[]}");
+        state.paginaMovimentos(reserva,new ContaAzulMovementClient.Pagina(0,List.of(),body));
+        assertEquals(3,state.cursor(reserva).etapa());
+        state.paginaMovimentos(reserva,new ContaAzulMovementClient.Pagina(0,List.of(),body));
+        assertEquals(4,state.cursor(reserva).etapa());
+        state.devolver(reserva,true);
+        assertEquals("CONCLUIDA",execucoes.get(reserva.execucaoId()).status);
+        verify(archive,times(2)).saveAndFlush(any());
+    }
+
+    @Test
+    void capturaRepetidaTemMesmaIdentidadeEClienteDaReserva() throws Exception {
+        var archive=mock(ContaAzulSourceCaptureRepository.class);
+        var mapper=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        ReflectionTestUtils.setField(state,"fontes",archive);ReflectionTestUtils.setField(state,"json",mapper);
+        config.sincronizacaoCompleta=true;var reserva=state.assumir(7L);
+        var body=mapper.readTree("{\"id\":\"parcela\",\"campo_extra\":\"preservado\"}");
+        state.arquivar(reserva,"PARCELA",id,body);state.arquivar(reserva,"PARCELA",id,body);
+        var captor=org.mockito.ArgumentCaptor.forClass(ContaAzulSourceCapture.class);verify(archive,times(2)).saveAndFlush(captor.capture());
+        assertEquals(captor.getAllValues().get(0).id,captor.getAllValues().get(1).id);
+        assertEquals(7L,captor.getValue().clienteId);assertTrue(captor.getValue().conteudo.contains("campo_extra"));
+        config.habilitada=false;
+        assertThrows(ContaAzulAutoState.ReservaPerdida.class,()->state.arquivar(reserva,"PARCELA",id,body));
+        assertThrows(IllegalArgumentException.class,()->state.fontes(8L,reserva.execucaoId(),"PARCELA",1));
+    }
 }

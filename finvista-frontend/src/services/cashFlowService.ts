@@ -1,3 +1,5 @@
+import { cashForFilter } from "./financialPageAdapters";
+import type { ViewFilter } from "./financialViewService";
 import { API_URL } from "../config/api";
 
 export type PeriodoFluxoCaixa = 6 | 12 | "todos";
@@ -12,7 +14,9 @@ export interface CashFlowData {
 
 export async function getCashFlow(
   periodo: PeriodoFluxoCaixa = 6,
+  viewFilter?: ViewFilter,
 ): Promise<CashFlowData[]> {
+  if (viewFilter) return (await cashForFilter(viewFilter)).meses;
   const params = new URLSearchParams();
 
   params.set("periodo", String(periodo));
@@ -65,7 +69,9 @@ export interface RealizedCashFlow {
 export async function getRealizedCashFlow(
   periodo: PeriodoFluxoCaixa,
   signal: AbortSignal,
+  viewFilter?: ViewFilter,
 ): Promise<RealizedCashFlow> {
+  if (viewFilter) return cashForFilter(viewFilter, signal);
   const r = await fetch(
     `${API_URL}/api/fluxo-caixa/realizado?periodo=${periodo}`,
     { credentials: "include", cache: "no-store", signal },

@@ -30,7 +30,7 @@
     .metas-filtros-descricao,
     .metas-filtros-nota
   ) {
-  color: #5b6779;
+  color: var(--fv-dark-muted, #5b6779);
   font-size: 13px;
 }
 .finvista-main
@@ -175,11 +175,11 @@
 }
 
 .finvista-main .recharts-cartesian-axis-tick text {
-  fill: #5b6779;
+  fill: var(--fv-dark-muted, #5b6779);
   font-size: 12px;
 }
 .finvista-main .recharts-cartesian-grid line {
-  stroke: #e6e9ee;
+  stroke: var(--fv-dark-border, #e6e9ee);
 }
 .finvista-main :is(.fe-legend, .gp-legend, .bc-legend, .fv-history-legend) {
   font-size: 12px;
@@ -188,7 +188,7 @@
 }
 
 .finvista-login-message h1 {
-  color: #eaf0f7;
+  color: var(--fv-dark-on-solid, #eaf0f7);
   font-size: clamp(38px, 4vw, 48px);
   line-height: 1.15;
   letter-spacing: -0.025em;
@@ -199,33 +199,33 @@
     .finvista-login-message p,
     .finvista-login-features small
   ) {
-  color: #c3d0e0;
+  color: var(--fv-dark-muted, #c3d0e0);
 }
 .finvista-login-card-header p,
 .finvista-login-security small,
 .finvista-login-footer,
 .finvista-login-input input::placeholder {
-  color: #5b6779;
+  color: var(--fv-dark-muted, #5b6779);
 }
 .finvista-login-card-header > span {
-  color: #96531d;
+  color: var(--fv-dark-warning, #96531d);
 }
 .finvista-login-submit {
-  background: #d98a3c;
-  color: #0e2038;
+  background: var(--fv-dark-warning-fill, #d98a3c);
+  color: var(--fv-dark-text, #0e2038);
 }
 .finvista-login-submit:hover:not(:disabled) {
-  background: #e49951;
+  background: var(--fv-dark-warning-fill, #e49951);
 }
 .finvista-login-input {
-  background: #fff;
+  background: var(--fv-dark-surface, #fff);
 }
 .finvista-login-input:focus-within {
-  border-color: #b46621;
+  border-color: var(--fv-dark-warning, #b46621);
   box-shadow: 0 0 0 2px #d98a3c;
 }
 .finvista-login-input input {
-  background: #fff;
+  background: var(--fv-dark-surface, #fff);
 }
 .finvista-login-security strong,
 .finvista-login-security small {
@@ -242,10 +242,10 @@
   min-height: 40px;
   margin-top: 20px;
   padding: 8px 16px;
-  border: 1px solid #b9c7d7;
+  border: 1px solid var(--fv-dark-border, #b9c7d7);
   border-radius: 8px;
-  background: #fff;
-  color: #14202e;
+  background: var(--fv-dark-surface, #fff);
+  color: var(--fv-dark-text, #14202e);
   font-size: 14px;
   cursor: pointer;
 }
@@ -255,7 +255,7 @@
     .finvista-client-selector-list-header p,
     .finvista-client-selector-footer
   ) {
-  color: #5b6779;
+  color: var(--fv-dark-muted, #5b6779);
   font-size: 12px;
 }
 .ar-page {
@@ -265,18 +265,18 @@
   min-width: 0;
 }
 .finvista-navigation-label {
-  color: #b2c3d6;
+  color: var(--fv-dark-muted, #b2c3d6);
   font-size: 11px;
 }
 .finvista-nav-item {
-  color: #d0dbea;
+  color: var(--fv-dark-muted, #d0dbea);
   font-size: 13px;
 }
 .finvista-brand-text small,
 .finvista-system-status small,
 .finvista-sidebar-version,
 .finvista-sidebar-version span {
-  color: #b2c3d6;
+  color: var(--fv-dark-muted, #b2c3d6);
   font-size: 11px;
 }
 .finvista-sidebar {
@@ -292,7 +292,7 @@
 }
 .finvista-topbar-user-info small,
 .finvista-topbar-eyebrow {
-  color: #96531d;
+  color: var(--fv-dark-warning, #96531d);
   font-size: 10px;
 }
 .finvista-topbar-user-info strong {
@@ -300,11 +300,11 @@
 }
 .finvista-topbar-status small,
 .finvista-topbar-period small {
-  color: #5b6779;
+  color: var(--fv-dark-muted, #5b6779);
   font-size: 10px;
 }
 .finvista-footer :is(small, .finvista-footer-copyright) {
-  color: #c3d0e0;
+  color: var(--fv-dark-muted, #c3d0e0);
   font-size: 11px;
 }
 
@@ -316,11 +316,11 @@
     .goal-detail-dialog
   )
   :is(button, a, input, select, textarea, summary):focus-visible {
-  outline: 3px solid #b46621;
+  outline: 3px solid var(--fv-dark-warning, #b46621);
   outline-offset: 3px;
 }
 .finvista-sidebar :is(a, button):focus-visible {
-  outline-color: #e49951;
+  outline-color: var(--fv-dark-warning, #e49951);
 }
 @media (max-width: 900px) {
   .finvista-main {
@@ -400,7 +400,7 @@
   align-items: start;
 }
 .finvista-nav-item-active {
-  color: #fff;
+  color: var(--fv-dark-on-solid, #fff);
 }
 
 .finvista-sidebar-inner {

@@ -31,10 +31,14 @@
   inset: 0 auto 0 0;
   z-index: 100;
   overflow: visible;
-  background: linear-gradient(165deg, #0f2a47 0%, #0b2038 100%);
+  background: linear-gradient(
+    165deg,
+    var(--fv-dark-primary, #0f2a47) 0%,
+    var(--fv-dark-primary, #0b2038) 100%
+  );
   box-shadow: 4px 0 24px #0814262e;
   border: 0;
-  color: #c9d6e8;
+  color: var(--fv-dark-muted, #c9d6e8);
   transform: none;
   transition: width 0.18s ease;
 }
@@ -110,7 +114,7 @@
   opacity: 1;
   padding: 8px 14px 10px;
   margin: 0;
-  color: #8fa6c4;
+  color: var(--fv-dark-muted, #8fa6c4);
   font-size: 11px;
   line-height: 1.5;
   letter-spacing: 0.1em;
@@ -137,7 +141,7 @@
   border-radius: 8px;
   background: transparent;
   box-shadow: none;
-  color: #c9d6e8;
+  color: var(--fv-dark-muted, #c9d6e8);
   text-decoration: none;
   font-size: 14px;
   line-height: 1.45;
@@ -157,7 +161,7 @@
 }
 .finvista-shell-v2 .finvista-nav-item:hover {
   background: #ffffff0f;
-  color: #fff;
+  color: var(--fv-dark-on-solid, #fff);
   transform: none;
   border: 0;
   box-shadow: none;
@@ -217,10 +221,10 @@
   height: 28px;
   min-height: 28px;
   padding: 0;
-  border: 1px solid #dfe6ef;
+  border: 1px solid var(--fv-dark-border, #dfe6ef);
   border-radius: 50%;
-  background: white;
-  color: #284564;
+  background: var(--fv-dark-surface, white);
+  color: var(--fv-dark-text, #284564);
   box-shadow: 0 2px 8px #08142629;
   z-index: 3;
   transform: none;
@@ -262,9 +266,9 @@
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  background: #21466e;
+  background: var(--fv-dark-primary, #21466e);
   color: white;
-  border: 2px solid #577293;
+  border: 2px solid var(--fv-dark-info, #577293);
   font-size: 16px;
   font-weight: 700;
 }
@@ -275,7 +279,7 @@
   gap: 4px;
 }
 .finvista-shell-v2 .finvista-user-info strong {
-  color: #fff;
+  color: var(--fv-dark-on-solid, #fff);
   font-size: 14px;
   font-weight: 650;
   overflow: hidden;
@@ -284,7 +288,7 @@
 }
 .finvista-shell-v2 .finvista-user-info > span {
   font-size: 12px;
-  color: #9eb3ce;
+  color: var(--fv-dark-muted, #9eb3ce);
 }
 .finvista-shell-v2 .finvista-sidebar-logout {
   display: flex;
@@ -295,7 +299,7 @@
   border: 1px solid #ffffff24;
   border-radius: 8px;
   background: #ffffff08;
-  color: #c9d6e8;
+  color: var(--fv-dark-muted, #c9d6e8);
   font: inherit;
   font-size: 14px;
   cursor: pointer;
@@ -307,7 +311,7 @@
 }
 .finvista-shell-v2 .finvista-sidebar-logout:hover {
   background: #ffffff0f;
-  color: #fff;
+  color: var(--fv-dark-on-solid, #fff);
 }
 .finvista-shell-v2 .finvista-sidebar-logout svg {
   width: 20px;
@@ -338,7 +342,7 @@
   gap: 16px;
   min-height: 72px;
   padding: 16px 28px;
-  background: #fff;
+  background: var(--fv-dark-surface, #fff);
   border: 0;
   box-shadow: 0 1px 0 #0f2a4714;
   backdrop-filter: none;
@@ -355,13 +359,13 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
-  color: #6a7b91;
+  color: var(--fv-dark-muted, #6a7b91);
   font-size: 14px;
   line-height: 1.5;
   white-space: nowrap;
 }
 .finvista-shell-v2 .finvista-breadcrumb > span:last-child {
-  color: #163655;
+  color: var(--fv-dark-text, #163655);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -381,30 +385,30 @@
   gap: 8px;
   min-height: 36px;
   padding: 7px 12px;
-  border: 1px solid #e3e8f0;
+  border: 1px solid var(--fv-dark-border, #e3e8f0);
   border-radius: 24px;
-  color: #405a76;
+  color: var(--fv-dark-muted, #405a76);
   font-size: 13px;
-  background: #fff;
+  background: var(--fv-dark-surface, #fff);
   white-space: nowrap;
 }
 .finvista-shell-v2 .finvista-data-badge i {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #3e77b9;
+  background: var(--fv-dark-info-fill, #3e77b9);
 }
 .finvista-shell-v2 .finvista-reference-badge svg {
   width: 17px;
   height: 17px;
   fill: none;
-  stroke: #6d819a;
+  stroke: var(--fv-dark-border, #6d819a);
   stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 .finvista-shell-v2 .finvista-reference-label {
-  color: #718198;
+  color: var(--fv-dark-muted, #718198);
 }
 .finvista-shell-v2 .finvista-main {
   width: 100%;
@@ -430,11 +434,11 @@
     .finvista-mobile-menu-button,
     .finvista-drawer-close
   ):focus-visible {
-  outline: 2px solid #82b7f4;
+  outline: 2px solid var(--fv-dark-border, #82b7f4);
   outline-offset: 3px;
 }
 .finvista-shell-v2 .finvista-main :is(input, select, textarea):focus-visible {
-  outline: 2px solid #2a78d6;
+  outline: 2px solid var(--fv-dark-info, #2a78d6);
   outline-offset: 2px;
 }
 .finvista-shell-v2
@@ -574,7 +578,7 @@
     border: 1px solid #ffffff26;
     border-radius: 50%;
     background: #ffffff0a;
-    color: #c9d6e8;
+    color: var(--fv-dark-muted, #c9d6e8);
     cursor: pointer;
   }
   .finvista-shell-v2 .finvista-drawer-close svg {
@@ -624,9 +628,9 @@
     height: 36px;
     min-height: 36px;
     padding: 8px;
-    border: 1px solid #dbe3ed;
+    border: 1px solid var(--fv-dark-border, #dbe3ed);
     border-radius: 8px;
-    background: white;
+    background: var(--fv-dark-surface, white);
     box-shadow: none;
     transform: none;
   }
@@ -634,7 +638,7 @@
     display: block;
     width: 17px;
     height: 2px;
-    background: #264767;
+    background: var(--fv-dark-primary, #264767);
     border-radius: 2px;
     margin: 0;
   }

@@ -1,3 +1,5 @@
+import {useContext} from "react";
+import {FinancialViewContext, FinancialViewUpdateContext} from "../contexts/financialViewContext";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 
@@ -24,6 +26,8 @@ import {
 } from "../services/budgetAnalysis";
 
 function Budgets() {
+  const viewFilter=useContext(FinancialViewContext);
+  const updateView=useContext(FinancialViewUpdateContext);
   const { search } = useLocation();
   const [orcamentoAlvo] = useState(
     () => Number(new URLSearchParams(search).get("orcamento")) || null,
@@ -56,16 +60,18 @@ function Budgets() {
   });
 
   useEffect(() => {
+    let ativo = true;
     async function carregarPagina() {
       try {
         setCarregando(true);
         setErro(null);
 
         const [dadosOrcamentos, usuarioAtual] = await Promise.all([
-          getBudgetPipeline(),
+          getBudgetPipeline(viewFilter ?? undefined),
           obterUsuarioAtual(),
         ]);
 
+        if (!ativo) return;
         setOrcamentos(dadosOrcamentos);
         const recente =
           dadosOrcamentos.find((item) => item.id === orcamentoAlvo) ??
@@ -74,7 +80,7 @@ function Budgets() {
               b.dataInicio.localeCompare(a.dataInicio) ||
               b.dataFim.localeCompare(a.dataFim),
           )[0];
-        if (recente) {
+        if (recente && !viewFilter) {
           setFiltro({
             modo: "EXATO",
             inicio: recente.dataInicio,
@@ -85,6 +91,7 @@ function Budgets() {
         }
         setUsuario(usuarioAtual);
       } catch (error) {
+        if (!ativo) return;
         console.error("Erro ao carregar orçamentos:", error);
 
         if (error instanceof Error) {
@@ -93,12 +100,13 @@ function Budgets() {
           setErro("Não foi possível carregar os orçamentos.");
         }
       } finally {
-        setCarregando(false);
+        if (ativo) setCarregando(false);
       }
     }
 
     void carregarPagina();
-  }, [orcamentoAlvo]);
+    return () => { ativo = false; };
+  }, [orcamentoAlvo, viewFilter]);
 
   const visiveis = useMemo(
     () => filtrarOrcamentos(orcamentos, filtro),
@@ -210,6 +218,8 @@ function Budgets() {
         centroCusto: novoOrcamento.centroCusto?.trim() || null,
         categoria: novoOrcamento.categoria?.trim() || null,
       });
+
+      if (viewFilter && updateView) updateView({...viewFilter,periodo:"PERSONALIZADO",inicio:cadastrado.dataInicio,fim:cadastrado.dataFim});
 
       setOrcamentos((atuais) => [...atuais, cadastrado]);
 
@@ -490,9 +500,9 @@ function Budgets() {
           . {visiveis.length} orçamento(s).
         </p>
         <p className="ba-note">
-          O filtro seleciona orçamentos. Valores planejados e utilizados
-          permanecem calculados no período completo de cada um, sem ratear o
-          limite por dias.
+          O período cadastrado seleciona os orçamentos exibidos. O consumo
+          segue o critério e o período de análise selecionados. O limite
+          cadastrado não é rateado por dias.
         </p>
         {erroFiltro && (
           <p role="alert" className="ba-error">

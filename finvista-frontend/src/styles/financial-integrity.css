@@ -2,10 +2,10 @@
 .ca-coverage {
   margin: 20px 0;
   padding: 20px;
-  border: 1px solid #cfdae7;
+  border: 1px solid var(--fv-dark-border, #cfdae7);
   border-radius: 12px;
-  background: #fff;
-  color: #153653;
+  background: var(--fv-dark-surface, #fff);
+  color: var(--fv-dark-text, #153653);
   font-size: 14px;
   line-height: 1.6;
   overflow-wrap: anywhere;
@@ -26,10 +26,10 @@
 .ca-coverage input {
   max-width: 100%;
   min-height: 40px;
-  border: 1px solid #bacadd;
+  border: 1px solid var(--fv-dark-border, #bacadd);
   border-radius: 8px;
   padding: 8px;
-  background: #fff;
+  background: var(--fv-dark-surface, #fff);
   color: inherit;
   font: inherit;
 }
@@ -40,7 +40,7 @@
 .ca-run-review li,
 .ca-coverage li {
   padding: 12px 0;
-  border-bottom: 1px solid #e1e8f0;
+  border-bottom: 1px solid var(--fv-dark-border, #e1e8f0);
 }
 .ca-run-review button,
 .ca-coverage button {
@@ -48,9 +48,9 @@
   margin: 4px 8px 4px 0;
   white-space: normal;
   font: inherit;
-  border: 1px solid #bacadd;
-  background: #f6f9fc;
-  color: #173c5a;
+  border: 1px solid var(--fv-dark-border, #bacadd);
+  background: var(--fv-dark-surface, #f6f9fc);
+  color: var(--fv-dark-text, #173c5a);
   border-radius: 8px;
   padding: 8px 12px;
   cursor: pointer;
@@ -71,20 +71,20 @@
   margin-bottom: 16px;
 }
 .cash-flow-basis button[aria-pressed="true"] {
-  background: #173c5a;
-  color: #fff;
-  border-color: #173c5a;
+  background: var(--fv-dark-primary, #173c5a);
+  color: var(--fv-dark-on-solid, #fff);
+  border-color: var(--fv-dark-border, #173c5a);
 }
 .ca-run-review [role="alert"],
 .ca-coverage [role="alert"] {
   padding: 12px;
-  background: #fff2eb;
-  color: #863d20;
+  background: var(--fv-dark-warning-soft, #fff2eb);
+  color: var(--fv-dark-danger, #863d20);
   border-radius: 8px;
 }
 .ca-run-review :focus-visible,
 .ca-coverage :focus-visible {
-  outline: 2px solid #2a78d6;
+  outline: 2px solid var(--fv-dark-info, #2a78d6);
   outline-offset: 2px;
 }
 @media (max-width: 600px) {

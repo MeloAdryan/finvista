@@ -1,9 +1,9 @@
 .ca-import {
-  background: #fff;
-  border: 1px solid #dce5ee;
+  background: var(--fv-dark-surface, #fff);
+  border: 1px solid var(--fv-dark-border, #dce5ee);
   border-radius: 14px;
   padding: 24px;
-  color: #17344f;
+  color: var(--fv-dark-text, #17344f);
 }
 .ca-import h2,
 .ca-import h3 {
@@ -24,17 +24,17 @@
 .ca-import button {
   font: inherit;
   min-height: 44px;
-  border: 1px solid #cfdae7;
+  border: 1px solid var(--fv-dark-border, #cfdae7);
   border-radius: 8px;
   padding: 10px 12px;
   color: inherit;
-  background: #fff;
+  background: var(--fv-dark-surface, #fff);
 }
 .ca-import input:focus-visible,
 .ca-import select:focus-visible,
 .ca-import button:focus-visible,
 .ca-import summary:focus-visible {
-  outline: 3px solid #3b82f6;
+  outline: 3px solid var(--fv-dark-info, #3b82f6);
   outline-offset: 2px;
 }
 .ca-import button {
@@ -46,9 +46,9 @@
   cursor: default;
 }
 .ca-import .ca-primary {
-  background: #bb7a36;
-  color: #fff;
-  border-color: #bb7a36;
+  background: var(--fv-dark-warning-fill, #bb7a36);
+  color: var(--fv-dark-on-solid, #fff);
+  border-color: var(--fv-dark-warning, #bb7a36);
 }
 .ca-inputs {
   display: grid;
@@ -64,12 +64,12 @@
 .ca-destination,
 .ca-result,
 .ca-candidate {
-  background: #f3f7fb;
+  background: var(--fv-dark-canvas, #f3f7fb);
   padding: 12px;
   border-radius: 8px;
 }
 .ca-result {
-  border-left: 4px solid #3c8068;
+  border-left: 4px solid var(--fv-dark-success, #3c8068);
   margin: 16px 0;
 }
 .ca-summary {
@@ -82,7 +82,7 @@
   display: grid;
   gap: 8px;
   padding: 14px;
-  background: #f3f7fb;
+  background: var(--fv-dark-canvas, #f3f7fb);
   border-radius: 8px;
 }
 .ca-summary span {
@@ -108,11 +108,11 @@
 .ca-scroll th,
 .ca-scroll td {
   padding: 14px;
-  border-bottom: 1px solid #e3eaf2;
+  border-bottom: 1px solid var(--fv-dark-border, #e3eaf2);
   vertical-align: top;
 }
 .ca-scroll th {
-  background: #f3f7fb;
+  background: var(--fv-dark-canvas, #f3f7fb);
 }
 .ca-scroll td:nth-child(2) {
   width: 52%;
@@ -136,13 +136,13 @@
   font-size: 12px;
 }
 .ca-error {
-  color: #a32323;
-  background: #fff2f2;
+  color: var(--fv-dark-danger, #a32323);
+  background: var(--fv-dark-surface, #fff2f2);
   padding: 10px;
   border-radius: 6px;
 }
 .ca-notice {
-  color: #81551d;
+  color: var(--fv-dark-text, #81551d);
   font-size: 12px;
 }
 .ca-pages {
@@ -158,7 +158,7 @@
 .ca-confirm {
   display: grid;
   gap: 12px;
-  border-top: 1px solid #e3eaf2;
+  border-top: 1px solid var(--fv-dark-border, #e3eaf2);
   margin-top: 20px;
   padding-top: 20px;
 }
@@ -182,15 +182,15 @@
   min-height: 44px;
   padding: 10px 16px;
   border-radius: 8px;
-  border: 1px solid #d0dce8;
-  background: white;
-  color: #17344f;
+  border: 1px solid var(--fv-dark-border, #d0dce8);
+  background: var(--fv-dark-surface, white);
+  color: var(--fv-dark-text, #17344f);
   font-weight: 600;
   cursor: pointer;
 }
 .ca-mode button[aria-pressed="true"] {
-  background: #17344f;
-  color: #fff;
+  background: var(--fv-dark-primary, #17344f);
+  color: var(--fv-dark-on-solid, #fff);
 }
 @media (max-width: 700px) {
   .ca-import {

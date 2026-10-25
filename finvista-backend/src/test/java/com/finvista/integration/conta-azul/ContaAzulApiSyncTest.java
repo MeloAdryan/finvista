@@ -17,7 +17,7 @@ import static org.mockito.Mockito.*;
 
 class ContaAzulApiSyncTest {
 
-
+    
 
           private static final String ID = "9986f173-f531-4660-96ae-04b71c879264";
         private final FinancialTransactionRepository tx = mock(FinancialTransactionRepository.class);
@@ -76,7 +76,9 @@ class ContaAzulApiSyncTest {
                 operations.put(op.getId(), op);
                 return op;
             });
-            when(clock.instant()).thenReturn(Instant.parse("2026-10-17T12:00:00Z"));
+            when(audit.findFirstByClienteIdAndLancamentoIdOrderByConcluidoEmDescIdDesc(eq(7L), anyLong())).thenAnswer(i -> operations.values().stream().filter(o -> o.getLancamentoId().equals(i.getArgument(1))).max(Comparator.comparing(ContaAzulApiOperation::getConcluidoEm).thenComparing(ContaAzulApiOperation::getId)));
+            var ticks = new java.util.concurrent.atomic.AtomicLong();
+            when(clock.instant()).thenAnswer(i -> Instant.parse("2026-10-17T12:00:00Z").plusMillis(ticks.getAndIncrement()));
             var properties = new ContaAzulProperties();
             properties.setEncryptionKey(Base64.getEncoder().encodeToString(new byte[32]));
             service = new ContaAzulApiSyncService(connections, source, new ContaAzulApiPlanService(tx, context),
@@ -751,4 +753,18 @@ class ContaAzulApiSyncTest {
             assertEquals(2, operations.size());
             assertEquals(1, records.size());
         }
+
+        @Test
+        void automaticoRecuperaSnapshotAusenteSemDuplicarLancamento() {
+            service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), parcela("RECEITA", "50"), true);
+            operations.clear();
+            var resultado = service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), parcela("RECEITA", "50"), true);
+            assertEquals("ATUALIZAR", resultado.acao());
+            assertEquals(1, records.size());
+            assertEquals(1, operations.size());
+        }
     }
+
+                                                      
+         
+             

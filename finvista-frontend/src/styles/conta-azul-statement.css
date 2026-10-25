@@ -1,0 +1,116 @@
+.ca-statement {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid var(--fv-dark-border, #cbd5e3);
+  border-radius: 12px;
+  background: var(--fv-dark-surface, #f7f9fc);
+  color: var(--fv-dark-text, #0f2a47);
+}
+.ca-statement p {
+  line-height: 1.6;
+}
+.ca-statement-filters {
+  display: flex;
+  align-items: end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+.ca-statement-filters label {
+  display: grid;
+  gap: 8px;
+}
+.ca-statement input,
+.ca-statement button {
+  min-height: 40px;
+  border: 1px solid var(--fv-dark-border, #cbd5e3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--fv-dark-surface, #fff);
+  color: var(--fv-dark-text, #0f2a47);
+}
+.ca-statement :focus-visible {
+  outline: 2px solid var(--fv-dark-info, #2a78d6);
+  outline-offset: 2px;
+}
+.ca-statement-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.ca-statement-summary > div {
+  display: grid;
+  gap: 8px;
+  background: var(--fv-dark-surface, #fff);
+  padding: 16px;
+  border-radius: 8px;
+}
+.ca-statement-summary strong {
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+.ca-statement-table {
+  overflow-x: auto;
+  max-width: 100%;
+  margin: 16px 0;
+}
+.ca-statement table {
+  width: 100%;
+  min-width: 850px;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+.ca-statement th,
+.ca-statement td {
+  padding: 12px;
+  border-bottom: 1px solid var(--fv-dark-border, #e3e8f0);
+  vertical-align: top;
+}
+.ca-statement small {
+  display: block;
+  margin-top: 6px;
+}
+.ca-statement nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.ca-statement button:disabled {
+  opacity: 0.5;
+}
+.ca-statement-import {
+  margin: 24px 0;
+  padding: 20px;
+  border: 1px solid var(--fv-dark-border, #b8cbe3);
+  border-radius: 12px;
+  background: var(--fv-dark-surface, #fff);
+}
+.ca-statement-confirm {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+  margin: 16px 0;
+  line-height: 1.5;
+}
+.ca-statement-confirm input {
+  min-height: 20px;
+  min-width: 20px;
+  margin-top: 2px;
+}
+.ca-statement details {
+  margin-top: 8px;
+}
+.ca-statement summary {
+  cursor: pointer;
+}
+.ca-statement dt {
+  font-weight: 600;
+}
+.ca-statement dd {
+  margin: 4px 0 12px;
+  max-width: 320px;
+  overflow-wrap: anywhere;
+}

@@ -1,3 +1,6 @@
+import { useContext } from "react";
+import { FinancialViewContext, FinancialViewUpdateContext } from "../contexts/financialViewContext";
+import { viewRange } from "../services/financialViewService";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { getHistory, type HistoryData } from "../services/historyService";
 import { obterReferenciaFinanceira } from "../services/financialReferenceService";
@@ -22,6 +25,8 @@ function nomeMes(mes: string) {
 }
 
 export default function History() {
+  const viewFilter=useContext(FinancialViewContext);
+  const updateView=useContext(FinancialViewUpdateContext);
   const [inicio, setInicio] = useState("");
   const [fim, setFim] = useState("");
   const [referencia, setReferencia] = useState("");
@@ -39,18 +44,23 @@ export default function History() {
     const controller = new AbortController();
     request.current = controller;
     async function abrir() {
+      setCarregando(true);
+      setErro(null);
+      setPagina(0);
       try {
         const ref = await obterReferenciaFinanceira();
         if (controller.signal.aborted) return;
-        const ultimo = `${ref.ano}-${String(ref.mes).padStart(2, "0")}`;
-        const primeiro = recuarMeses(ultimo, 11);
+        const range=viewFilter?viewRange(viewFilter):null;
+        const ultimo = range?.fim.slice(0,7) ?? `${ref.ano}-${String(ref.mes).padStart(2, "0")}`;
+        const primeiro = range?.inicio.slice(0,7) ?? recuarMeses(ultimo, 11);
         setReferencia(ultimo);
         setInicio(primeiro);
         setFim(ultimo);
-        const result = await getHistory(primeiro, ultimo, controller.signal);
+        const result = await getHistory(primeiro, ultimo, controller.signal, viewFilter ?? undefined);
         if (!controller.signal.aborted) {
           setDados(result);
-          setAplicado({ inicio: primeiro, fim: ultimo });
+          setAplicado({ inicio: result[0]?.periodo ?? primeiro, fim: result.at(-1)?.periodo ?? ultimo });
+          setInicio(result[0]?.periodo ?? primeiro);setFim(result.at(-1)?.periodo ?? ultimo);
         }
       } catch (error) {
         if (!controller.signal.aborted)
@@ -68,11 +78,21 @@ export default function History() {
       controller.abort();
       request.current?.abort();
     };
-  }, []);
+  }, [viewFilter]);
 
   async function carregar(primeiro: string, ultimo: string) {
     if (primeiro && ultimo && primeiro > ultimo) {
       setErro("O mês inicial deve ser anterior ou igual ao mês final.");
+      return;
+    }
+    if(viewFilter && updateView) {
+      if(!primeiro && !ultimo) updateView({...viewFilter,periodo:"TODOS"});
+      else {
+        const first=primeiro||dados[0]?.periodo||referencia, last=ultimo||dados.at(-1)?.periodo||referencia;
+        const [year,month]=last.split("-").map(Number);
+        const end=new Date(Date.UTC(year,month,0,12)).toISOString().slice(0,10);
+        updateView({...viewFilter,periodo:"PERSONALIZADO",inicio:first+"-01",fim:end});
+      }
       return;
     }
     request.current?.abort();

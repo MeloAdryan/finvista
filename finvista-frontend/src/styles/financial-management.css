@@ -1,0 +1,224 @@
+.fv-management {
+  max-width: 1440px;
+  margin: auto;
+  color: var(--fv-dark-text, #15324e);
+}
+.fv-management > header,
+.fv-management-panel > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.fv-management nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 20px 0;
+}
+.fv-management button,
+.fv-management select,
+.fv-management input {
+  font: inherit;
+  border: 1px solid var(--fv-dark-border, #bccddd);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--fv-dark-surface, white);
+  color: inherit;
+}
+.fv-management button {
+  cursor: pointer;
+}
+.fv-management button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.fv-management button[aria-current="page"],
+.fv-management button[aria-pressed="true"] {
+  background: var(--fv-dark-primary, #15324e);
+  color: white;
+}
+.fv-management :focus-visible,
+.fv-record-dialog :focus-visible {
+  outline: 3px solid var(--fv-dark-info, #3283e8);
+  outline-offset: 2px;
+}
+.fv-management-panel {
+  background: var(--fv-dark-surface, white);
+  border: 1px solid var(--fv-dark-border, #dce4ed);
+  border-radius: 14px;
+  padding: 24px;
+  min-width: 0;
+}
+.fv-management form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin: 16px 0;
+}
+.fv-management label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 100%;
+}
+.fv-management label:has(input[type="checkbox"]) {
+  flex-direction: row;
+  align-items: center;
+}
+.fv-management label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+.fv-management-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+.fv-management-cards > article,
+.fv-management-cards > button {
+  border: 1px solid var(--fv-dark-border, #dce4ed);
+  padding: 18px;
+  border-radius: 12px;
+  text-align: left;
+  min-width: 0;
+}
+.fv-management-cards strong,
+.fv-management-cards span {
+  display: block;
+}
+.fv-management-cards strong {
+  font-size: 1.3rem;
+  margin: 8px 0;
+}
+.fv-management h3 {
+  font-size: 1rem;
+}
+.fv-management-bands {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: 8px;
+  margin: 20px 0;
+}
+.fv-management-bands button {
+  text-align: left;
+}
+.fv-management-bands span,
+.fv-management-bands strong,
+.fv-management-bands small {
+  display: block;
+  margin: 4px 0;
+}
+.fv-management-scroll {
+  overflow: auto;
+  max-height: 600px;
+}
+.fv-management table,
+.fv-record-dialog table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.fv-management th,
+.fv-management td,
+.fv-record-dialog th,
+.fv-record-dialog td {
+  padding: 12px;
+  border-bottom: 1px solid var(--fv-dark-border, #e1e8f0);
+  vertical-align: top;
+}
+.fv-management td:last-child,
+.fv-record-dialog td:last-child {
+  white-space: nowrap;
+}
+.fv-management-notice {
+  padding: 12px;
+  border-left: 3px solid var(--fv-dark-warning, #cd8a2b);
+  background: var(--fv-dark-warning-soft, #fff8ed);
+  line-height: 1.6;
+}
+.fv-management-error {
+  color: var(--fv-dark-danger, #a12424);
+  background: var(--fv-dark-surface, #fff1f1);
+  padding: 12px;
+}
+.fv-management details {
+  border-top: 1px solid var(--fv-dark-border, #e1e8f0);
+  padding: 14px 0;
+}
+.fv-management summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.fv-record-dialog {
+  width: min(950px, calc(100vw - 28px));
+  max-height: 85dvh;
+  overflow: auto;
+  border: 1px solid var(--fv-dark-border, #dce4ed);
+  border-radius: 14px;
+  padding: 22px;
+  color: var(--fv-dark-text, #15324e);
+}
+.fv-record-dialog::backdrop {
+  background: #10263e99;
+}
+.fv-record-dialog header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.fv-record-dialog button {
+  font: inherit;
+  padding: 10px;
+  border: 1px solid var(--fv-dark-border, #bccddd);
+  border-radius: 8px;
+  background: var(--fv-dark-surface, white);
+  cursor: pointer;
+}
+.fv-record-dialog dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.fv-record-dialog dd {
+  margin: 0;
+  font-weight: 600;
+}
+@media (max-width: 700px) {
+  .fv-management-panel {
+    padding: 14px;
+  }
+  .fv-management-cards {
+    grid-template-columns: 1fr;
+  }
+  .fv-management form {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .fv-management input,
+  .fv-management select {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .fv-management > header {
+    display: block;
+  }
+  .fv-management nav button {
+    flex: 1 1 40%;
+  }
+  .fv-management h1 {
+    font-size: 1.6rem;
+  }
+  .fv-record-dialog dl {
+    grid-template-columns: 1fr;
+  }
+  .fv-record-dialog table {
+    min-width: 580px;
+  }
+  .fv-management table {
+    min-width: 600px;
+  }
+}

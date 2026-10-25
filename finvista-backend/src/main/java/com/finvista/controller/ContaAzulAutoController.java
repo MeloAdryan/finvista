@@ -10,6 +10,8 @@ import org.springframework.http.*;
 public class ContaAzulAutoController {
 
     private final ContaAzulAutoState estado;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.finvista.service.ContaAzulReconciliationService reconciliacao;
 
     public ContaAzulAutoController(ContaAzulAutoState estado) {
         this.estado = estado;
@@ -20,6 +22,11 @@ public class ContaAzulAutoController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(estado.status(clienteId, paginaPendencias));
     }
 
+    @GetMapping("/conferencia")
+    public ResponseEntity<com.finvista.service.ContaAzulReconciliationService.Resultado> conferencia(@RequestParam Long clienteId,@RequestParam @org.springframework.format.annotation.DateTimeFormat(iso=org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate inicio,@RequestParam @org.springframework.format.annotation.DateTimeFormat(iso=org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate fim){
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(reconciliacao.conferir(clienteId,inicio,fim));
+    }
+
     @GetMapping("/execucoes")
     public ResponseEntity<Historico> historico(@RequestParam Long clienteId, @RequestParam(defaultValue = "1") int pagina) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(estado.historico(clienteId, pagina));
@@ -28,6 +35,12 @@ public class ContaAzulAutoController {
     @GetMapping("/execucoes/{id}/pendencias")
     public ResponseEntity<Revisao> revisar(@RequestParam Long clienteId, @PathVariable java.util.UUID id, @RequestParam(defaultValue = "1") int pagina) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(estado.revisar(clienteId, id, pagina));
+    }
+
+    @GetMapping("/execucoes/{id}/fontes")
+    public ResponseEntity<ContaAzulAutoState.Fontes> fontes(@RequestParam Long clienteId,@PathVariable java.util.UUID id,
+            @RequestParam(defaultValue="PARCELA") String tipo,@RequestParam(defaultValue="1") int pagina) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(estado.fontes(clienteId,id,tipo,pagina));
     }
 
     @PostMapping

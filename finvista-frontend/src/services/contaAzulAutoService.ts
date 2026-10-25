@@ -9,6 +9,7 @@ export interface AutoConfig {
   intervaloMinutos: number;
   incluirNovas: boolean;
   periodoMovel?: boolean;
+  sincronizacaoCompleta?: boolean;
   proximaEm: string | null;
   alteradoEm: string | null;
 }
@@ -48,6 +49,7 @@ export interface AutoPedido {
   intervaloMinutos: number;
   incluirNovas: boolean;
   periodoMovel?: boolean;
+  sincronizacaoCompleta?: boolean;
   confirmado: boolean;
   confirmoHistorico: boolean;
 }

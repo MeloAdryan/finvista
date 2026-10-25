@@ -7,11 +7,11 @@
   place-items: center;
   width: 24px;
   height: 24px;
-  border: 1px solid #bdcbe0;
+  border: 1px solid var(--fv-dark-border, #bdcbe0);
   border-radius: 50%;
   cursor: pointer;
-  color: #16233f;
-  background: #f4f7fb;
+  color: var(--fv-dark-text, #16233f);
+  background: var(--fv-dark-surface, #f4f7fb);
   font-size: 13px;
   list-style: none;
 }
@@ -20,7 +20,7 @@
 }
 .financial-help summary:focus-visible,
 .dashboard-quick-actions a:focus-visible {
-  outline: 3px solid #e8892b;
+  outline: 3px solid var(--fv-dark-warning, #e8892b);
   outline-offset: 3px;
 }
 .financial-help-text {
@@ -30,10 +30,10 @@
   z-index: 10;
   width: min(270px, 65vw);
   padding: 14px;
-  border: 1px solid #bdcbe0;
+  border: 1px solid var(--fv-dark-border, #bdcbe0);
   border-radius: 10px;
-  background: #fff;
-  color: #16233f;
+  background: var(--fv-dark-surface, #fff);
+  color: var(--fv-dark-text, #16233f);
   box-shadow: 0 8px 24px #16233f26;
   font-size: 13px;
   line-height: 1.55;
@@ -43,9 +43,9 @@
 .dashboard-quick-actions {
   margin: 24px 0;
   padding: 20px;
-  border: 1px solid #dce5f1;
+  border: 1px solid var(--fv-dark-border, #dce5f1);
   border-radius: 14px;
-  background: #fff;
+  background: var(--fv-dark-surface, #fff);
 }
 .dashboard-quick-actions h2 {
   margin: 0 0 14px;
@@ -59,14 +59,14 @@
 .dashboard-quick-actions a {
   display: inline-block;
   padding: 10px 14px;
-  border: 1px solid #bdcbe0;
+  border: 1px solid var(--fv-dark-border, #bdcbe0);
   border-radius: 8px;
-  color: #16233f;
+  color: var(--fv-dark-text, #16233f);
   text-decoration: none;
-  background: #f4f7fb;
+  background: var(--fv-dark-surface, #f4f7fb);
 }
 .dashboard-quick-actions a:hover {
-  background: #e9eef7;
+  background: var(--fv-dark-canvas, #e9eef7);
 }
 @media (max-width: 600px) {
   .dashboard-quick-actions > div {

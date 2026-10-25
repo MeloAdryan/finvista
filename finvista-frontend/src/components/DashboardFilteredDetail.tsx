@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import FinancialRecordDialog from "./FinancialRecordDialog";
+import { FinancialViewContext } from "../contexts/financialViewContext";
+import { useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   brl,
@@ -15,6 +17,8 @@ export default function DashboardFilteredDetail({
   tipo: "RECEITA" | "DESPESA";
   fechar: () => void;
 }) {
+  const filter = useContext(FinancialViewContext);
+  const [record, setRecord] = useState<Record<string, string> | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const [pagina, setPagina] = useState(0);
   const itens = analise.itens.filter((i) => i.tipo === tipo);
@@ -57,9 +61,9 @@ export default function DashboardFilteredDetail({
         <strong>Total: {brl(total)}</strong> · {itens.length} lançamentos
       </p>
       <p>
-        O valor selecionado soma apenas os rateios da categoria escolhida. Sem
-        filtro, é o valor contabilizado integral. Não representa somente
-        pagamentos ou recebimentos.
+        O valor selecionado segue o critério e o período dos gráficos e soma
+        apenas os rateios da categoria escolhida. O valor integral corresponde
+        ao mesmo lançamento no critério aplicado, antes do filtro de categoria.
       </p>
       <button
         type="button"
@@ -101,10 +105,35 @@ export default function DashboardFilteredDetail({
             </thead>
             <tbody>
               {itens.slice(pagina * 20, pagina * 20 + 20).map((i) => (
-                <tr key={i.id}>
+                <tr key={`${i.id}-${i.movimentoId ?? ""}-${i.data}`}>
                   <td>{dataBR(i.data)}</td>
                   <td>
-                    #{i.id} · {i.descricao}
+                    {filter ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setRecord({
+                            id: String(i.id),
+                            ...(i.movimentoId
+                              ? { movimentoId: i.movimentoId }
+                              : {}),
+                            criterio: filter.criterio,
+                            periodo: "PERSONALIZADO",
+                            situacao: filter.situacao,
+                            inicio: analise.inicio,
+                            fim: analise.fim,
+                            categoria: analise.categoria ?? "",
+                            centro: filter.centro,
+                          })
+                        }
+                      >
+                        #{i.id} · {i.descricao}
+                      </button>
+                    ) : (
+                      <>
+                        #{i.id} · {i.descricao}
+                      </>
+                    )}
                     <small>{i.categorias.join(" · ")}</small>
                   </td>
                   <td>{brl(i.valorSelecionado)}</td>
@@ -134,6 +163,13 @@ export default function DashboardFilteredDetail({
           Próxima
         </button>
       </nav>
+      {record && (
+        <FinancialRecordDialog
+          clienteId={analise.clienteId}
+          params={record}
+          onClose={() => setRecord(null)}
+        />
+      )}
     </dialog>,
     document.body,
   );

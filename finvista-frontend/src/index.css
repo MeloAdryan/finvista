@@ -1,17 +1,17 @@
 :root {
-  --text: #5b6779;
-  --text-h: #14202e;
-  --bg: #f7f8fa;
-  --border: #e6e9ee;
-  --code-bg: #f1f5f9;
-  --accent: #d98a3c;
+  --text: var(--fv-dark-muted, #5b6779);
+  --text-h: var(--fv-dark-text, #14202e);
+  --bg: var(--fv-dark-surface, #f7f8fa);
+  --border: var(--fv-dark-on-solid, #e6e9ee);
+  --code-bg: var(--fv-dark-canvas, #f1f5f9);
+  --accent: var(--fv-dark-warning, #d98a3c);
   --sans: system-ui, "Segoe UI", Roboto, sans-serif;
   --heading: var(--sans);
   --mono: ui-monospace, Consolas, monospace;
   font: 14px/1.6 var(--sans);
   color: var(--text-h);
   background: var(--bg);
-  /* Tema escuro completo será implementado em uma etapa própria. */
+
   color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;

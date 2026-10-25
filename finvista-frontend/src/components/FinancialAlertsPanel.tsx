@@ -80,7 +80,7 @@ export default function FinancialAlertsPanel({
       <div className="fa-heading">
         <div>
           <span className="fa-label">Acompanhamento financeiro</span>
-          <h2 id="financial-alerts-title">Pontos de atenção</h2>
+          <h2 id="financial-alerts-title">Pontos de atenção · competência</h2>
         </div>
         {dados && (
           <span className="fa-count">
@@ -94,9 +94,11 @@ export default function FinancialAlertsPanel({
       <details className="fa-method">
         <summary>Como os alertas são avaliados</summary>
         <p className="fa-note">
-          Metas e orçamentos usam seus períodos e escopos completos. O filtro de
-          categoria do painel se aplica ao aumento de despesas. Valores
-          registrados podem incluir lançamentos em aberto.
+          Os alertas cadastrados usam competência, independentemente do critério
+          analítico dos gráficos. Metas e orçamentos usam seus períodos e
+          escopos completos. O filtro de categoria do painel se aplica ao
+          aumento de despesas. Valores registrados podem incluir lançamentos em
+          aberto.
         </p>
       </details>
       {erro ? (

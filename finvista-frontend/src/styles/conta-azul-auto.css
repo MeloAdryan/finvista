@@ -1,10 +1,10 @@
 .ca-auto {
   margin: 20px 0;
   padding: 20px;
-  border: 1px solid #c3d3e6;
+  border: 1px solid var(--fv-dark-border, #c3d3e6);
   border-radius: 12px;
-  background: #fff;
-  color: #173852;
+  background: var(--fv-dark-surface, #fff);
+  color: var(--fv-dark-text, #173852);
   font-size: 14px;
   line-height: 1.6;
   overflow-wrap: anywhere;
@@ -40,10 +40,10 @@
   min-width: 0;
   padding: 10px;
   font: inherit;
-  border: 1px solid #c8d8ea;
+  border: 1px solid var(--fv-dark-border, #c8d8ea);
   border-radius: 6px;
-  background: #fff;
-  color: #173852;
+  background: var(--fv-dark-surface, #fff);
+  color: var(--fv-dark-text, #173852);
 }
 .ca-auto label.ca-auto-check {
   display: flex;
@@ -69,17 +69,17 @@
   font: inherit;
   padding: 10px 14px;
   cursor: pointer;
-  border: 1px solid #b5cce7;
+  border: 1px solid var(--fv-dark-border, #b5cce7);
   border-radius: 6px;
-  background: #f7faff;
-  color: #173852;
+  background: var(--fv-dark-surface, #f7faff);
+  color: var(--fv-dark-text, #173852);
 }
 .ca-auto button:disabled {
   opacity: 0.5;
   cursor: default;
 }
 .ca-auto-run {
-  border-top: 1px solid #dce5ef;
+  border-top: 1px solid var(--fv-dark-border, #dce5ef);
   margin-top: 18px;
   padding-top: 18px;
 }
@@ -89,7 +89,7 @@
   gap: 12px;
 }
 .ca-auto dl div {
-  background: #f2f6fa;
+  background: var(--fv-dark-canvas, #f2f6fa);
   padding: 12px;
   border-radius: 8px;
 }
@@ -99,12 +99,12 @@
   font-weight: 700;
 }
 .ca-auto [role="alert"] {
-  color: #a32424;
+  color: var(--fv-dark-danger, #a32424);
 }
 .ca-auto li {
   margin-bottom: 12px;
 }
 .ca-auto :focus-visible {
-  outline: 3px solid #315fa5;
+  outline: 3px solid var(--fv-dark-info, #315fa5);
   outline-offset: 3px;
 }

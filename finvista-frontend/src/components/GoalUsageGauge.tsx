@@ -32,10 +32,10 @@ export default function GoalUsageGauge({
   const needle = ponto(uso, 95);
   const cor =
     meta.status === "EXCEDIDA"
-      ? "#ab3030"
+      ? "var(--fv-chart-danger)"
       : meta.status === "ALERTA"
-        ? "#a36a16"
-        : "#2f7d5d";
+        ? "var(--fv-chart-orange)"
+        : "var(--fv-chart-blue)";
   const valor =
     uso > 100 ? `${percentual(uso / 100)}× o limite` : `${percentual(uso)}%`;
   const descricao = `Meta ${meta.id}: consumo ${percentual(uso)} por cento do limite. Alerta ${percentual(alerta)} por cento.`;

@@ -191,11 +191,18 @@ export default function BudgetPipelineChart({
           <span className="ba-eyebrow">Controle orçamentário</span>
           <h2 id={`bc-title-${id}`}>Planejado × utilizado</h2>
           <p>
-            Compare cada orçamento no seu período completo. Alterne entre percentual do planejado e valores em reais.
+            Compare cada orçamento no seu período completo. Alterne entre
+            percentual do planejado e valores em reais.
           </p>
         </div>
         <div className="ba-actions">
-          <button type="button" onClick={() => setPercentual(v => !v)} aria-pressed={percentual}>{percentual ? "Ver em reais" : "Ver em percentual"}</button>
+          <button
+            type="button"
+            onClick={() => setPercentual((v) => !v)}
+            aria-pressed={percentual}
+          >
+            {percentual ? "Ver em reais" : "Ver em percentual"}
+          </button>
           <button
             type="button"
             onClick={() => setTabela((atual) => !atual)}
@@ -280,7 +287,9 @@ export default function BudgetPipelineChart({
                 </tbody>
               </table>
             </div>
-          ) : percentual ? <BudgetPercentageChart dados={dados}/> : (
+          ) : percentual ? (
+            <BudgetPercentageChart dados={dados} />
+          ) : (
             <div className="bc-plot-card">
               <div className="bc-plot-heading">
                 <div className="bc-legend">
@@ -328,9 +337,18 @@ export default function BudgetPipelineChart({
                           x2="1"
                           y2="0"
                         >
-                          <stop offset="0%" stopColor="#153856" />
-                          <stop offset="45%" stopColor="#315879" />
-                          <stop offset="100%" stopColor="#183b5b" />
+                          <stop
+                            offset="0%"
+                            stopColor="var(--fv-chart-blue-bottom)"
+                          />
+                          <stop
+                            offset="45%"
+                            stopColor="var(--fv-chart-blue-top)"
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="var(--fv-chart-blue-bottom)"
+                          />
                         </linearGradient>
                         <linearGradient
                           id={utilizadoId}
@@ -339,9 +357,18 @@ export default function BudgetPipelineChart({
                           x2="1"
                           y2="0"
                         >
-                          <stop offset="0%" stopColor="#ac6426" />
-                          <stop offset="45%" stopColor="#df9954" />
-                          <stop offset="100%" stopColor="#bc742e" />
+                          <stop
+                            offset="0%"
+                            stopColor="var(--fv-chart-orange-bottom)"
+                          />
+                          <stop
+                            offset="45%"
+                            stopColor="var(--fv-chart-orange-top)"
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="var(--fv-chart-orange-bottom)"
+                          />
                         </linearGradient>
                         <filter
                           id={sombraId}
@@ -385,6 +412,7 @@ export default function BudgetPipelineChart({
                         allowEscapeViewBox={{ x: true, y: true }}
                       />
                       <Bar
+                        isAnimationActive={false}
                         dataKey="valorPlanejado"
                         name="Planejado"
                         fill={`url(#${planejadoId})`}
@@ -402,6 +430,7 @@ export default function BudgetPipelineChart({
                         />
                       </Bar>
                       <Bar
+                        isAnimationActive={false}
                         dataKey="valorUtilizado"
                         name="Utilizado"
                         fill={`url(#${utilizadoId})`}
@@ -440,38 +469,44 @@ export default function BudgetPipelineChart({
               </p>
             </div>
           )}
-          {!percentual && <div className="bc-results">
-            {dados.map((item) => {
-              const excedente = Math.max(
-                0,
-                item.valorUtilizado - item.valorPlanejado,
-              );
-              return (
-                <div
-                  key={item.id}
-                  className={excedente > 0 ? "bc-result-exceeded" : ""}
-                >
-                  <strong>{item.nome}</strong>
-                  <span>
-                    {dataOrcamento(item.dataInicio)} —{" "}
-                    {dataOrcamento(item.dataFim)}
-                  </span>
-                  <b>
-                    {percentualOrcamento(item.percentualUtilizado)}% utilizado
-                  </b>
-                  <span>
-                    {excedente > 0
-                      ? `Excedente de ${moedaOrcamento(excedente)}`
-                      : `Disponível: ${moedaOrcamento(item.valorDisponivel)}`}
-                  </span>
-                </div>
-              );
-            })}
-          </div>}
+          {!percentual && (
+            <div className="bc-results">
+              {dados.map((item) => {
+                const excedente = Math.max(
+                  0,
+                  item.valorUtilizado - item.valorPlanejado,
+                );
+                return (
+                  <div
+                    key={item.id}
+                    className={excedente > 0 ? "bc-result-exceeded" : ""}
+                  >
+                    <strong>{item.nome}</strong>
+                    <span>
+                      {dataOrcamento(item.dataInicio)} —{" "}
+                      {dataOrcamento(item.dataFim)}
+                    </span>
+                    <b>
+                      {percentualOrcamento(item.percentualUtilizado)}% utilizado
+                    </b>
+                    <span>
+                      {excedente > 0
+                        ? `Excedente de ${moedaOrcamento(excedente)}`
+                        : `Disponível: ${moedaOrcamento(item.valorDisponivel)}`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           <p className="ba-note">
             Valores contabilizados pela data de análise, incluindo lançamentos
-            em aberto. {percentual ? "Azul indica consumo até o limite; vermelho indica excedente." : "Cores identificam planejado e utilizado; o sombreamento é igual para todas as colunas."} Consulte a utilização individual quando
-            os orçamentos tiverem critérios ou períodos diferentes.
+            em aberto.{" "}
+            {percentual
+              ? "Azul indica consumo até o limite; vermelho indica excedente."
+              : "Cores identificam planejado e utilizado; o sombreamento é igual para todas as colunas."}{" "}
+            Consulte a utilização individual quando os orçamentos tiverem
+            critérios ou períodos diferentes.
           </p>
         </>
       )}

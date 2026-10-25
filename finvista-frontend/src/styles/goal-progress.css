@@ -1,7 +1,7 @@
 .goal-progress-new {
   min-width: 0;
   text-align: left;
-  color: #153856;
+  color: var(--fv-dark-text, #153856);
 }
 .gp-heading {
   display: flex;
@@ -21,18 +21,18 @@
   font-weight: 600;
 }
 .gp-risk-normal {
-  color: #28745c;
+  color: var(--fv-dark-text, #28745c);
 }
 .gp-risk-alerta {
-  color: #a35d08;
+  color: var(--fv-dark-warning, #a35d08);
 }
 .gp-risk-excedida {
-  color: #b42318;
+  color: var(--fv-dark-danger, #b42318);
 }
 .gp-track {
   position: relative;
   height: 16px;
-  background: #edf1f6;
+  background: var(--fv-dark-canvas, #edf1f6);
   border-radius: 5px;
   margin: 24px 2px 16px;
 }
@@ -40,11 +40,11 @@
 .gp-over {
   position: absolute;
   height: 100%;
-  background: #153856;
+  background: var(--fv-dark-primary, #153856);
   border-radius: 4px;
 }
 .gp-over {
-  background: #b42318;
+  background: var(--fv-dark-danger-fill, #b42318);
 }
 .gp-mark {
   position: absolute;
@@ -54,17 +54,17 @@
   transform: translateX(-1px);
 }
 .gp-alert {
-  color: #b45309;
+  color: var(--fv-dark-warning, #b45309);
 }
 .gp-limit {
-  color: #64748b;
+  color: var(--fv-dark-muted, #64748b);
 }
 .gp-rhythm {
-  color: #94a3b8;
+  color: var(--fv-dark-muted, #94a3b8);
   border-left-style: dashed;
 }
 .gp-estimate {
-  color: #2563eb;
+  color: var(--fv-dark-info, #2563eb);
   border-left-style: dashed;
 }
 .gp-legend {
@@ -80,8 +80,8 @@
   margin: 16px 0;
 }
 .gp-stats > div {
-  background: #f6f8fb;
-  border: 1px solid #e5ebf2;
+  background: var(--fv-dark-surface, #f6f8fb);
+  border: 1px solid var(--fv-dark-border, #e5ebf2);
   padding: 12px;
   border-radius: 7px;
   font-size: 12px;
@@ -94,15 +94,15 @@
 }
 .goal-progress-new button {
   padding: 8px 12px;
-  border: 1px solid #c5d6e8;
+  border: 1px solid var(--fv-dark-border, #c5d6e8);
   border-radius: 6px;
-  background: #f6f8fc;
-  color: #153856;
+  background: var(--fv-dark-surface, #f6f8fc);
+  color: var(--fv-dark-text, #153856);
   cursor: pointer;
   font-size: 12px;
 }
 .goal-progress-new button:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--fv-dark-info, #2563eb);
   outline-offset: 3px;
 }
 .gp-actions {
@@ -131,7 +131,7 @@
 .gp-table th,
 .gp-table td {
   padding: 9px;
-  border-bottom: 1px solid #e4eaf1;
+  border-bottom: 1px solid var(--fv-dark-border, #e4eaf1);
   text-align: right;
   white-space: nowrap;
 }
@@ -140,7 +140,7 @@
   text-align: left;
 }
 .gp-table th {
-  background: #f6f8fb;
+  background: var(--fv-dark-surface, #f6f8fb);
   position: sticky;
   top: 0;
 }
@@ -156,7 +156,7 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 10px;
-  border-bottom: 1px solid #e4eaf1;
+  border-bottom: 1px solid var(--fv-dark-border, #e4eaf1);
   padding: 8px 0;
 }
 .goal-panel select {
@@ -164,13 +164,13 @@
   max-width: 280px;
   margin-top: 6px;
   padding: 7px;
-  border: 1px solid #c5d6e8;
+  border: 1px solid var(--fv-dark-border, #c5d6e8);
   border-radius: 6px;
-  color: #153856;
+  color: var(--fv-dark-text, #153856);
 }
 .meta-status {
-  background: #edf1f6 !important;
-  color: #153856 !important;
+  background: var(--fv-dark-canvas, #edf1f6) !important;
+  color: var(--fv-dark-text, #153856) !important;
 }
 .metas-lista .meta-card {
   min-width: 0;
@@ -205,8 +205,8 @@
 }
 .gp-excess-banner {
   padding: 12px;
-  background: #fff0ef;
-  border: 1px solid #f3c7c3;
+  background: var(--fv-dark-danger-soft, #fff0ef);
+  border: 1px solid var(--fv-dark-border, #f3c7c3);
   border-radius: 9px;
 }
 .gp-bottom-actions button {
@@ -214,7 +214,7 @@
   border: 0;
   min-height: 36px;
   padding: 8px;
-  color: #173955;
+  color: var(--fv-dark-text, #173955);
   font-weight: 600;
 }
 .goal-progress-new button {
@@ -222,22 +222,22 @@
   min-height: 36px;
 }
 .goal-progress-new button:focus-visible {
-  outline: 2px solid #db8a27;
+  outline: 2px solid var(--fv-dark-warning, #db8a27);
   outline-offset: 3px;
 }
 .gp-state-normal .gp-fill {
-  background: #348369;
+  background: var(--fv-dark-success-fill, #348369);
 }
 .gp-state-alerta .gp-fill {
-  background: #b57c21;
+  background: var(--fv-dark-warning-fill, #b57c21);
 }
 .gp-state-excedida .gp-fill,
 .gp-state-excedida .gp-over {
-  background: #ab3030;
+  background: var(--fv-dark-danger-fill, #ab3030);
 }
 .gp-state-excedida .gp-stats > div:nth-child(n + 2) {
-  background: #fff0ef;
-  color: #9f2828;
+  background: var(--fv-dark-danger-soft, #fff0ef);
+  color: var(--fv-dark-danger, #9f2828);
 }
 .gp-limit {
   pointer-events: none;

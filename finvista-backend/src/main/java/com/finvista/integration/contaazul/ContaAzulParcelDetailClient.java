@@ -34,27 +34,34 @@ public class ContaAzulParcelDetailClient {
         return RestClient.builder().requestFactory(factory).build();
     }
 
-    public ContaAzulParcelDetail consultar(String acesso, String id) {
+    public record Consulta(ContaAzulParcelDetail parcela,com.fasterxml.jackson.databind.JsonNode fonte) {}
+    public ContaAzulParcelDetail consultar(String acesso,String id){return consultarCompleto(acesso,id).parcela();}
+    public Consulta consultarCompleto(String acesso, String id) {
         try {
-            var result = http.get()
+            var mapper=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+            var raw = http.get()
                     .uri(ContaAzulFinancialClient.BASE + "/v1/financeiro/eventos-financeiros/parcelas/{id}", id)
                     .headers(headers -> headers.setBearerAuth(acesso))
-                    .retrieve().body(ContaAzulParcelDetail.class);
+                    .retrieve().body(com.fasterxml.jackson.databind.JsonNode.class);
+            var result=mapper.treeToValue(raw,ContaAzulParcelDetail.class);
             if (result == null || result.id() == null || !id.equalsIgnoreCase(result.id())) {
                 throw new IllegalArgumentException("Parcela diferente da solicitada.");
             }
             if (result.pago() != null && result.pago().signum() > 0 && result.baixas() == null) {
-                var baixas = http.get()
+                var baixasRaw = http.get()
                         .uri(ContaAzulFinancialClient.BASE + "/v1/financeiro/eventos-financeiros/parcelas/{id}/baixa", id)
                         .headers(headers -> headers.setBearerAuth(acesso))
-                        .retrieve().body(ContaAzulParcelDetail.Baixa[].class);
+                        .retrieve().body(com.fasterxml.jackson.databind.JsonNode.class);
+                if(baixasRaw==null||!baixasRaw.isArray())throw new IllegalArgumentException("Baixas incompletas.");
+                var baixas=mapper.treeToValue(baixasRaw,ContaAzulParcelDetail.Baixa[].class);
+                ((com.fasterxml.jackson.databind.node.ObjectNode)raw).set("baixas",baixasRaw);
                 if (baixas == null || baixas.length > 1000) throw new IllegalArgumentException("Baixas incompletas.");
                 result = new ContaAzulParcelDetail(result.id(), result.descricao(), result.status(), result.vencimento(),
                         result.liquido(), result.pago(), result.pendente(), result.composicao(), result.evento(),
                         result.perda(), result.renegociacao(), java.util.Arrays.asList(baixas));
             }
             validarRateios(result);
-            return result;
+            return new Consulta(result,raw);
         } catch (RestClientResponseException erro) {
             int status = erro.getStatusCode().value();
             if (status == 429) {

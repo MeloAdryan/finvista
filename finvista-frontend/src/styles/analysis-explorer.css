@@ -2,12 +2,12 @@
   min-width: 0;
 }
 .ax-panel {
-  background: #fff;
-  border: 1px solid #dbe4ef;
+  background: var(--fv-dark-surface, #fff);
+  border: 1px solid var(--fv-dark-border, #dbe4ef);
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 18px;
-  color: #153856;
+  color: var(--fv-dark-text, #153856);
   min-width: 0;
 }
 .ax-panel h1 {
@@ -25,7 +25,7 @@
 }
 .ax-note {
   font-size: 12px;
-  color: #64748b;
+  color: var(--fv-dark-muted, #64748b);
   line-height: 1.7;
 }
 .ax-filter-grid {
@@ -46,19 +46,19 @@
   width: 100%;
   box-sizing: border-box;
   padding: 9px;
-  background: #fff;
-  border: 1px solid #c5d6e8;
+  background: var(--fv-dark-surface, #fff);
+  border: 1px solid var(--fv-dark-border, #c5d6e8);
   border-radius: 6px;
-  color: #153856;
+  color: var(--fv-dark-text, #153856);
   font: inherit;
 }
 .ax-panel button,
 .ax-explorer > p button {
   padding: 9px 12px;
-  border: 1px solid #c5d6e8;
+  border: 1px solid var(--fv-dark-border, #c5d6e8);
   border-radius: 6px;
-  background: #f6f8fc;
-  color: #153856;
+  background: var(--fv-dark-surface, #f6f8fc);
+  color: var(--fv-dark-text, #153856);
   cursor: pointer;
   font-size: 12px;
 }
@@ -69,7 +69,7 @@
 .ax-panel button:focus-visible,
 .ax-panel input:focus-visible,
 .ax-panel select:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--fv-dark-info, #2563eb);
   outline-offset: 3px;
 }
 .ax-actions {
@@ -87,16 +87,16 @@
   margin: 16px 0;
 }
 .ax-summary > div {
-  background: #fff;
-  border: 1px solid #dbe4ef;
+  background: var(--fv-dark-surface, #fff);
+  border: 1px solid var(--fv-dark-border, #dbe4ef);
   padding: 18px;
   border-radius: 10px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--fv-dark-muted, #64748b);
 }
 .ax-summary strong {
   display: block;
-  color: #153856;
+  color: var(--fv-dark-text, #153856);
   font-size: 20px;
   margin-top: 8px;
   overflow-wrap: anywhere;
@@ -116,14 +116,14 @@
   width: 100%;
   text-align: left;
   padding: 12px;
-  background: #fff;
-  border: 1px solid #e4eaf1;
+  background: var(--fv-dark-surface, #fff);
+  border: 1px solid var(--fv-dark-border, #e4eaf1);
   border-radius: 8px;
 }
 .ax-bar-row:hover,
 .ax-panel .ax-bar-row[aria-pressed="true"] {
-  background: #f1f6fc;
-  border-color: #9cbadd;
+  background: var(--fv-dark-canvas, #f1f6fc);
+  border-color: var(--fv-dark-border, #9cbadd);
 }
 .ax-bar-name {
   overflow-wrap: anywhere;
@@ -133,29 +133,29 @@
 .ax-track {
   position: relative;
   height: 20px;
-  background: #edf2f7;
+  background: var(--fv-dark-canvas, #edf2f7);
   border-radius: 4px;
 }
 .ax-fill {
   position: absolute;
   height: 100%;
-  background: #527492;
+  background: var(--fv-dark-info-fill, #527492);
   border-radius: 4px;
   box-shadow: 0 2px 5px rgba(21, 56, 86, 0.12);
 }
 .ax-fill.ax-emphasis {
-  background: #c47c32;
+  background: var(--fv-dark-warning-fill, #c47c32);
 }
 .ax-zero,
 .ax-previous {
   position: absolute;
   top: -4px;
   height: 28px;
-  border-left: 2px solid #94a3b8;
+  border-left: 2px solid var(--fv-dark-border, #94a3b8);
   transform: translateX(-1px);
 }
 .ax-previous {
-  border-left-color: #153856;
+  border-left-color: var(--fv-dark-border, #153856);
 }
 .ax-bar-value {
   text-align: right;
@@ -165,7 +165,7 @@
 }
 .ax-bar-value small {
   font-size: 10px;
-  color: #64748b;
+  color: var(--fv-dark-muted, #64748b);
 }
 .ax-bar-value strong {
   font-size: 13px;
@@ -183,7 +183,7 @@
 .ax-table td,
 .ax-table th {
   padding: 10px;
-  border-bottom: 1px solid #e4eaf1;
+  border-bottom: 1px solid var(--fv-dark-border, #e4eaf1);
   text-align: right;
   white-space: nowrap;
 }
@@ -192,10 +192,10 @@
   text-align: left;
 }
 .ax-table thead {
-  background: #f6f8fc;
+  background: var(--fv-dark-surface, #f6f8fc);
 }
 .ax-groups details {
-  border: 1px solid #e4eaf1;
+  border: 1px solid var(--fv-dark-border, #e4eaf1);
   border-radius: 8px;
   padding: 12px;
   margin: 8px 0;
@@ -261,42 +261,42 @@
 }
 
 .ax-secondary {
-  border: 1px solid #dbe4ef;
+  border: 1px solid var(--fv-dark-border, #dbe4ef);
   border-radius: 12px;
-  background: #fff;
+  background: var(--fv-dark-surface, #fff);
   margin-bottom: 18px;
   min-width: 0;
 }
 .ax-secondary > summary {
   padding: 16px 20px;
   cursor: pointer;
-  color: #153856;
+  color: var(--fv-dark-text, #153856);
   font-size: 14px;
   font-weight: 600;
 }
 .ax-secondary > summary:focus-visible {
-  outline: 2px solid #d98a3c;
+  outline: 2px solid var(--fv-dark-warning, #d98a3c);
   outline-offset: 2px;
 }
 .ax-secondary > .ax-panel {
   border: 0;
-  border-top: 1px solid #e6e9ee;
+  border-top: 1px solid var(--fv-dark-border, #e6e9ee);
   border-radius: 0 0 12px 12px;
   margin: 0;
 }
 .ax-explorer > .ax-actions button {
   padding: 9px 12px;
-  border: 1px solid #c5d6e8;
+  border: 1px solid var(--fv-dark-border, #c5d6e8);
   border-radius: 6px;
-  background: #f6f8fc;
-  color: #153856;
+  background: var(--fv-dark-surface, #f6f8fc);
+  color: var(--fv-dark-text, #153856);
   cursor: pointer;
 }
 .ax-explorer > .ax-actions button:focus-visible {
-  outline: 2px solid #d98a3c;
+  outline: 2px solid var(--fv-dark-warning, #d98a3c);
   outline-offset: 2px;
 }
 .ax-actions button[aria-pressed="true"] {
-  background: #1b3350;
-  color: #fff;
+  background: var(--fv-dark-primary, #1b3350);
+  color: var(--fv-dark-on-solid, #fff);
 }

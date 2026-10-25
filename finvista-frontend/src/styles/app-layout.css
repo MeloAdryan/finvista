@@ -17,7 +17,7 @@ body,
 
 body {
   min-height: 100vh;
-  background: #f4f6f8;
+  background: var(--fv-dark-canvas, #f4f6f8);
 }
 
 #root {
@@ -29,7 +29,7 @@ body {
   grid-template-columns: 240px minmax(0, 1fr);
   width: 100%;
   min-height: 100vh;
-  background: #f4f6f8;
+  background: var(--fv-dark-canvas, #f4f6f8);
 }
 
 /* =========================================================
@@ -47,8 +47,12 @@ body {
 
   padding: 26px 20px;
 
-  color: #ffffff;
-  background: linear-gradient(180deg, #1a2942 0%, #0f2a44 100%);
+  color: var(--fv-dark-on-solid, #ffffff);
+  background: linear-gradient(
+    180deg,
+    var(--fv-dark-primary, #1a2942) 0%,
+    var(--fv-dark-primary, #0f2a44) 100%
+  );
 
   border-right: 1px solid rgba(255, 255, 255, 0.06);
 
@@ -91,9 +95,9 @@ body {
 
   padding: 17px 32px;
 
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--fv-dark-translucent, rgba(255, 255, 255, 0.94));
 
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--fv-dark-border, #e2e8f0);
 
   box-shadow: 0 2px 12px rgba(15, 42, 68, 0.035);
 }
@@ -103,7 +107,7 @@ body {
 
   margin-bottom: 3px;
 
-  color: #b8763d;
+  color: var(--fv-dark-warning, #b8763d);
 
   font-size: 9px;
   font-weight: 800;
@@ -114,7 +118,7 @@ body {
 .finvista-topbar h1 {
   margin: 0;
 
-  color: #0f2a44;
+  color: var(--fv-dark-text, #0f2a44);
 
   font-size: 20px;
   font-weight: 800;
@@ -162,13 +166,13 @@ body {
 
   color: rgba(255, 255, 255, 0.7);
 
-  background: #0f2a44;
+  background: var(--fv-dark-primary, #0f2a44);
 
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .finvista-footer > span {
-  color: #ffffff;
+  color: var(--fv-dark-on-solid, #ffffff);
 
   font-size: 12px;
   font-weight: 800;
@@ -268,7 +272,11 @@ body {
 
   padding: 9px 8px;
 
-  background: linear-gradient(145deg, #173b5d, #0b2238);
+  background: linear-gradient(
+    145deg,
+    var(--fv-dark-primary, #173b5d),
+    var(--fv-dark-primary, #0b2238)
+  );
 
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 12px;
@@ -283,7 +291,11 @@ body {
 
   width: 6px;
 
-  background: linear-gradient(180deg, #e89b3d, #b8763d);
+  background: linear-gradient(
+    180deg,
+    var(--fv-dark-warning-fill, #e89b3d),
+    var(--fv-dark-warning-fill, #b8763d)
+  );
 
   border-radius: 3px 3px 1px 1px;
 
@@ -310,7 +322,7 @@ body {
 }
 
 .finvista-brand-text strong {
-  color: #ffffff;
+  color: var(--fv-dark-on-solid, #ffffff);
 
   font-size: 19px;
   font-weight: 800;
@@ -321,7 +333,7 @@ body {
 .finvista-brand-text small {
   margin-top: 2px;
 
-  color: #8298ab;
+  color: var(--fv-dark-muted, #8298ab);
 
   font-size: 9px;
   font-weight: 600;
@@ -367,7 +379,7 @@ body {
 
   margin: 0 10px 7px;
 
-  color: #607a90;
+  color: var(--fv-dark-muted, #607a90);
 
   font-size: 9px;
   font-weight: 800;
@@ -392,7 +404,7 @@ body {
 
   padding: 8px 11px;
 
-  color: #a9bac8;
+  color: var(--fv-dark-muted, #a9bac8);
 
   text-decoration: none;
 
@@ -411,7 +423,7 @@ body {
 }
 
 .finvista-nav-item:hover {
-  color: #ffffff;
+  color: var(--fv-dark-on-solid, #ffffff);
 
   background: rgba(255, 255, 255, 0.055);
 
@@ -430,7 +442,7 @@ body {
   width: 30px;
   height: 30px;
 
-  color: #8298ab;
+  color: var(--fv-dark-muted, #8298ab);
 
   border-radius: 8px;
 
@@ -452,7 +464,7 @@ body {
 }
 
 .finvista-nav-item:hover .finvista-nav-icon {
-  color: #d7e2ea;
+  color: var(--fv-dark-muted, #d7e2ea);
 
   background: rgba(255, 255, 255, 0.05);
 }
@@ -462,7 +474,7 @@ body {
    ========================================================= */
 
 .finvista-nav-item-active {
-  color: #ffffff;
+  color: var(--fv-dark-on-solid, #ffffff);
 
   background: linear-gradient(
     90deg,
@@ -488,7 +500,11 @@ body {
 
   width: 3px;
 
-  background: linear-gradient(180deg, #e89b3d, #b8763d);
+  background: linear-gradient(
+    180deg,
+    var(--fv-dark-warning-fill, #e89b3d),
+    var(--fv-dark-warning-fill, #b8763d)
+  );
 
   border-radius: 0 4px 4px 0;
 
@@ -496,7 +512,7 @@ body {
 }
 
 .finvista-nav-item-active .finvista-nav-icon {
-  color: #e89b3d;
+  color: var(--fv-dark-warning, #e89b3d);
 
   background: rgba(232, 155, 61, 0.09);
 }
@@ -535,7 +551,7 @@ body {
   width: 7px;
   height: 7px;
 
-  background: #10b981;
+  background: var(--fv-dark-success-fill, #10b981);
 
   border-radius: 50%;
 
@@ -554,7 +570,7 @@ body {
 .finvista-system-status strong {
   overflow: hidden;
 
-  color: #cbd7e0;
+  color: var(--fv-dark-muted, #cbd7e0);
 
   font-size: 10px;
   font-weight: 700;
@@ -566,7 +582,7 @@ body {
 .finvista-system-status small {
   margin-top: 3px;
 
-  color: #6f879a;
+  color: var(--fv-dark-muted, #6f879a);
 
   font-size: 9px;
 }
@@ -578,7 +594,7 @@ body {
 
   padding: 0 8px;
 
-  color: #526d82;
+  color: var(--fv-dark-muted, #526d82);
 
   font-size: 9px;
   font-weight: 650;
@@ -587,7 +603,7 @@ body {
 .finvista-sidebar-version span {
   padding: 3px 6px;
 
-  color: #71889a;
+  color: var(--fv-dark-muted, #71889a);
 
   background: rgba(255, 255, 255, 0.035);
 
@@ -669,9 +685,13 @@ html {
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 10px;
 
-  background: linear-gradient(145deg, #e89b3d 0%, #b8763d 100%);
+  background: linear-gradient(
+    145deg,
+    var(--fv-dark-warning-fill, #e89b3d) 0%,
+    var(--fv-dark-warning-fill, #b8763d) 100%
+  );
 
-  color: #ffffff;
+  color: var(--fv-dark-on-solid, #ffffff);
 
   box-shadow:
     0 5px 14px rgba(15, 42, 68, 0.28),
@@ -966,7 +986,7 @@ html {
     border: 1px solid rgba(15, 42, 68, 0.1);
     border-radius: 11px;
 
-    background: #ffffff;
+    background: var(--fv-dark-surface, #ffffff);
 
     box-shadow:
       0 4px 12px rgba(15, 42, 68, 0.09),
@@ -997,7 +1017,7 @@ html {
 
     border-radius: 999px;
 
-    background: #0f2a44;
+    background: var(--fv-dark-primary, #0f2a44);
   }
 
   /* Topbar acomoda botão + título */
@@ -1070,7 +1090,7 @@ html {
   padding: 7px 14px;
   border: 1px solid rgba(15, 42, 68, 0.08);
   border-radius: 12px;
-  background: rgba(244, 246, 248, 0.72);
+  background: var(--fv-dark-translucent, rgba(244, 246, 248, 0.72));
 }
 
 .finvista-topbar-status {
@@ -1082,7 +1102,7 @@ html {
   height: 8px;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: #10b981;
+  background: var(--fv-dark-success-fill, #10b981);
   box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
 }
 
@@ -1096,7 +1116,7 @@ html {
 .finvista-topbar-status small,
 .finvista-topbar-period small {
   margin-bottom: 2px;
-  color: #8190a3;
+  color: var(--fv-dark-muted, #8190a3);
   font-size: 8px;
   font-weight: 800;
   line-height: 1;
@@ -1105,7 +1125,7 @@ html {
 
 .finvista-topbar-status strong,
 .finvista-topbar-period strong {
-  color: #0f2a44;
+  color: var(--fv-dark-text, #0f2a44);
   font-size: 12px;
   font-weight: 750;
   line-height: 1.2;
@@ -1139,7 +1159,7 @@ html {
     rgba(184, 118, 61, 0.07)
   );
 
-  color: #9c6839;
+  color: var(--fv-dark-warning, #9c6839);
 
   font: inherit;
   font-size: 12px;
@@ -1259,7 +1279,11 @@ html {
 
   padding: 14px 32px;
 
-  background: linear-gradient(135deg, #1a2942 0%, #0f2a44 100%);
+  background: linear-gradient(
+    135deg,
+    var(--fv-dark-primary, #1a2942) 0%,
+    var(--fv-dark-primary, #0f2a44) 100%
+  );
 
   border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
@@ -1296,7 +1320,11 @@ html {
 
   border-radius: 3px 3px 1px 1px;
 
-  background: linear-gradient(180deg, #e89b3d, #b8763d);
+  background: linear-gradient(
+    180deg,
+    var(--fv-dark-warning-fill, #e89b3d),
+    var(--fv-dark-warning-fill, #b8763d)
+  );
 }
 
 .finvista-footer-mark span:nth-child(1) {
@@ -1318,7 +1346,7 @@ html {
 }
 
 .finvista-footer-brand strong {
-  color: #ffffff;
+  color: var(--fv-dark-on-solid, #ffffff);
 
   font-size: 13px;
   font-weight: 800;
@@ -1375,7 +1403,7 @@ html {
 
   border-radius: 50%;
 
-  background: #10b981;
+  background: var(--fv-dark-success-fill, #10b981);
 
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08);
 }
@@ -1444,7 +1472,7 @@ html {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: #0f2a44;
+  background: var(--fv-dark-primary, #0f2a44);
 }
 
 .finvista-auth-loading-brand {
@@ -1454,7 +1482,7 @@ html {
 }
 
 .finvista-auth-loading-brand strong {
-  color: #ffffff;
+  color: var(--fv-dark-on-solid, #ffffff);
   font-size: 28px;
   letter-spacing: -0.8px;
 }
@@ -1496,7 +1524,11 @@ html {
   border: 1px solid rgba(15, 42, 68, 0.08);
   border-radius: 13px;
 
-  background: linear-gradient(145deg, #ffffff 0%, #f8fafb 100%);
+  background: linear-gradient(
+    145deg,
+    var(--fv-dark-surface, #ffffff) 0%,
+    var(--fv-dark-surface, #f8fafb) 100%
+  );
 
   box-shadow:
     0 4px 13px rgba(15, 42, 68, 0.055),
@@ -1514,9 +1546,13 @@ html {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
 
-  background: linear-gradient(145deg, #173b5d, #0f2a44);
+  background: linear-gradient(
+    145deg,
+    var(--fv-dark-primary, #173b5d),
+    var(--fv-dark-primary, #0f2a44)
+  );
 
-  color: #ffffff;
+  color: var(--fv-dark-on-solid, #ffffff);
 
   box-shadow:
     0 5px 12px rgba(15, 42, 68, 0.16),
@@ -1542,7 +1578,7 @@ html {
 
   overflow: hidden;
 
-  color: #b8763d;
+  color: var(--fv-dark-warning, #b8763d);
 
   font-size: 7px;
   font-weight: 850;
@@ -1559,7 +1595,7 @@ html {
 
   overflow: hidden;
 
-  color: #17344f;
+  color: var(--fv-dark-text, #17344f);
 
   font-size: 11px;
   font-weight: 800;
@@ -1583,9 +1619,13 @@ html {
   border: 1px solid rgba(184, 118, 61, 0.2);
   border-radius: 9px;
 
-  background: linear-gradient(180deg, #fffaf6 0%, #f8eee5 100%);
+  background: linear-gradient(
+    180deg,
+    var(--fv-dark-surface, #fffaf6) 0%,
+    var(--fv-dark-warning-soft, #f8eee5) 100%
+  );
 
-  color: #9c6232;
+  color: var(--fv-dark-warning, #9c6232);
 
   box-shadow:
     0 3px 7px rgba(15, 42, 68, 0.06),
@@ -1619,9 +1659,13 @@ html {
 .finvista-topbar-logout:hover {
   border-color: rgba(184, 118, 61, 0.4);
 
-  background: linear-gradient(180deg, #fff7f0 0%, #f3e4d7 100%);
+  background: linear-gradient(
+    180deg,
+    var(--fv-dark-surface, #fff7f0) 0%,
+    var(--fv-dark-warning-soft, #f3e4d7) 100%
+  );
 
-  color: #81491f;
+  color: var(--fv-dark-text, #81491f);
 
   box-shadow:
     0 5px 12px rgba(184, 118, 61, 0.12),

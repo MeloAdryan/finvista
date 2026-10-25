@@ -1,3 +1,5 @@
+import { FinancialChartPaint } from "../components/FinancialChartPaint";
+import { useChartAppearance } from "../services/chartAppearance";
 import { useId, useState } from "react";
 import {
   Bar,
@@ -41,6 +43,7 @@ export default function DashboardMonthlyChart({
 }: {
   analise: DashboardAnalysis;
 }) {
+  const appearance = useChartAppearance();
   const [tabela, setTabela] = useState(false);
   const [modo, setModo] = useState<"RECEBIMENTOS" | "RESULTADO">(
     "RECEBIMENTOS",
@@ -102,6 +105,7 @@ export default function DashboardMonthlyChart({
     ]);
   return (
     <article className="executive-panel df-monthly">
+      <FinancialChartPaint id={appearance.id} />
       <header>
         <div>
           <span className="executive-eyebrow">
@@ -130,7 +134,7 @@ export default function DashboardMonthlyChart({
       </header>
       <p>
         {detalhar
-          ? "Situação atual do principal das receitas, agrupada pela competência, ao lado da despesa registrada. Valores em R$."
+          ? "Recebido e em aberto conforme o critério e período selecionados, ao lado da despesa. Valores em R$."
           : "Receita e despesa em colunas; resultado em linha. Todos os valores em R$."}
       </p>
       {detalhar && parcial && (
@@ -153,8 +157,8 @@ export default function DashboardMonthlyChart({
                 <th>Receita registrada</th>
                 {detalhar && (
                   <>
-                    <th>Recebido (principal conhecido)</th>
-                    <th>Em aberto (principal conhecido)</th>
+                    <th>Recebido (valor conhecido)</th>
+                    <th>Em aberto (valor conhecido)</th>
                     <th>Sem detalhamento</th>
                   </>
                 )}
@@ -243,15 +247,15 @@ export default function DashboardMonthlyChart({
                   <Bar
                     dataKey="recebido"
                     stackId="receita"
-                    name="Recebido (principal conhecido)"
-                    fill="#2e75d3"
+                    name="Recebido (valor conhecido)"
+                    fill={appearance.fill("#2e75d3")}
                     maxBarSize={44}
                     isAnimationActive={false}
                   ></Bar>
                   <Bar
                     dataKey="emAberto"
                     stackId="receita"
-                    name="Em aberto (principal conhecido)"
+                    name="Em aberto (valor conhecido)"
                     fill={`url(#${padrao})`}
                     stroke="#2e75d3"
                     maxBarSize={44}
@@ -261,16 +265,17 @@ export default function DashboardMonthlyChart({
                     dataKey="semDetalhamento"
                     stackId="receita"
                     name="Receita sem detalhamento"
-                    fill="#9aa8b7"
+                    fill={appearance.fill("#9aa8b7")}
                     maxBarSize={44}
                     isAnimationActive={false}
                   />
                 </>
               ) : (
                 <Bar
+                  isAnimationActive={false}
                   dataKey="receita"
                   name="Receita"
-                  fill="#3e806c"
+                  fill={appearance.fill("#2e75d3")}
                   maxBarSize={44}
                 >
                   {analise.meses.map((m) => (
@@ -282,9 +287,10 @@ export default function DashboardMonthlyChart({
                 </Bar>
               )}
               <Bar
+                isAnimationActive={false}
                 dataKey="despesa"
                 name="Despesa"
-                fill="#c47c32"
+                fill={appearance.fill("#c47c32")}
                 maxBarSize={44}
               >
                 {analise.meses.map((m) => (
@@ -299,7 +305,7 @@ export default function DashboardMonthlyChart({
                   type="linear"
                   dataKey="resultado"
                   name="Resultado"
-                  stroke="#3869c8"
+                  stroke="var(--fv-chart-success)"
                   strokeWidth={2}
                   dot={{ r: 3 }}
                   isAnimationActive={false}
@@ -314,11 +320,11 @@ export default function DashboardMonthlyChart({
           <div className="mr-legend">
             <span>
               <i className="mr-paid" />
-              Recebido (principal)
+              Recebido
             </span>
             <span>
               <i className="mr-open" />
-              Em aberto (principal)
+              Em aberto
             </span>
             <span>
               <i className="mr-unknown" />
@@ -339,7 +345,7 @@ export default function DashboardMonthlyChart({
                 )
                 .map(
                   (m) =>
-                    `${m.periodo}: R$ 0 de principal recebido conhecido; ${brl(m.emAberto)} de principal em aberto conhecido.`,
+                    `${m.periodo}: R$ 0 de valor recebido conhecido; ${brl(m.emAberto)} de valor em aberto conhecido.`,
                 )
                 .join(" ")}
             </p>
@@ -351,13 +357,13 @@ export default function DashboardMonthlyChart({
           <details className="mr-method">
             <summary>Como interpretar este gráfico</summary>
             <p>
-              Competência é a data de análise do lançamento; não é a data de
-              recebimento. Os saldos representam a situação atual sincronizada,
-              não o saldo histórico no fim de cada mês. Recebido e em aberto
-              referem-se ao principal, sem juros, multas e descontos. Despesa
-              registrada pode incluir valores ainda não pagos. A linha de
-              resultado e os totais originais continuam disponíveis em “Ver
-              resultado”.
+              Competência usa o principal na data do evento. Vencimento usa o
+              líquido pago e aberto na data de vencimento. Baixa usa os
+              pagamentos/recebimentos efetivos da fonte selecionada. No regime
+              de competência ou vencimento, a divisão entre recebido e em aberto
+              é a posição atual disponível, não uma reconstrução histórica do
+              fechamento de cada mês. Valores sem detalhamento permanecem
+              sinalizados.
             </p>
             <p>
               Se os campos não forem informados, não fecharem com a receita ou o
@@ -370,7 +376,7 @@ export default function DashboardMonthlyChart({
         </>
       ) : (
         <p className="df-note">
-          Verde: receita · Laranja: despesa · Azul: resultado. Colunas claras
+          Azul: receita · Laranja: despesa · Verde: resultado. Colunas claras
           indicam mês em andamento, não dados completos. Use o atalho de seis
           meses para ampliar o intervalo.
         </p>

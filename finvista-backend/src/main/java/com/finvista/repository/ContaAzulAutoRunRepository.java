@@ -7,6 +7,8 @@ import java.util.*;
 
 
       public interface ContaAzulAutoRunRepository extends JpaRepository<ContaAzulAutoRun, UUID> {
+        Optional<ContaAzulAutoRun> findFirstByClienteIdAndStatusInOrderByConcluidoEmDesc(Long clienteId, java.util.Collection<String> status);
+        Optional<ContaAzulAutoRun> findFirstByClienteIdAndSincronizacaoCompletaTrueAndStatusInOrderByConcluidoEmDesc(Long clienteId, java.util.Collection<String> status);
 
         org.springframework.data.domain.Page<ContaAzulAutoRun> findByClienteIdOrderByCriadoEmDesc(Long clienteId, org.springframework.data.domain.Pageable pagina);
 

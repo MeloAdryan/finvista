@@ -13,5 +13,10 @@ public record FinancialPositionResponse(Long clienteId, LocalDate referencia,
 
     public record Cobertura(String origem, int semValorAberto, int semVencimento, LocalDate primeiraDataAnalise, LocalDate ultimaDataAnalise) {}
 
-    public record Grupo(BigDecimal vencidos, BigDecimal aVencer) {}
+    public record Grupo(BigDecimal vencidos, BigDecimal aVencer, BigDecimal venceHoje, BigDecimal aVencerAposHoje) {
+
+        public Grupo(BigDecimal vencidos, BigDecimal aVencer) {
+            this(vencidos, aVencer, null, null);
+        }
+    }
 }

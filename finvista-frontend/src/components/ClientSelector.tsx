@@ -1,3 +1,4 @@
+import logoEscuro from "../assets/logo-skyline-escuro.svg";
 import logoClaro from "../assets/logo-skyline-claro.svg";
 import "../styles/brand-assets.css";
 import { useEffect, useState } from "react";
@@ -90,7 +91,7 @@ function ClientSelector({ onSelecionar }: ClientSelectorProps) {
     ).toUpperCase();
   };
 
-return (
+  return (
     <main className="finvista-client-selector">
       <div className="finvista-client-selector-background">
         <span className="finvista-client-selector-orb finvista-client-selector-orb-one" />
@@ -100,8 +101,13 @@ return (
       <section className="finvista-client-selector-card">
         <div className="finvista-client-selector-brand">
           <img
-            className="finvista-brand-image"
+            className="finvista-brand-image fv-selector-logo-light"
             src={logoClaro}
+            alt="FinVista — Financial Intelligence"
+          />
+          <img
+            className="finvista-brand-image fv-selector-logo-dark"
+            src={logoEscuro}
             alt="FinVista — Financial Intelligence"
           />
         </div>

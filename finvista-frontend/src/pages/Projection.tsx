@@ -1,4 +1,6 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { FinancialViewContext } from "../contexts/financialViewContext";
+import { viewRange } from "../services/financialViewService";
+import { useContext, useEffect, useState, type FormEvent } from "react";
 import {
   getProjectionPlanning,
   type ProjectionInputs,
@@ -10,6 +12,8 @@ import "../styles/dashboard.css";
 import "../styles/financial-evolution.css";
 
 export default function Projection() {
+  const filtroVisual = useContext(FinancialViewContext);
+  const faixa = filtroVisual ? viewRange(filtroVisual) : null;
   const [dados, setDados] = useState<ProjectionPlanning | null>(null);
   const [inputs, setInputs] = useState<ProjectionInputs>({});
   const [formulario, setFormulario] = useState({
@@ -74,6 +78,47 @@ export default function Projection() {
       variacaoPercentual: variacao,
     });
   }
+  const mesesVisiveis =
+    dados?.meses.filter(
+      (m) =>
+        !faixa ||
+        (m.periodo >= faixa.inicio.slice(0, 7) &&
+          m.periodo <= faixa.fim.slice(0, 7)),
+    ) ?? [];
+  const primeiroIndice =
+    dados && mesesVisiveis.length
+      ? dados.meses.findIndex((m) => m.periodo === mesesVisiveis[0].periodo)
+      : 0;
+  const dadosVisiveis = dados
+    ? {
+        ...dados,
+        meses: mesesVisiveis,
+        recorteVisual: !!faixa,
+        inicio: mesesVisiveis.length
+          ? `${mesesVisiveis[0].periodo}-01`
+          : dados.inicio,
+        fim: mesesVisiveis.length
+          ? new Date(
+              Date.UTC(
+                Number(mesesVisiveis.at(-1)!.periodo.slice(0, 4)),
+                Number(mesesVisiveis.at(-1)!.periodo.slice(5, 7)),
+                0,
+                12,
+              ),
+            )
+              .toISOString()
+              .slice(0, 10)
+          : dados.fim,
+        saldosAnteriores:
+          primeiroIndice > 0
+            ? {
+                base: dados.meses[primeiroIndice - 1].saldoBase,
+                conservador: dados.meses[primeiroIndice - 1].saldoConservador,
+                otimista: dados.meses[primeiroIndice - 1].saldoOtimista,
+              }
+            : undefined,
+      }
+    : null;
   return (
     <div className="dashboard fe-page">
       <section className="fe-card">
@@ -176,7 +221,25 @@ export default function Projection() {
         )}
         {carregando && <p role="status">Calculando simulação…</p>}
       </section>
-      {!carregando && !erro && dados && <ProjectionChart dados={dados} />}
+      {!carregando &&
+        !erro &&
+        dadosVisiveis &&
+        (mesesVisiveis.length ? (
+          <>
+            <p className="fe-note">
+              Meses completos da simulação que cruzam o filtro. Os saldos
+              preservam os meses anteriores da simulação. O filtro não altera a
+              base por competência nem cria projeções fora do horizonte de seis
+              meses.
+            </p>
+            <ProjectionChart dados={dadosVisiveis} />
+          </>
+        ) : (
+          <p role="status">
+            Nenhum mês da projeção cruza o período escolhido. Use Todo período
+            para exibir os seis meses disponíveis.
+          </p>
+        ))}
     </div>
   );
 }

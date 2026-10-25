@@ -1,3 +1,8 @@
+import { useContext } from "react";
+import {
+  FinancialViewContext,
+  FinancialViewUpdateContext,
+} from "../contexts/financialViewContext";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useLocation } from "react-router-dom";
@@ -52,6 +57,10 @@ const formatarData = (data: string) => {
 };
 
 function SpendingGoals() {
+  const viewFilter = useContext(FinancialViewContext);
+  const updateView = useContext(FinancialViewUpdateContext);
+  const [sucessoCadastro, setSucessoCadastro] = useState("");
+  const erroCadastroRef = useRef<HTMLDivElement>(null);
   const { hash } = useLocation();
   const [periodosSelecionados, setPeriodosSelecionados] = useState<
     Record<string, { id: number; hash: string }>
@@ -118,10 +127,13 @@ function SpendingGoals() {
       setCarregando(true);
       setErro("");
 
-      const dados = await listarMetas({
-        centroCusto: centroCusto || null,
-        categoria: categoria || null,
-      });
+      const dados = await listarMetas(
+        {
+          centroCusto: centroCusto || null,
+          categoria: categoria || null,
+        },
+        viewFilter ?? undefined,
+      );
 
       setMetas(dados);
     } catch (error) {
@@ -143,7 +155,7 @@ function SpendingGoals() {
         setErro("");
 
         const resultados = await Promise.allSettled([
-          listarMetas(),
+          listarMetas({}, viewFilter ?? undefined),
           obterUsuarioAtual(),
           getCostCenters(true),
           getExpenseDistribution(true),
@@ -213,7 +225,7 @@ function SpendingGoals() {
     return () => {
       ativo = false;
     };
-  }, []);
+  }, [viewFilter]);
 
   const usuarioAdmin = usuario?.perfil === "ADMIN";
 
@@ -338,6 +350,31 @@ function SpendingGoals() {
     };
   }, [metasFiltradas]);
 
+  useEffect(() => {
+    if (erro && mostrarFormulario) {
+      erroCadastroRef.current?.focus();
+      erroCadastroRef.current?.scrollIntoView({ block: "nearest" });
+    }
+  }, [erro, mostrarFormulario]);
+
+  function validarCadastro(): string | null {
+    if (!formulario.nome.trim() || formulario.nome.trim().length > 120)
+      return "Informe um nome de até 120 caracteres para a meta.";
+    if (!formulario.dataInicio || !formulario.dataFim)
+      return "Informe o início e o fim da vigência.";
+    if (formulario.dataFim < formulario.dataInicio)
+      return "A data final não pode ser anterior à data inicial.";
+    if (!Number.isFinite(formulario.valorLimite) || formulario.valorLimite <= 0)
+      return "Informe um limite maior que zero.";
+    if (
+      !Number.isInteger(formulario.percentualAlerta) ||
+      formulario.percentualAlerta < 1 ||
+      formulario.percentualAlerta > 100
+    )
+      return "O percentual de alerta deve ser um número inteiro entre 1 e 100.";
+    return null;
+  }
+
   const atualizarFormulario = (
     campo: keyof RecurrenceRequest,
     valor: string | number | null,
@@ -376,6 +413,11 @@ function SpendingGoals() {
   };
 
   async function visualizarPeriodos() {
+    const problema = validarCadastro();
+    if (problema) {
+      setErro(problema);
+      return;
+    }
     const pedido = { ...formulario };
     setGerandoPrevia(true);
     setPrevia(null);
@@ -396,67 +438,68 @@ function SpendingGoals() {
 
   const salvarMeta = async (event: FormEvent) => {
     event.preventDefault();
-    if (gravando.current) return;
+    if (gravando.current || gerandoPrevia) return;
+    setSucessoCadastro("");
+    const problema = validarCadastro();
+    if (problema) {
+      setErro(problema);
+      return;
+    }
     if (!previa || previa.assinatura !== JSON.stringify(formulario)) {
       setErro(
-        "Visualize os períodos antes de salvar. Se alterar os dados, gere uma nova prévia.",
+        "Clique em ‘Visualizar períodos’ antes de criar a meta. Se alterar os dados, gere uma nova prévia.",
       );
       return;
     }
 
-    if (
-      !formulario.dataInicio ||
-      !formulario.dataFim ||
-      formulario.valorLimite <= 0
-    ) {
-      setErro("Preencha o período e informe um valor limite maior que zero.");
-
-      return;
-    }
-
-    if (formulario.percentualAlerta <= 0 || formulario.percentualAlerta > 100) {
-      setErro("O percentual de alerta deve estar entre 1% e 100%.");
-
-      return;
-    }
-
-    if (formulario.dataFim < formulario.dataInicio) {
-      setErro("A data final não pode ser anterior à data inicial.");
-
-      return;
-    }
-
+    const pedido = { ...formulario };
+    gravando.current = true;
+    setSalvando(true);
+    setErro("");
     try {
-      gravando.current = true;
-      setSalvando(true);
-      setErro("");
-
-      await criarRecorrencia(formulario);
-      setPrevia(null);
-
-      setFormulario({
-        nome: "",
-        recorrencia: "MENSAL",
-        dataInicio: "",
-        dataFim: "",
-        valorLimite: 0,
-        percentualAlerta: 80,
-        categoria: null,
-        centroCusto: null,
-      });
-
-      setMostrarFormulario(false);
-
-      await carregarMetas();
+      await criarRecorrencia(pedido);
     } catch (error) {
       setErro(
         error instanceof Error
           ? error.message
           : "Não foi possível criar a meta.",
       );
+      return;
     } finally {
       gravando.current = false;
       setSalvando(false);
+    }
+
+    // The server has confirmed creation. A later list failure must not be
+    // reported as a failed creation, prompting an accidental second submission.
+    setSucessoCadastro(`Meta “${pedido.nome.trim()}” criada com sucesso.`);
+    setPrevia(null);
+    setFormulario({
+      nome: "",
+      recorrencia: "MENSAL",
+      dataInicio: "",
+      dataFim: "",
+      valorLimite: 0,
+      percentualAlerta: 80,
+      categoria: null,
+      centroCusto: null,
+    });
+    setCategoriasFormulario([]);
+    setMostrarFormulario(false);
+    setFiltroCentroCusto("");
+    setFiltroCategoria("");
+    if (viewFilter && updateView) {
+      // Keep the selected financial criterion; display the new validity range.
+      updateView({
+        ...viewFilter,
+        periodo: "PERSONALIZADO",
+        inicio: pedido.dataInicio,
+        fim: pedido.dataFim,
+        categoria: "",
+        centro: "",
+      });
+    } else {
+      await carregarMetas("", "");
     }
   };
 
@@ -504,6 +547,7 @@ function SpendingGoals() {
     <section className="metas-page">
       <div role="status" aria-live="polite" className="meta-exclusao-status">
         {sucessoExclusao}
+        {sucessoCadastro}
       </div>
       <div className="metas-header">
         <div>
@@ -533,10 +577,24 @@ function SpendingGoals() {
         )}
       </div>
 
-      {erro && <div className="metas-alerta-erro">{erro}</div>}
+      {erro && !mostrarFormulario && (
+        <div role="alert" className="metas-alerta-erro">
+          {erro}
+        </div>
+      )}
 
       {usuarioAdmin && mostrarFormulario && (
-        <form className="metas-formulario" onSubmit={salvarMeta}>
+        <form className="metas-formulario" onSubmit={salvarMeta} noValidate>
+          {erro && (
+            <div
+              role="alert"
+              tabIndex={-1}
+              ref={erroCadastroRef}
+              className="metas-alerta-erro"
+            >
+              {erro}
+            </div>
+          )}
           <fieldset className="meta-cadastro-campos" disabled={salvando}>
             <legend className="meta-cadastro-legenda">
               Cadastrar meta e períodos
@@ -755,11 +813,7 @@ function SpendingGoals() {
                 <button
                   type="submit"
                   className="metas-primary-button"
-                  disabled={
-                    salvando ||
-                    !previa ||
-                    previa.assinatura !== JSON.stringify(formulario)
-                  }
+                  disabled={salvando || gerandoPrevia}
                 >
                   {salvando ? "Salvando..." : "Criar meta"}
                 </button>

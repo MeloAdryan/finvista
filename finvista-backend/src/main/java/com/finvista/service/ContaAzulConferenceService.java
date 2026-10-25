@@ -53,6 +53,9 @@ public class ContaAzulConferenceService {
                     blocos.add(i);
                 }
             }
+            if (ContaAzulStatementService.isStatement(colunas.keySet())) {
+                throw new IllegalArgumentException(ContaAzulStatementService.IMPORT_GUIDANCE);
+            }
             for (String obrigatoria : List.of("data de competência", "data de vencimento",
                     "descrição", "valor original da parcela (r$)")) {
                 if (!colunas.containsKey(obrigatoria)) {
@@ -179,8 +182,8 @@ public class ContaAzulConferenceService {
                     avisos.add("Saldo aberto com vencimento anterior à data de corte.");
                 }
                 if (!erros.isEmpty()) {
-                    rejeitadas++; 
-                }else {
+                    rejeitadas++;
+                } else {
                     original = original.add(vo);
                     realizado = realizado.add(tr);
                     aberto = aberto.add(ta);

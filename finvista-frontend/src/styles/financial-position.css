@@ -11,20 +11,20 @@
 .executive-dashboard .fp-heading h2 {
   margin: 0;
   font-size: 18px;
-  color: #183b53;
+  color: var(--fv-dark-text, #183b53);
 }
 .executive-dashboard .fp-heading p,
 .executive-dashboard .fp-note {
   margin: 6px 0;
   font-size: 13px;
-  color: #52657c;
+  color: var(--fv-dark-muted, #52657c);
   line-height: 1.5;
 }
 .executive-dashboard .fp-heading button {
-  border: 1px solid #ccd9e7;
+  border: 1px solid var(--fv-dark-border, #ccd9e7);
   border-radius: 7px;
-  background: white;
-  color: #183b53;
+  background: var(--fv-dark-surface, white);
+  color: var(--fv-dark-text, #183b53);
   padding: 10px 14px;
   cursor: pointer;
 }
@@ -33,7 +33,7 @@
   cursor: wait;
 }
 .executive-dashboard .fp-heading button:focus-visible {
-  outline: 3px solid #96b8d4;
+  outline: 3px solid var(--fv-dark-border, #96b8d4);
   outline-offset: 2px;
 }
 .executive-dashboard .fp-grid {
@@ -42,8 +42,8 @@
   gap: 14px;
 }
 .executive-dashboard .fp-card {
-  background: #fff;
-  border: 1px solid #dbe4ef;
+  background: var(--fv-dark-surface, #fff);
+  border: 1px solid var(--fv-dark-border, #dbe4ef);
   border-radius: 10px;
   padding: 18px;
   min-width: 0;
@@ -51,7 +51,7 @@
 .executive-dashboard .fp-card h3 {
   margin: 0 0 14px;
   font-size: 15px;
-  color: #183b53;
+  color: var(--fv-dark-text, #183b53);
 }
 .executive-dashboard .fp-card dl {
   display: grid;
@@ -60,7 +60,7 @@
   margin: 0;
 }
 .executive-dashboard .fp-card dt {
-  color: #52657c;
+  color: var(--fv-dark-muted, #52657c);
   font-size: 13px;
   margin-bottom: 7px;
 }
@@ -68,19 +68,19 @@
   margin: 0;
   font-weight: 700;
   font-size: clamp(16px, 1.7vw, 22px);
-  color: #183b53;
+  color: var(--fv-dark-text, #183b53);
   overflow-wrap: anywhere;
 }
 .executive-dashboard .fp-card dd.fp-overdue {
-  color: #b43a36;
+  color: var(--fv-dark-danger, #b43a36);
 }
 .executive-dashboard .fp-unavailable {
   font-size: 17px;
-  color: #52657c;
+  color: var(--fv-dark-muted, #52657c);
 }
 .executive-dashboard .fp-card p {
   font-size: 13px;
-  color: #52657c;
+  color: var(--fv-dark-muted, #52657c);
   margin: 8px 0 0;
   line-height: 1.5;
 }
@@ -93,7 +93,7 @@
 .executive-dashboard .fp-account-total {
   display: block;
   font-size: 22px;
-  color: #183b53;
+  color: var(--fv-dark-text, #183b53);
   overflow-wrap: anywhere;
 }
 .executive-dashboard .fp-accounts details {
@@ -102,11 +102,11 @@
 }
 .executive-dashboard .fp-accounts summary {
   cursor: pointer;
-  color: #183b53;
+  color: var(--fv-dark-text, #183b53);
   padding: 6px 0;
 }
 .executive-dashboard .fp-accounts summary:focus-visible {
-  outline: 2px solid #96b8d4;
+  outline: 2px solid var(--fv-dark-border, #96b8d4);
 }
 .executive-dashboard .fp-accounts ul {
   list-style: none;
@@ -120,7 +120,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 8px 0;
-  border-top: 1px solid #e7edf3;
+  border-top: 1px solid var(--fv-dark-border, #e7edf3);
 }
 .executive-dashboard .fp-accounts li span {
   overflow-wrap: anywhere;
@@ -130,7 +130,7 @@
   white-space: nowrap;
 }
 .executive-dashboard .fp-card p.fp-accounts-warning {
-  color: #8a540c;
+  color: var(--fv-dark-text, #8a540c);
 }
 .executive-dashboard .fp-card p.fp-accounts-source {
   margin-top: 12px;
@@ -138,9 +138,9 @@
 }
 
 .executive-dashboard .fp-coverage-warning {
-  border-left: 3px solid #b77b25;
-  background: #fff8ec;
-  color: #775016;
+  border-left: 3px solid var(--fv-dark-warning, #b77b25);
+  background: var(--fv-dark-warning-soft, #fff8ec);
+  color: var(--fv-dark-text, #775016);
   padding: 10px 14px;
   font-size: 13px;
   line-height: 1.6;
@@ -149,16 +149,16 @@
 .executive-dashboard .fp-coverage {
   margin-top: 10px;
   font-size: 13px;
-  border-top: 1px solid #dbe4ef;
+  border-top: 1px solid var(--fv-dark-border, #dbe4ef);
   padding-top: 10px;
 }
 .executive-dashboard .fp-coverage summary {
   cursor: pointer;
   padding: 6px 0;
-  color: #183b53;
+  color: var(--fv-dark-text, #183b53);
 }
 .executive-dashboard .fp-coverage summary:focus-visible {
-  outline: 2px solid #96b8d4;
+  outline: 2px solid var(--fv-dark-border, #96b8d4);
   outline-offset: 3px;
 }
 .executive-dashboard .fp-coverage ul {
@@ -171,7 +171,7 @@
   flex-wrap: wrap;
   gap: 6px 18px;
   padding: 8px 0;
-  border-bottom: 1px solid #dbe4ef;
+  border-bottom: 1px solid var(--fv-dark-border, #dbe4ef);
 }
 .executive-dashboard .fp-diagnostic p {
   overflow-wrap: anywhere;
@@ -180,7 +180,7 @@
 /* Hierarquia visual da posição financeira, restrita ao painel executivo. */
 .executive-dashboard .fp-panel {
   margin: 28px 0;
-  color: #18334d;
+  color: var(--fv-dark-text, #18334d);
 }
 .executive-dashboard .fp-heading {
   align-items: center;
@@ -189,7 +189,7 @@
 .executive-dashboard .fp-eyebrow {
   display: block;
   margin-bottom: 7px;
-  color: #8b5b26;
+  color: var(--fv-dark-warning, #8b5b26);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -202,7 +202,7 @@
 }
 .executive-dashboard .fp-heading p {
   font-size: 14px;
-  color: #5c6d80;
+  color: var(--fv-dark-muted, #5c6d80);
   line-height: 1.6;
   margin-top: 8px;
 }
@@ -221,7 +221,7 @@
 .executive-dashboard .fp-card {
   padding: 22px;
   border-radius: 16px;
-  border-color: #dce4ed;
+  border-color: var(--fv-dark-border, #dce4ed);
   box-shadow: 0 4px 16px #17334d04;
 }
 .executive-dashboard .fp-card-heading {
@@ -242,29 +242,29 @@
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  background: #edf3f8;
-  color: #40617f;
+  background: var(--fv-dark-canvas, #edf3f8);
+  color: var(--fv-dark-muted, #40617f);
   font-size: 22px;
 }
 .executive-dashboard .fp-receivable .fp-card-heading > span {
-  background: #edf8f2;
-  color: #287653;
+  background: var(--fv-dark-success-soft, #edf8f2);
+  color: var(--fv-dark-text, #287653);
 }
 .executive-dashboard .fp-payable .fp-card-heading > span {
-  background: #fff3e8;
-  color: #a56b28;
+  background: var(--fv-dark-warning-soft, #fff3e8);
+  color: var(--fv-dark-warning, #a56b28);
 }
 .executive-dashboard .fp-card dl {
   gap: 16px;
   padding-top: 4px;
 }
 .executive-dashboard .fp-card dl > div + div {
-  border-left: 1px solid #e6ebf1;
+  border-left: 1px solid var(--fv-dark-border, #e6ebf1);
   padding-left: 16px;
 }
 .executive-dashboard .fp-card dt {
   font-size: 14px;
-  color: #617185;
+  color: var(--fv-dark-muted, #617185);
   margin-bottom: 12px;
 }
 .executive-dashboard .fp-card dd {
@@ -274,7 +274,7 @@
   font-variant-numeric: tabular-nums;
 }
 .executive-dashboard .fp-card dd.fp-overdue {
-  color: #b63737;
+  color: var(--fv-dark-danger, #b63737);
 }
 .executive-dashboard .fp-account-total {
   font-size: clamp(24px, 2vw, 30px);
@@ -296,34 +296,34 @@
 }
 .executive-dashboard .fp-card .fp-account-time {
   font-size: 13px;
-  color: #63758b;
+  color: var(--fv-dark-muted, #63758b);
 }
 .executive-dashboard .fp-accounts-warning,
 .executive-dashboard .fp-accounts > p[role="status"] {
   padding: 12px;
-  background: #fff7ec;
+  background: var(--fv-dark-warning-soft, #fff7ec);
   border-radius: 9px;
-  color: #81571f;
+  color: var(--fv-dark-text, #81571f);
 }
 .executive-dashboard .fp-accounts details {
   font-size: 14px;
   margin-top: 12px;
 }
 .executive-dashboard .fp-account-source {
-  border-top: 1px solid #e9edf2;
+  border-top: 1px solid var(--fv-dark-border, #e9edf2);
   padding-top: 9px;
 }
 .executive-dashboard .fp-account-source summary {
-  color: #586e83;
+  color: var(--fv-dark-muted, #586e83);
 }
 .executive-dashboard .fp-coverage-warning {
   display: flex;
   gap: 12px;
   align-items: flex-start;
   margin: 0 0 18px;
-  border: 1px solid #ead6b5;
-  border-left: 4px solid #bd852e;
-  background: #fff9ef;
+  border: 1px solid var(--fv-dark-border, #ead6b5);
+  border-left: 4px solid var(--fv-dark-warning, #bd852e);
+  background: var(--fv-dark-warning-soft, #fff9ef);
   border-radius: 11px;
   padding: 15px 18px;
   font-size: 14px;
@@ -335,9 +335,9 @@
   flex-shrink: 0;
   width: 22px;
   height: 22px;
-  border: 1.5px solid #ad761f;
+  border: 1.5px solid var(--fv-dark-warning, #ad761f);
   border-radius: 50%;
-  color: #8d611f;
+  color: var(--fv-dark-warning, #8d611f);
   font-weight: 700;
 }
 .executive-dashboard .fp-coverage-warning strong {
@@ -348,20 +348,20 @@
   margin: 5px 0 0;
   font-size: 14px;
   line-height: 1.6;
-  color: #785e35;
+  color: var(--fv-dark-warning, #785e35);
 }
 .executive-dashboard .fp-method,
 .executive-dashboard .fp-coverage {
   font-size: 14px;
-  border: 1px solid #e0e7ee;
-  background: #fff;
+  border: 1px solid var(--fv-dark-border, #e0e7ee);
+  background: var(--fv-dark-surface, #fff);
   border-radius: 10px;
   margin-top: 12px;
   padding: 4px 16px;
 }
 .executive-dashboard .fp-method summary,
 .executive-dashboard .fp-coverage summary {
-  color: #405a73;
+  color: var(--fv-dark-muted, #405a73);
   cursor: pointer;
   padding: 10px 0;
   line-height: 1.5;
@@ -373,13 +373,13 @@
   margin: 6px 0 14px;
 }
 .executive-dashboard .fp-panel summary:focus-visible {
-  outline: 3px solid #93b5d6;
+  outline: 3px solid var(--fv-dark-border, #93b5d6);
   outline-offset: 3px;
   border-radius: 4px;
 }
 .executive-dashboard .fp-panel > p[role="alert"] {
-  background: #fff0ee;
-  color: #9c332e;
+  background: var(--fv-dark-danger-soft, #fff0ee);
+  color: var(--fv-dark-danger, #9c332e);
   padding: 14px;
   border-radius: 10px;
   font-size: 14px;
@@ -394,7 +394,7 @@
   .executive-dashboard .fp-card dl > div + div {
     border-left: 0;
     padding-left: 0;
-    border-top: 1px solid #e6ebf1;
+    border-top: 1px solid var(--fv-dark-border, #e6ebf1);
     padding-top: 14px;
   }
 }
@@ -414,4 +414,8 @@
   .executive-dashboard .fp-coverage-warning {
     padding: 14px;
   }
+}
+
+#dashboard.executive-dashboard .fp-card dl {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
 }

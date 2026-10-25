@@ -1,3 +1,5 @@
+import { dashboardForFilter } from "./financialPageAdapters";
+import type { ViewFilter } from "./financialViewService";
 import { API_URL } from "../config/api";
 import type { DashboardData } from "./dashboardService";
 export interface DashboardAnalysis {
@@ -36,6 +38,7 @@ export interface DashboardAnalysis {
     diferenca: number;
   }[];
   itens: {
+    movimentoId?: string | null;
     id: number;
     data: string;
     descricao: string;
@@ -50,7 +53,9 @@ export async function getDashboardAnalysis(
   fim?: string,
   categoria?: string,
   signal?: AbortSignal,
+  viewFilter?: ViewFilter,
 ): Promise<DashboardAnalysis> {
+  if (viewFilter) return dashboardForFilter(viewFilter, categoria, signal);
   const params = new URLSearchParams();
   if (inicio) params.set("inicio", inicio);
   if (fim) params.set("fim", fim);

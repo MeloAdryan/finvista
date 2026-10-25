@@ -1,3 +1,8 @@
+import { useContext } from "react";
+import {
+  FinancialViewContext,
+  FinancialViewUpdateContext,
+} from "../contexts/financialViewContext";
 import FinancialPositionPanel from "../components/FinancialPositionPanel";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
@@ -12,7 +17,6 @@ import FinancialWaterfall from "../charts/FinancialWaterfall";
 import DashboardFilteredDetail from "../components/DashboardFilteredDetail";
 import "../styles/dashboard-filters.css";
 import FinancialHelp from "../components/FinancialHelp";
-import DashboardQuickActions from "../components/DashboardQuickActions";
 import FinancialAlertsPanel from "../components/FinancialAlertsPanel";
 
 import {
@@ -29,6 +33,8 @@ import "../styles/dashboard.css";
 import "../styles/dashboard-polish.css";
 
 function Dashboard() {
+  const viewFilter = useContext(FinancialViewContext);
+  const updateView = useContext(FinancialViewUpdateContext);
   const { periodo, atualizarPeriodo } = useAnalysisPeriod();
   const [periodoInicial] = useState(() => ({ ...periodo }));
   const [analise, setAnalise] = useState<DashboardAnalysis | null>(null);
@@ -49,15 +55,25 @@ function Dashboard() {
     const controller = new AbortController();
     consulta.current = controller;
     async function abrir() {
+      setCarregando(true);
+      setErro(null);
       try {
         const [resultado, goals] = await Promise.all([
           getDashboardAnalysis(
             periodoInicial.inicio,
             periodoInicial.fim,
-            periodoInicial.categoria,
+            viewFilter
+              ? viewFilter.categoria || undefined
+              : periodoInicial.categoria,
             controller.signal,
+            viewFilter ?? undefined,
           ),
-          listarMetas(),
+          listarMetas(
+            {},
+            viewFilter
+              ? { ...viewFilter, categoria: "", centro: "" }
+              : undefined,
+          ),
         ]);
         if (!controller.signal.aborted) {
           setAnalise(resultado);
@@ -87,7 +103,7 @@ function Dashboard() {
       controller.abort();
       consulta.current?.abort();
     };
-  }, [periodoInicial, atualizarPeriodo]);
+  }, [periodoInicial, atualizarPeriodo, viewFilter]);
   async function aplicar(
     event?: FormEvent<HTMLFormElement>,
     seisMeses = false,
@@ -116,6 +132,17 @@ function Dashboard() {
     }
     if (!primeiro || !ultimo || primeiro > ultimo) {
       setErro("Informe as duas datas em ordem válida.");
+      return;
+    }
+    if (viewFilter && updateView) {
+      updateView({
+        ...viewFilter,
+        periodo: "PERSONALIZADO",
+        inicio: primeiro,
+        fim: ultimo,
+        categoria: categoriaConsulta || "",
+        centro: "",
+      });
       return;
     }
     consulta.current?.abort();
@@ -208,77 +235,13 @@ function Dashboard() {
 
   return (
     <div id="dashboard" className="dashboard executive-dashboard">
-      <header className="executive-header">
-        <div>
-          <span className="executive-page-label">Painel Executivo</span>
-
-          <h1>Visão financeira</h1>
-
-          <p>
-            Acompanhe os principais indicadores e limites financeiros em uma
-            visão consolidada.
-          </p>
-        </div>
-
-        <div className="executive-header-badge">
-          <span>FinVista</span>
-          <strong>Visão Executiva</strong>
-        </div>
-      </header>
-
-      <div className="df-toolbar">
-        <DashboardQuickActions />
-        <section className="df-filter-panel" aria-label="Filtros do painel">
-          <form onSubmit={(event) => void aplicar(event)}>
-            <label htmlFor="df-start">
-              Data inicial
-              <input
-                id="df-start"
-                type="date"
-                value={inicio}
-                disabled={carregando}
-                onChange={(e) => setInicio(e.target.value)}
-              />
-            </label>
-            <label htmlFor="df-end">
-              Data final
-              <input
-                id="df-end"
-                type="date"
-                value={fim}
-                disabled={carregando}
-                onChange={(e) => setFim(e.target.value)}
-              />
-            </label>
-            <label htmlFor="df-category">
-              Categoria
-              <select
-                id="df-category"
-                value={categoria}
-                disabled={carregando}
-                onChange={(e) => setCategoria(e.target.value)}
-              >
-                <option value="">Todas as categorias</option>
-                {analise.categorias.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit" disabled={carregando}>
-              {carregando ? "Consultando..." : "Aplicar filtros"}
-            </button>
-            <button
-              type="button"
-              disabled={carregando}
-              onClick={() => void aplicar(undefined, true)}
-            >
-              Ver seis meses
-            </button>
-          </form>
-        </section>
-      </div>
+      <button
+        type="button"
+        disabled={carregando}
+        onClick={() => void aplicar(undefined, true)}
+      >
+        Ver seis meses
+      </button>
       <p className="df-applied" aria-live="polite">
         Aplicado: {dataBR(analise.inicio)} até {dataBR(analise.fim)} ·{" "}
         {analise.categoria ?? "Todas as categorias"}. Comparação:{" "}
@@ -419,10 +382,11 @@ function Dashboard() {
       </section>
 
       <aside className="fp-coverage-warning" role="note">
-        <strong>Cobertura dos dados:</strong> os gráficos usam competência; a
-        automação consulta vencimentos. Concluir uma varredura não garante que
-        toda a competência foi importada. Revise pendências e use “Conferir
-        cobertura por competência” em Importar dados antes de fechar o período.
+        <strong>Cobertura dos dados:</strong> os gráficos seguem a fonte, o
+        critério e o período selecionados. Concluir uma varredura não certifica
+        a cobertura integral. Revise pendências e a conferência individual em
+        Importar dados. A posição financeira abaixo usa sua referência atual
+        própria, com todos os vencimentos.
       </aside>
       <FinancialPositionPanel
         key={analise.clienteId}

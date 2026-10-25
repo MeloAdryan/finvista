@@ -10,7 +10,12 @@ public final class ContaAzulAutoResponse {
     }
 
     public record Configurar(Long clienteId, boolean habilitada, LocalDate inicio, LocalDate fim, int intervaloMinutos,
-            boolean incluirNovas, boolean confirmado, boolean confirmoHistorico, boolean periodoMovel) {
+            boolean incluirNovas, boolean confirmado, boolean confirmoHistorico, boolean periodoMovel, boolean sincronizacaoCompleta) {
+
+        public Configurar(Long clienteId, boolean habilitada, LocalDate inicio, LocalDate fim, int intervaloMinutos,
+                boolean incluirNovas, boolean confirmado, boolean confirmoHistorico, boolean periodoMovel) {
+            this(clienteId, habilitada, inicio, fim, intervaloMinutos, incluirNovas, confirmado, confirmoHistorico, periodoMovel, false);
+        }
 
         public Configurar(Long clienteId, boolean habilitada, LocalDate inicio, LocalDate fim, int intervaloMinutos,
                 boolean incluirNovas, boolean confirmado, boolean confirmoHistorico) {
@@ -32,7 +37,12 @@ public final class ContaAzulAutoResponse {
     }
 
     public record Config(Long clienteId, boolean habilitada, LocalDate inicio, LocalDate fim, int intervaloMinutos,
-            boolean incluirNovas, Instant proximaEm, Instant alteradoEm, boolean periodoMovel) {
+            boolean incluirNovas, Instant proximaEm, Instant alteradoEm, boolean periodoMovel, boolean sincronizacaoCompleta) {
+
+        public Config(Long clienteId, boolean habilitada, LocalDate inicio, LocalDate fim, int intervaloMinutos,
+                boolean incluirNovas, Instant proximaEm, Instant alteradoEm, boolean periodoMovel) {
+            this(clienteId, habilitada, inicio, fim, intervaloMinutos, incluirNovas, proximaEm, alteradoEm, periodoMovel, false);
+        }
 
         public Config(Long clienteId, boolean habilitada, LocalDate inicio, LocalDate fim, int intervaloMinutos,
                 boolean incluirNovas, Instant proximaEm, Instant alteradoEm) {

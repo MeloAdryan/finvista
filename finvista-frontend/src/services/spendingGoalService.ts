@@ -1,3 +1,4 @@
+import { getFinancialView, type ViewFilter } from "./financialViewService";
 import { apiFetch } from "../config/http";
 import { API_URL } from "../config/api";
 
@@ -50,6 +51,7 @@ export interface SpendingGoalFilters {
 
 export async function listarMetas(
   filtros: SpendingGoalFilters = {},
+  viewFilter?: ViewFilter,
 ): Promise<SpendingGoal[]> {
   const params = new URLSearchParams();
 
@@ -79,7 +81,50 @@ export async function listarMetas(
     throw new Error("Não foi possível carregar as metas.");
   }
 
-  return response.json();
+  const configs: SpendingGoal[] = await response.json();
+  if (!viewFilter) return configs;
+  const signal = new AbortController().signal;
+  const base = await getFinancialView(
+    { ...viewFilter, categoria: "", centro: "" },
+    signal,
+  );
+  const cat = filtros.categoria ?? viewFilter.categoria,
+    center = filtros.centroCusto ?? viewFilter.centro;
+  const selected =
+    cat || center
+      ? await getFinancialView(
+          { ...viewFilter, categoria: cat || "", centro: center || "" },
+          signal,
+        )
+      : base;
+  if (base.clienteId !== selected.clienteId)
+    throw new Error("A empresa mudou. Atualize a página.");
+  return configs
+    .filter((c) => base.metas.some((m) => m.id === c.id))
+    .map((c) => {
+      const limit = base.metas.find((m) => m.id === c.id)!;
+      const filtered = selected.metas.find((m) => m.id === c.id);
+      const spent = Number(limit.consumoPeriodo),
+        percentage = Number(limit.percentual ?? 0),
+        value = Number(filtered?.consumoPeriodo ?? 0);
+      return {
+        ...c,
+        gastoAtual: spent,
+        percentualUtilizado: percentage,
+        saldoMeta: Math.round((c.valorLimite - spent) * 100) / 100,
+        gastoFiltrado: value,
+        percentualFiltrado:
+          c.valorLimite > 0 ? (value / c.valorLimite) * 100 : 0,
+        filtroCategoria: cat || null,
+        filtroCentroCusto: center || null,
+        status:
+          percentage > 100
+            ? "EXCEDIDA"
+            : percentage >= c.percentualAlerta
+              ? "ALERTA"
+              : "NORMAL",
+      };
+    });
 }
 
 export async function criarMeta(

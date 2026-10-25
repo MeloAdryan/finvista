@@ -1,3 +1,5 @@
+import VisualThemeToggle from "./components/VisualThemeToggle";
+import FinancialCriteriaWorkspace from "./components/FinancialCriteriaWorkspace";
 import marcaIcone from "./assets/brand-icon.svg";
 import logoEscuro from "./assets/logo-skyline-escuro.svg";
 import "./styles/brand-assets.css";
@@ -45,6 +47,9 @@ const CashFlow = lazy(() => import("./pages/CashFlow"));
 const CostCenters = lazy(() => import("./pages/CostCenters"));
 const Expenses = lazy(() => import("./pages/Expenses"));
 const Budgets = lazy(() => import("./pages/Budgets"));
+const FinancialControlCenter = lazy(
+  () => import("./pages/FinancialControlCenter"),
+);
 const History = lazy(() => import("./pages/History"));
 const AdminRegistration = lazy(() => import("./components/AdminRegistration"));
 
@@ -57,6 +62,7 @@ type PaginaAtiva =
   | "despesas"
   | "orcamentos"
   | "fluxo-caixa"
+  | "conferencia"
   | "historico"
   | "importacao"
   | "cadastros";
@@ -248,11 +254,13 @@ function App() {
                   ? "despesas"
                   : location.pathname === "/orcamentos"
                     ? "orcamentos"
-                    : location.pathname === "/historico"
-                      ? "historico"
-                      : location.pathname === "/importar"
-                        ? "importacao"
-                        : "metas";
+                    : location.pathname === "/conferencia-financeira"
+                      ? "conferencia"
+                      : location.pathname === "/historico"
+                        ? "historico"
+                        : location.pathname === "/importar"
+                          ? "importacao"
+                          : "metas";
 
   const [sidebarRecolhida, setSidebarRecolhida] = useState(false);
 
@@ -810,6 +818,24 @@ function App() {
               <span>Histórico</span>
             </a>
 
+            <a
+              className={`finvista-nav-item ${paginaAtiva === "conferencia" ? "finvista-nav-item-active" : ""}`}
+              href="/conferencia-financeira"
+              aria-label="Conferência financeira"
+              title="Conferência financeira"
+              aria-current={paginaAtiva === "conferencia" ? "page" : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+                fecharMenuMobile();
+                navigate("/conferencia-financeira");
+                window.scrollTo({ top: 0 });
+              }}
+            >
+              <span className="finvista-nav-icon">
+                <HistoryIcon />
+              </span>
+              <span>Conferência financeira</span>
+            </a>
             {usuarioAdmin && (
               <>
                 <span className="finvista-navigation-label finvista-navigation-group">
@@ -817,7 +843,7 @@ function App() {
                 </span>
 
                 <a
-                  className={`finvista-nav-item ${paginaAtiva === "cadastros" ? "finvista-nav-item-active" : ""}`}
+                  className={`finvista-nav-item ${paginaAtiva === "conferencia" ? "Conferência financeira" : paginaAtiva === "cadastros" ? "finvista-nav-item-active" : ""}`}
                   href="/admin/cadastros"
                   aria-label="Clientes e usuários"
                   title="Clientes e usuários"
@@ -953,6 +979,7 @@ function App() {
           </div>
 
           <div className="finvista-topbar-actions">
+            <VisualThemeToggle />
             <span
               className="finvista-data-badge"
               title="Base de dados do FinVista"
@@ -962,6 +989,17 @@ function App() {
             </span>
             <span
               className="finvista-reference-badge"
+              hidden={[
+                "dashboard",
+                "metas",
+                "projecao",
+                "fluxo-caixa",
+                "centros-custo",
+                "despesas",
+                "orcamentos",
+                "historico",
+                "conferencia",
+              ].includes(paginaAtiva)}
               title="Referência financeira da empresa; os filtros permanecem em cada página"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -987,39 +1025,51 @@ function App() {
               }
             }}
           >
-            <PageBoundary key={paginaAtiva}>
-              {paginaAtiva === "cadastros" && usuarioAdmin ? (
-                <AdminRegistration
-                  onVoltar={() => navigate("/metas")}
-                  textoVoltar="Voltar às metas"
-                />
-              ) : paginaAtiva === "dashboard" ? (
-                <Dashboard key={clienteAtual?.id ?? "sem-cliente"} />
-              ) : paginaAtiva === "alertas" ? (
-                <AlertCenter />
-              ) : paginaAtiva === "metas" ? (
-                <SpendingGoals />
-              ) : paginaAtiva === "projecao" ? (
-                <Projection />
-              ) : paginaAtiva === "fluxo-caixa" ? (
-                <CashFlow />
-              ) : paginaAtiva === "centros-custo" ? (
-                <CostCenters />
-              ) : paginaAtiva === "despesas" ? (
-                <Expenses />
-              ) : paginaAtiva === "orcamentos" ? (
-                <Budgets />
-              ) : paginaAtiva === "historico" ? (
-                <History key={clienteAtual?.id ?? "sem-cliente"} />
-              ) : usuarioAdmin ? (
-                <ImportData
-                  key={clienteAtual?.id ?? "sem-cliente"}
-                  cliente={clienteAtual}
-                />
-              ) : (
-                <SpendingGoals />
-              )}
-            </PageBoundary>
+            <FinancialCriteriaWorkspace
+              key={clienteAtual?.id}
+              page={paginaAtiva}
+              clienteId={clienteAtual?.id}
+            >
+              <PageBoundary key={paginaAtiva}>
+                {paginaAtiva === "cadastros" && usuarioAdmin ? (
+                  <AdminRegistration
+                    onVoltar={() => navigate("/metas")}
+                    textoVoltar="Voltar às metas"
+                  />
+                ) : paginaAtiva === "dashboard" ? (
+                  <Dashboard key={clienteAtual?.id ?? "sem-cliente"} />
+                ) : paginaAtiva === "alertas" ? (
+                  <AlertCenter />
+                ) : paginaAtiva === "metas" ? (
+                  <SpendingGoals />
+                ) : paginaAtiva === "projecao" ? (
+                  <Projection />
+                ) : paginaAtiva === "fluxo-caixa" ? (
+                  <CashFlow />
+                ) : paginaAtiva === "centros-custo" ? (
+                  <CostCenters />
+                ) : paginaAtiva === "despesas" ? (
+                  <Expenses />
+                ) : paginaAtiva === "orcamentos" ? (
+                  <Budgets />
+                ) : paginaAtiva === "conferencia" ? (
+                  <FinancialControlCenter
+                    key={clienteAtual?.id ?? "sem-cliente"}
+                    clienteId={clienteAtual?.id}
+                    admin={usuarioAdmin}
+                  />
+                ) : paginaAtiva === "historico" ? (
+                  <History key={clienteAtual?.id ?? "sem-cliente"} />
+                ) : usuarioAdmin ? (
+                  <ImportData
+                    key={clienteAtual?.id ?? "sem-cliente"}
+                    cliente={clienteAtual}
+                  />
+                ) : (
+                  <SpendingGoals />
+                )}
+              </PageBoundary>
+            </FinancialCriteriaWorkspace>
           </main>
         </AnalysisPeriodProvider>
 
