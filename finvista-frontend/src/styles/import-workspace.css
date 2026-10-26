@@ -1,6 +1,6 @@
 .import-data {
-  --import-ink: #17364f;
-  --import-muted: #53677b;
+  --import-ink: var(--fv-dark-text, #17364f);
+  --import-muted: var(--fv-dark-muted, #53677b);
   font-size: 16px;
   line-height: 1.55;
   gap: 20px;
