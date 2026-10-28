@@ -196,7 +196,7 @@ export default function ContaAzulAutoPanel({
           <div>
             <span>
               {status.configuracao.sincronizacaoCompleta
-                ? "Sincronização ampla da empresa"
+                ? "Alcance das parcelas · inclui futuras"
                 : status.configuracao.periodoMovel
                   ? "Período móvel · por vencimento"
                   : "Período autorizado · por vencimento"}
@@ -205,6 +205,9 @@ export default function ContaAzulAutoPanel({
               {data(status.configuracao.inicio)} a{" "}
               {data(status.configuracao.fim)}
             </strong>
+            {status.configuracao.sincronizacaoCompleta && (
+              <small>Transferências e saldos iniciais: desde 2000 até a data fixada na coleta.</small>
+            )}
           </div>
           <div>
             <span>Próxima verificação</span>
@@ -294,10 +297,11 @@ export default function ContaAzulAutoPanel({
         </label>
         {completa && (
           <p>
-            Os filtros das páginas não limitam esta coleta. Faixa técnica
-            suportada: 1900 a 2200. Parcelas antigas vinculadas também são
-            reconsultadas. Novas parcelas dependem da autorização de inclusão
-            abaixo; impedimentos ficam para conferência.
+            Os filtros das páginas não limitam esta coleta. Novas varreduras
+            incluem parcelas desde 2000 e compromissos futuros. Transferências
+            e saldos iniciais são consultados desde 2000 até a data fixada na
+            coleta. Parcelas antigas já vinculadas continuam sendo reconsultadas.
+            Novas parcelas dependem da autorização abaixo; impedimentos ficam para conferência.
           </p>
         )}
         <label className="ca-auto-check" hidden={completa}>
@@ -406,7 +410,7 @@ export default function ContaAzulAutoPanel({
             onChange={(e) => setConfirmado(e.target.checked)}
           />
           {completa
-            ? "Autorizo as execuções periódicas para sincronizar o financeiro desta empresa na faixa de 1900 a 2200, incluindo parcelas antigas, baixas, transferências e saldos iniciais, conforme as opções acima."
+            ? "Autorizo as execuções periódicas para consultar parcelas desde 2000 e compromissos futuros, reconsultar vínculos antigos e coletar transferências e saldos iniciais realizados até a data fixada na coleta, conforme as opções acima."
             : movel
               ? "Autorizo as execuções periódicas para esta empresa no período móvel, acompanhando o calendário, conforme as opções acima."
               : "Autorizo as execuções periódicas para esta empresa e este período, conforme as opções acima."}

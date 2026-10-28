@@ -475,6 +475,8 @@ class ContaAzulAutoStateTest {
 
     private record MovimentoFixture(ContaAzulAutoState.Reserva reserva,ContaAzulAutoRun run,ContaAzulSourceCaptureRepository archive,com.fasterxml.jackson.databind.ObjectMapper mapper) {}
     private MovimentoFixture movimentos(LocalDate inicio,LocalDate fim) {
+        agora=Instant.parse("2026-11-02T12:00:00Z");
+        when(clock.withZone(any())).thenAnswer(i -> Clock.fixed(agora, i.getArgument(0)));
         var archive=mock(ContaAzulSourceCaptureRepository.class);
         var mapper=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
         ReflectionTestUtils.setField(state,"fontes",archive);ReflectionTestUtils.setField(state,"json",mapper);
@@ -489,7 +491,7 @@ class ContaAzulAutoStateTest {
     }
     @Test void janelaInicialPreservaAlcanceCompletoAutorizado() {
         var f=movimentos(ContaAzulFullScope.INICIO,ContaAzulFullScope.FIM);var cursor=state.cursor(f.reserva());
-        assertEquals(ContaAzulFullScope.INICIO,cursor.inicio());assertEquals(LocalDate.of(1900,1,30),cursor.fim());
+        assertEquals(ContaAzulFullScope.INICIO,cursor.inicio());assertEquals(ContaAzulFullScope.INICIO.plusDays(29),cursor.fim());
         assertEquals(ContaAzulFullScope.INICIO,f.run().inicio);assertEquals(ContaAzulFullScope.FIM,f.run().fim);
     }
     @Test void paginaDentroDaJanelaAvancaAntesDeMudarPeriodo() {
@@ -539,6 +541,50 @@ class ContaAzulAutoStateTest {
     }
     @Test void cursorForaDoAlcanceFalhaEmVezDeOmitirDatas() {
         var f=movimentos(LocalDate.of(2026,9,1),LocalDate.of(2026,9,30));f.run().movimentoInicio=LocalDate.of(2026,10,1);
+        assertThrows(IllegalStateException.class,()->state.cursor(f.reserva()));verifyNoInteractions(f.archive());
+    }
+
+    @Test void migracaoEmAndamentoPulaPara2000PreservandoExecucaoEContadores() {
+        var f=movimentos(LocalDate.of(1900,1,1),LocalDate.of(2200,12,31));f.run().movimentoInicio=LocalDate.of(1913,1,23);
+        f.run().incluidas=238;f.run().atualizadas=2;f.run().mantidas=1531;f.run().pendentes=142;
+        var c=state.cursor(f.reserva());assertEquals(LocalDate.of(2000,1,1),c.inicio());assertEquals(LocalDate.of(2000,1,30),c.fim());
+        assertEquals(f.reserva().execucaoId(),f.run().id);assertEquals(LocalDate.of(1900,1,1),f.run().inicio);assertEquals(LocalDate.of(2200,12,31),f.run().fim);
+        assertEquals(238,f.run().incluidas);assertEquals(2,f.run().atualizadas);assertEquals(1531,f.run().mantidas);assertEquals(142,f.run().pendentes);
+        assertEquals(LocalDate.of(2026,11,2),f.run().movimentosEscopoFim);verifyNoInteractions(f.archive());
+    }
+    @Test void novasListagensDeParcelasPreservamFuturasESeparamMovimentos() {
+        var f=movimentos(ContaAzulFullScope.INICIO,ContaAzulFullScope.FIM);f.run().etapa=1;
+        assertEquals(LocalDate.of(2000,1,1),state.cursor(f.reserva()).inicio());assertEquals(LocalDate.of(2200,12,31),state.cursor(f.reserva()).fim());
+        assertTrue(LocalDate.of(2029,3,16).isBefore(state.cursor(f.reserva()).fim()));
+        f.run().etapa=2;state.cursor(f.reserva());assertEquals(LocalDate.of(2026,11,2),f.run().movimentosEscopoFim);assertEquals(LocalDate.of(2200,12,31),f.run().fim);
+    }
+    @Test void dataFinalDaColetaFicaCongeladaAposMudancaDeDia() {
+        var f=movimentos(ContaAzulFullScope.INICIO,ContaAzulFullScope.FIM);state.cursor(f.reserva());
+        var fim=f.run().movimentosEscopoFim;state.devolver(f.reserva(),false);agora=agora.plusSeconds(86400);
+        var outra=state.assumir(7L);state.cursor(outra);assertEquals(f.reserva().execucaoId(),outra.execucaoId());assertEquals(fim,f.run().movimentosEscopoFim);
+    }
+    @Test void janelaAntigaParcialTerminaAntesDaMigracaoSemMisturarPagina() {
+        var f=movimentos(LocalDate.of(1900,1,1),LocalDate.of(2200,12,31));f.run().movimentoInicio=LocalDate.of(1913,1,1);f.run().pagina=2;f.run().totalEsperado=105;
+        var antiga=state.cursor(f.reserva());assertEquals(LocalDate.of(1913,1,1),antiga.inicio());assertEquals(LocalDate.of(1913,1,30),antiga.fim());assertNull(f.run().movimentosEscopoInicio);
+        state.paginaMovimentos(f.reserva(),paginaMov(f,105,5));var nova=state.cursor(f.reserva());assertEquals(LocalDate.of(2000,1,1),nova.inicio());assertEquals(1,nova.pagina());assertNull(f.run().totalEsperado);
+        var captor=org.mockito.ArgumentCaptor.forClass(ContaAzulSourceCapture.class);verify(f.archive()).saveAndFlush(captor.capture());assertEquals("periodo:1913-01-01:1913-01-30:pagina:2",captor.getValue().chave);
+    }
+    @Test void cursorAntigoNoFuturoAvancaParaSaldosSemReiniciarParcelas() {
+        var f=movimentos(LocalDate.of(1900,1,1),LocalDate.of(2200,12,31));f.run().movimentoInicio=LocalDate.of(2100,1,1);
+        var c=state.cursor(f.reserva());assertEquals(3,c.etapa());assertEquals(LocalDate.of(2000,1,1),c.inicio());verifyNoInteractions(f.archive());
+    }
+    @Test void ultimaJanelaRecortaNaDataFixaAntesDeIniciarSaldos() {
+        var f=movimentos(ContaAzulFullScope.INICIO,ContaAzulFullScope.FIM);f.run().movimentoInicio=LocalDate.of(2026,10,20);
+        assertEquals(LocalDate.of(2026,11,2),state.cursor(f.reserva()).fim());
+        state.paginaMovimentos(f.reserva(),paginaMov(f,0,0));assertEquals(3,state.cursor(f.reserva()).etapa());assertEquals(LocalDate.of(2000,1,1),state.cursor(f.reserva()).inicio());
+        var captor=org.mockito.ArgumentCaptor.forClass(ContaAzulSourceCapture.class);verify(f.archive()).saveAndFlush(captor.capture());assertEquals("periodo:2026-10-20:2026-11-02:pagina:1",captor.getValue().chave);
+    }
+    @Test void alcanceSoFuturoNaoGeraConsultaDeMovimentoRealizado() {
+        var f=movimentos(LocalDate.of(2029,1,1),LocalDate.of(2030,1,1));assertEquals(4,state.cursor(f.reserva()).etapa());verifyNoInteractions(f.archive());
+        assertEquals(LocalDate.of(2029,1,1),f.run().inicio);assertEquals(LocalDate.of(2030,1,1),f.run().fim);
+    }
+    @Test void escopoPersistidoIncompletoFalhaSemReescreverDados() {
+        var f=movimentos(ContaAzulFullScope.INICIO,ContaAzulFullScope.FIM);f.run().movimentosEscopoInicio=LocalDate.of(2000,1,1);
         assertThrows(IllegalStateException.class,()->state.cursor(f.reserva()));verifyNoInteractions(f.archive());
     }
 }

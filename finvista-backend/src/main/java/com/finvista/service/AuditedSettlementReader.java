@@ -35,7 +35,7 @@ public final class AuditedSettlementReader {
             }
             List<Payment> rows = new ArrayList<>();
             for (var q : p.baixas() == null ? List.<ContaAzulParcelDetail.Baixa>of() : p.baixas()) {
-                if (q.data().isAfter(today) || q.data().isBefore(ContaAzulFullScope.INICIO)) {
+                if (q.data().isAfter(today) || q.data().isBefore(LocalDate.of(1900, 1, 1))) {
                     throw new IllegalArgumentException();
                 }
                 var c = q.composicao();

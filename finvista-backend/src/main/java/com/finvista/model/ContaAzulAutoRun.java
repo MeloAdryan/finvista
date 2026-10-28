@@ -40,6 +40,11 @@ import java.util.UUID;
         /** Start of the current auxiliary-source window; null for legacy/global cursors. */
         @Column(name = "movimento_inicio")
         public LocalDate movimentoInicio;
+        /** Frozen acquisition range for realized auxiliary movements, independent of title range. */
+        @Column(name = "movimentos_escopo_inicio")
+        public LocalDate movimentosEscopoInicio;
+        @Column(name = "movimentos_escopo_fim")
+        public LocalDate movimentosEscopoFim;
         @Column(name = "total_esperado")
         public Integer totalEsperado;
         @Column(name = "listagem_mudou")

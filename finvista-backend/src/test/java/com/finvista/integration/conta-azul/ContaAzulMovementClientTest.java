@@ -25,7 +25,7 @@ class ContaAzulMovementClientTest {
 
     @Test
     void transferenciasPreservamContaDestinoValorAssinadoECamposAdicionais() {
-        server.expect(requestTo(ContaAzulFinancialClient.BASE + "/v1/financeiro/transferencias?pagina=2&tamanho_pagina=100&data_inicio=1900-01-01&data_fim=2200-12-31"))
+        server.expect(requestTo(ContaAzulFinancialClient.BASE + "/v1/financeiro/transferencias?pagina=2&tamanho_pagina=100&data_inicio=2000-01-01&data_fim=2200-12-31"))
                 .andExpect(method(HttpMethod.GET)).andExpect(header("Authorization", "Bearer teste"))
                 .andRespond(withSuccess("{\"itens_totais\":101,\"itens\":[{\"id\":\"tr-101\",\"valor\":-100.25,\"conta_destino\":\"c2\",\"adicional\":true}]}", MediaType.APPLICATION_JSON));
         var p = client.consultar("teste", "TRANSFERENCIA", ContaAzulFullScope.INICIO, ContaAzulFullScope.FIM, 2);

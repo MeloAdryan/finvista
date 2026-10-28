@@ -249,6 +249,8 @@ import org.springframework.beans.factory.annotation.Value;
             var c = validar(reserva);
             var r = execucao(c);
             if (Boolean.TRUE.equals(r.sincronizacaoCompleta) && r.etapa >= 2 && r.etapa <= 3) {
+                prepararEscopoMovimentos(r);
+                if (r.etapa == 4) return new Cursor(r.inicio, r.fim, r.etapa, r.pagina, true);
                 var janela = janelaMovimentos(r);
                 return new Cursor(janela.inicio(), janela.fim(), r.etapa, r.pagina, true);
             }
@@ -297,17 +299,50 @@ import org.springframework.beans.factory.annotation.Value;
          */
         static record JanelaMovimentos(LocalDate inicio, LocalDate fim, boolean emJanelas) {}
 
-        /** Keep already committed legacy pages on their original range. */
+        private static LocalDate inicioMovimentos(ContaAzulAutoRun r) {
+            return r.movimentosEscopoInicio == null ? r.inicio : r.movimentosEscopoInicio;
+        }
+        private static LocalDate fimMovimentos(ContaAzulAutoRun r) {
+            return r.movimentosEscopoFim == null ? r.fim : r.movimentosEscopoFim;
+        }
+
+        /** Adopt the narrower movement policy only between completed pages/windows. */
+        private void prepararEscopoMovimentos(ContaAzulAutoRun r) {
+            if (r.movimentoInicio != null && (r.movimentoInicio.isBefore(r.inicio) || r.movimentoInicio.isAfter(r.fim)))
+                throw new IllegalStateException("Cursor de movimentações fora do alcance autorizado.");
+            if ((r.movimentosEscopoInicio == null) != (r.movimentosEscopoFim == null))
+                throw new IllegalStateException("Escopo de movimentações incompleto.");
+            boolean primeiraPaginaLivre = r.pagina == 1 && r.totalEsperado == null;
+            if (r.movimentosEscopoInicio == null) {
+                if (!primeiraPaginaLivre) return; // Finish the already committed pagination unchanged.
+                LocalDate hoje = LocalDate.now(clock.withZone(ZoneId.of("America/Sao_Paulo")));
+                r.movimentosEscopoInicio = r.inicio.isAfter(ContaAzulFullScope.INICIO) ? r.inicio : ContaAzulFullScope.INICIO;
+                r.movimentosEscopoFim = r.fim.isBefore(hoje) ? r.fim : hoje;
+            }
+            if (!primeiraPaginaLivre) return;
+            while (r.etapa >= 2 && r.etapa <= 3) {
+                if (r.movimentoInicio == null || r.movimentoInicio.isBefore(r.movimentosEscopoInicio))
+                    r.movimentoInicio = r.movimentosEscopoInicio;
+                if (!r.movimentoInicio.isAfter(r.movimentosEscopoFim)) return;
+                // Previously completed future/older scopes are preserved, never deleted or replayed.
+                r.etapa++;
+                r.movimentoInicio = null;
+                r.pagina = 1;
+                r.totalEsperado = null;
+            }
+        }
+
+        /** Pure window calculation; legacy in-flight pages retain their original boundaries. */
         static JanelaMovimentos janelaMovimentos(ContaAzulAutoRun r) {
             if (r.inicio == null || r.fim == null || r.fim.isBefore(r.inicio))
                 throw new IllegalStateException("Alcance da execução inválido.");
-            if (r.movimentoInicio == null && (r.pagina > 1 || r.totalEsperado != null))
+            if (r.movimentosEscopoInicio == null && r.movimentoInicio == null && (r.pagina > 1 || r.totalEsperado != null))
                 return new JanelaMovimentos(r.inicio, r.fim, false);
-            LocalDate inicio = r.movimentoInicio == null ? r.inicio : r.movimentoInicio;
-            if (inicio.isBefore(r.inicio) || inicio.isAfter(r.fim))
+            LocalDate inicio = r.movimentoInicio == null ? inicioMovimentos(r) : r.movimentoInicio;
+            if (inicio.isBefore(inicioMovimentos(r)) || inicio.isAfter(fimMovimentos(r)))
                 throw new IllegalStateException("Cursor de movimentações fora do alcance autorizado.");
             LocalDate fim = inicio.plusDays(29);
-            if (fim.isAfter(r.fim)) fim = r.fim;
+            if (fim.isAfter(fimMovimentos(r))) fim = fimMovimentos(r);
             return new JanelaMovimentos(inicio, fim, true);
         }
 
@@ -322,6 +357,9 @@ import org.springframework.beans.factory.annotation.Value;
                     || r.pagina < 1 || r.pagina > 1000 || pagina.itens().size() > 100) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Fonte acima do limite de conferência ou inválida. Cobertura não confirmada.");
             }
+            int etapaConsultada = r.etapa;
+            prepararEscopoMovimentos(r);
+            if (r.etapa != etapaConsultada) throw new ReservaPerdida();
             // Evaluate before setting totalEsperado, so a first page can select window mode.
             var janela = janelaMovimentos(r);
             if (r.totalEsperado == null) {
@@ -341,11 +379,12 @@ import org.springframework.beans.factory.annotation.Value;
             if (!r.listagemMudou) {
                 r.mensagem = "Coletando " + (r.etapa == 2 ? "transferências" : "saldos iniciais")
                         + ": " + janela.inicio() + " a " + janela.fim() + ", página " + r.pagina
-                        + ". Alcance autorizado preservado; a coleta ainda não terminou.";
+                        + ". Faixa de movimentações: " + inicioMovimentos(r) + " a " + fimMovimentos(r)
+                        + ". Parcelas futuras mantidas na listagem; a coleta ainda não terminou.";
             }
             if (janela.emJanelas()) r.movimentoInicio = janela.inicio();
             if ((long) r.pagina * 100 >= pagina.total()) {
-                if (janela.emJanelas() && janela.fim().isBefore(r.fim)) {
+                if (janela.emJanelas() && janela.fim().isBefore(fimMovimentos(r))) {
                     r.movimentoInicio = janela.fim().plusDays(1);
                 } else {
                     r.etapa++;
