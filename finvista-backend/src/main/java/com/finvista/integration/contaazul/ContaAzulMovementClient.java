@@ -40,7 +40,7 @@ public class ContaAzulMovementClient {
         if (!transfer && !"SALDO_INICIAL".equals(tipo)) {
             throw new IllegalArgumentException("Fonte desconhecida.");
         }
-        String path = transfer ? "/v1/financeiro/transferencias" : "/v1/financeiro/eventos-financeiros/saldo-inicial";
+        String path = transfer ? "/v1/financeiro/transferencias" : "/v1/financeiro/contas-financeiras/saldo-inicial";
         var uri = org.springframework.web.util.UriComponentsBuilder.fromUriString(ContaAzulFinancialClient.BASE + path)
                 .queryParam("pagina", pagina).queryParam("tamanho_pagina", 100)
                 .queryParam("data_inicio", transfer ? inicio.toString() : inicio + "T00:00:00")
@@ -50,11 +50,11 @@ public class ContaAzulMovementClient {
             return validar(body);
         } catch (RestClientResponseException e) {
             throw new ResponseStatusException(e.getStatusCode().value() == 429 ? HttpStatus.TOO_MANY_REQUESTS : HttpStatus.BAD_GATEWAY,
-                    "Não foi possível consultar " + tipo + ". A etapa não foi considerada concluída.");
+                    "Não foi possível consultar " + tipo + ". A etapa não foi considerada concluída.", e);
         } catch (ResponseStatusException e) {
             throw e;
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Resposta inválida de " + tipo + ". A sincronização permanece incompleta.");
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Resposta inválida de " + tipo + ". A sincronização permanece incompleta.", e);
         }
     }
 
