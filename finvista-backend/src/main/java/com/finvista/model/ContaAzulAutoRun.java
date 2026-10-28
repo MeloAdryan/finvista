@@ -37,6 +37,9 @@ import java.util.UUID;
         public int etapa;
         @Column(name = "pagina")
         public int pagina;
+        /** Start of the current auxiliary-source window; null for legacy/global cursors. */
+        @Column(name = "movimento_inicio")
+        public LocalDate movimentoInicio;
         @Column(name = "total_esperado")
         public Integer totalEsperado;
         @Column(name = "listagem_mudou")

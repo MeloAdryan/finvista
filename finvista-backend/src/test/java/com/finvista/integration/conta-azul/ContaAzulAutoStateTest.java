@@ -440,6 +440,9 @@ class ContaAzulAutoStateTest {
         var mapper=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
         ReflectionTestUtils.setField(state,"fontes",archive);ReflectionTestUtils.setField(state,"json",mapper);
         config.sincronizacaoCompleta=true;var reserva=state.assumir(7L);
+        // This test isolates stage completion over one window; full-range coverage is tested below.
+        execucoes.get(reserva.execucaoId()).inicio=LocalDate.of(2026,9,1);
+        execucoes.get(reserva.execucaoId()).fim=LocalDate.of(2026,9,30);
         state.pagina(reserva,new ContaAzulFinancialClient.Pagina(0,List.of()));
         state.pagina(reserva,new ContaAzulFinancialClient.Pagina(0,List.of()));
         assertEquals(2,state.cursor(reserva).etapa());
@@ -468,5 +471,74 @@ class ContaAzulAutoStateTest {
         config.habilitada=false;
         assertThrows(ContaAzulAutoState.ReservaPerdida.class,()->state.arquivar(reserva,"PARCELA",id,body));
         assertThrows(IllegalArgumentException.class,()->state.fontes(8L,reserva.execucaoId(),"PARCELA",1));
+    }
+
+    private record MovimentoFixture(ContaAzulAutoState.Reserva reserva,ContaAzulAutoRun run,ContaAzulSourceCaptureRepository archive,com.fasterxml.jackson.databind.ObjectMapper mapper) {}
+    private MovimentoFixture movimentos(LocalDate inicio,LocalDate fim) {
+        var archive=mock(ContaAzulSourceCaptureRepository.class);
+        var mapper=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        ReflectionTestUtils.setField(state,"fontes",archive);ReflectionTestUtils.setField(state,"json",mapper);
+        config.sincronizacaoCompleta=true;var reserva=state.assumir(7L);var r=execucoes.get(reserva.execucaoId());
+        r.inicio=inicio;r.fim=fim;r.etapa=2;
+        return new MovimentoFixture(reserva,r,archive,mapper);
+    }
+    private ContaAzulMovementClient.Pagina paginaMov(MovimentoFixture f,int total,int quantidade) {
+        var rows=java.util.stream.IntStream.range(0,quantidade).mapToObj(n->(com.fasterxml.jackson.databind.JsonNode)f.mapper().createObjectNode().put("id","tr-"+n)).toList();
+        var raw=f.mapper().createObjectNode().put("itens_totais",total);var array=f.mapper().createArrayNode();rows.forEach(array::add);raw.set("itens",array);
+        return new ContaAzulMovementClient.Pagina(total,rows,raw);
+    }
+    @Test void janelaInicialPreservaAlcanceCompletoAutorizado() {
+        var f=movimentos(ContaAzulFullScope.INICIO,ContaAzulFullScope.FIM);var cursor=state.cursor(f.reserva());
+        assertEquals(ContaAzulFullScope.INICIO,cursor.inicio());assertEquals(LocalDate.of(1900,1,30),cursor.fim());
+        assertEquals(ContaAzulFullScope.INICIO,f.run().inicio);assertEquals(ContaAzulFullScope.FIM,f.run().fim);
+    }
+    @Test void paginaDentroDaJanelaAvancaAntesDeMudarPeriodo() {
+        var f=movimentos(LocalDate.of(2026,9,1),LocalDate.of(2026,10,31));
+        state.paginaMovimentos(f.reserva(),paginaMov(f,150,100));
+        var c=state.cursor(f.reserva());assertEquals(2,c.pagina());assertEquals(LocalDate.of(2026,9,1),c.inicio());assertEquals(LocalDate.of(2026,9,30),c.fim());
+        state.paginaMovimentos(f.reserva(),paginaMov(f,150,50));
+        c=state.cursor(f.reserva());assertEquals(1,c.pagina());assertEquals(LocalDate.of(2026,10,1),c.inicio());assertEquals(LocalDate.of(2026,10,30),c.fim());assertEquals(2,c.etapa());assertNull(f.run().totalEsperado);
+    }
+    @Test void naoConcluiFonteAoEncontrarJanelaVaziaEUsaIdentidadesDistintas() {
+        var f=movimentos(LocalDate.of(2026,9,1),LocalDate.of(2026,10,31));
+        state.paginaMovimentos(f.reserva(),paginaMov(f,0,0));assertEquals(2,state.cursor(f.reserva()).etapa());
+        state.paginaMovimentos(f.reserva(),paginaMov(f,0,0));assertEquals(LocalDate.of(2026,10,31),state.cursor(f.reserva()).inicio());assertEquals(LocalDate.of(2026,10,31),state.cursor(f.reserva()).fim());
+        assertThrows(ContaAzulAutoState.ReservaPerdida.class,()->state.devolver(f.reserva(),true));
+        state.paginaMovimentos(f.reserva(),paginaMov(f,0,0));
+        assertEquals(3,state.cursor(f.reserva()).etapa());assertEquals(LocalDate.of(2026,9,1),state.cursor(f.reserva()).inicio());
+        var captor=org.mockito.ArgumentCaptor.forClass(ContaAzulSourceCapture.class);verify(f.archive(),times(3)).saveAndFlush(captor.capture());
+        assertEquals(3,captor.getAllValues().stream().map(x->x.id).distinct().count());
+        assertTrue(captor.getAllValues().stream().allMatch(x->x.chave.startsWith("periodo:")&&x.tipo.equals("TRANSFERENCIA")));
+        for(int n=0;n<3;n++)state.paginaMovimentos(f.reserva(),paginaMov(f,0,0));
+        assertEquals(4,state.cursor(f.reserva()).etapa());state.devolver(f.reserva(),true);assertEquals("CONCLUIDA",f.run().status);
+    }
+    @Test void repeticaoMantemCursorContadoresEIdentidadeDaExecucao() {
+        var f=movimentos(LocalDate.of(2026,9,1),LocalDate.of(2026,10,31));
+        f.run().incluidas=238;f.run().atualizadas=2;f.run().mantidas=1531;f.run().pendentes=142;
+        state.paginaMovimentos(f.reserva(),paginaMov(f,0,0));
+        state.falhar(f.reserva(),"Falha simulada",false);agora=agora.plusSeconds(6*60);
+        var nova=state.assumir(7L);assertEquals(f.reserva().execucaoId(),nova.execucaoId());
+        assertEquals(LocalDate.of(2026,10,1),state.cursor(nova).inicio());assertEquals(238,f.run().incluidas);assertEquals(2,f.run().atualizadas);assertEquals(1531,f.run().mantidas);assertEquals(142,f.run().pendentes);
+    }
+    @Test void paginaLegadaParcialNaoMisturaSuaContagemComJanelaNova() {
+        var f=movimentos(LocalDate.of(2026,9,1),LocalDate.of(2026,10,31));f.run().pagina=2;f.run().totalEsperado=150;
+        assertEquals(f.run().fim,state.cursor(f.reserva()).fim());
+        state.paginaMovimentos(f.reserva(),paginaMov(f,150,50));
+        var captor=org.mockito.ArgumentCaptor.forClass(ContaAzulSourceCapture.class);verify(f.archive()).saveAndFlush(captor.capture());assertEquals("pagina:2",captor.getValue().chave);
+        assertEquals(3,state.cursor(f.reserva()).etapa());assertEquals(LocalDate.of(2026,9,30),state.cursor(f.reserva()).fim());
+    }
+    @Test void planejamentoCompletoCobreTodosOsDiasSemLacunasNemSobreposicao() {
+        var r=new ContaAzulAutoRun();r.inicio=ContaAzulFullScope.INICIO;r.fim=ContaAzulFullScope.FIM;r.pagina=1;
+        long dias=0;int janelas=0;LocalDate esperado=r.inicio;
+        while(true){var janela=ContaAzulAutoState.janelaMovimentos(r);assertEquals(esperado,janela.inicio());long tamanho=java.time.temporal.ChronoUnit.DAYS.between(janela.inicio(),janela.fim())+1;assertTrue(tamanho>=1&&tamanho<=30);dias+=tamanho;assertTrue(++janelas<5000);if(janela.fim().equals(r.fim))break;esperado=janela.fim().plusDays(1);r.movimentoInicio=esperado;}
+        assertEquals(java.time.temporal.ChronoUnit.DAYS.between(r.inicio,r.fim)+1,dias);
+    }
+    @Test void planejamentoIncluiDiaBissexto() {
+        var r=new ContaAzulAutoRun();r.inicio=LocalDate.of(2024,2,15);r.fim=LocalDate.of(2024,3,20);r.pagina=1;
+        assertEquals(LocalDate.of(2024,3,15),ContaAzulAutoState.janelaMovimentos(r).fim());
+    }
+    @Test void cursorForaDoAlcanceFalhaEmVezDeOmitirDatas() {
+        var f=movimentos(LocalDate.of(2026,9,1),LocalDate.of(2026,9,30));f.run().movimentoInicio=LocalDate.of(2026,10,1);
+        assertThrows(IllegalStateException.class,()->state.cursor(f.reserva()));verifyNoInteractions(f.archive());
     }
 }

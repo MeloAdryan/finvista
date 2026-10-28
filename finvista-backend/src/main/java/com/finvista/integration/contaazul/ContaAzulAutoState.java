@@ -248,6 +248,10 @@ import org.springframework.beans.factory.annotation.Value;
         public Cursor cursor(Reserva reserva) {
             var c = validar(reserva);
             var r = execucao(c);
+            if (Boolean.TRUE.equals(r.sincronizacaoCompleta) && r.etapa >= 2 && r.etapa <= 3) {
+                var janela = janelaMovimentos(r);
+                return new Cursor(janela.inicio(), janela.fim(), r.etapa, r.pagina, true);
+            }
             return new Cursor(r.inicio, r.fim, r.etapa, r.pagina, Boolean.TRUE.equals(r.sincronizacaoCompleta));
         }
 
@@ -291,6 +295,22 @@ import org.springframework.beans.factory.annotation.Value;
          * Each source page is committed with its cursor; retrying does not
          * append it twice.
          */
+        static record JanelaMovimentos(LocalDate inicio, LocalDate fim, boolean emJanelas) {}
+
+        /** Keep already committed legacy pages on their original range. */
+        static JanelaMovimentos janelaMovimentos(ContaAzulAutoRun r) {
+            if (r.inicio == null || r.fim == null || r.fim.isBefore(r.inicio))
+                throw new IllegalStateException("Alcance da execução inválido.");
+            if (r.movimentoInicio == null && (r.pagina > 1 || r.totalEsperado != null))
+                return new JanelaMovimentos(r.inicio, r.fim, false);
+            LocalDate inicio = r.movimentoInicio == null ? r.inicio : r.movimentoInicio;
+            if (inicio.isBefore(r.inicio) || inicio.isAfter(r.fim))
+                throw new IllegalStateException("Cursor de movimentações fora do alcance autorizado.");
+            LocalDate fim = inicio.plusDays(29);
+            if (fim.isAfter(r.fim)) fim = r.fim;
+            return new JanelaMovimentos(inicio, fim, true);
+        }
+
         @Transactional
         public void paginaMovimentos(Reserva reserva, ContaAzulMovementClient.Pagina pagina) {
             var c = validar(reserva);
@@ -298,21 +318,39 @@ import org.springframework.beans.factory.annotation.Value;
             if (!Boolean.TRUE.equals(r.sincronizacaoCompleta) || r.etapa < 2 || r.etapa > 3) {
                 throw new ReservaPerdida();
             }
-            if (pagina == null || pagina.total() < 0 || pagina.total() > 100000 || r.pagina > 1000 || pagina.itens().size() > 100) {
+            if (pagina == null || pagina.itens() == null || pagina.fonte() == null || pagina.total() < 0 || pagina.total() > 100000
+                    || r.pagina < 1 || r.pagina > 1000 || pagina.itens().size() > 100) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Fonte acima do limite de conferência ou inválida. Cobertura não confirmada.");
             }
+            // Evaluate before setting totalEsperado, so a first page can select window mode.
+            var janela = janelaMovimentos(r);
             if (r.totalEsperado == null) {
-                r.totalEsperado = pagina.total(); 
-            }else if (!r.totalEsperado.equals(pagina.total())) {
+                r.totalEsperado = pagina.total();
+            } else if (!r.totalEsperado.equals(pagina.total())) {
                 r.listagemMudou = true;
             }
             int remaining = Math.max(0, pagina.total() - (r.pagina - 1) * 100);
             if (pagina.itens().size() != Math.min(100, remaining)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Fonte paginada incompleta.");
             }
-            arquivar(reserva, r.etapa == 2 ? "TRANSFERENCIA" : "SALDO_INICIAL", "pagina:" + r.pagina, pagina.fonte());
+            String tipo = r.etapa == 2 ? "TRANSFERENCIA" : "SALDO_INICIAL";
+            String chave = janela.emJanelas()
+                    ? "periodo:" + janela.inicio() + ":" + janela.fim() + ":pagina:" + r.pagina
+                    : "pagina:" + r.pagina;
+            arquivar(reserva, tipo, chave, pagina.fonte());
+            if (!r.listagemMudou) {
+                r.mensagem = "Coletando " + (r.etapa == 2 ? "transferências" : "saldos iniciais")
+                        + ": " + janela.inicio() + " a " + janela.fim() + ", página " + r.pagina
+                        + ". Alcance autorizado preservado; a coleta ainda não terminou.";
+            }
+            if (janela.emJanelas()) r.movimentoInicio = janela.inicio();
             if ((long) r.pagina * 100 >= pagina.total()) {
-                r.etapa++;
+                if (janela.emJanelas() && janela.fim().isBefore(r.fim)) {
+                    r.movimentoInicio = janela.fim().plusDays(1);
+                } else {
+                    r.etapa++;
+                    r.movimentoInicio = null;
+                }
                 r.pagina = 1;
                 r.totalEsperado = null;
             } else {
