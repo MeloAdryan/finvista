@@ -1,3 +1,6 @@
+import ContaAzulFinancialSource from "./ContaAzulFinancialSource";
+import { object, statusLabel, text } from "../services/accountantReview";
+import "../styles/conta-azul-accountant.css";
 import ContaAzulPendingDiagnostic from "./ContaAzulPendingDiagnostic";
 import { useEffect, useState } from "react";
 import { API_URL } from "../config/api";
@@ -69,7 +72,7 @@ export default function ContaAzulSourceReview({
     >
       <summary>Conferir dados financeiros sincronizados</summary>
       <p>
-        Fontes preservadas desta execução. Execução concluída não certifica
+        Dados recebidos nesta execução. Execução concluída não certifica
         conciliação com um relatório externo. Dados de uma execução em andamento
         podem estar incompletos.
       </p>
@@ -95,30 +98,21 @@ export default function ContaAzulSourceReview({
       {dados && (
         <>
           <p>
-            Execução: {dados.status} · {dados.total} registros de captura. Uma
-            captura de transferências ou saldos iniciais pode conter uma página
-            com vários movimentos.
+            Execução: {statusLabel(dados.status)} · {dados.total} registros recebidos. Uma
+            consulta de transferências ou saldos iniciais pode reunir
+            vários movimentos.
           </p>
           {dados.registros.map((r) => (
             <details key={`${r.tipo}:${r.chave}`}>
               <summary>
-                {r.tipo} · {r.chave} ·{" "}
+                {r.tipo === "PARCELA" ? text(object(r.dados).descricao, "Parcela sem descrição") : r.tipo === "TRANSFERENCIA" ? "Transferências entre contas" : "Saldos iniciais"} · Consulta de{" "}
                 {new Date(r.capturadoEm).toLocaleString("pt-BR")}
               </summary>
-              <pre
-                style={{
-                  whiteSpace: "pre-wrap",
-                  overflowWrap: "anywhere",
-                  maxHeight: 400,
-                  overflow: "auto",
-                }}
-              >
-                {JSON.stringify(r.dados, null, 2)}
-              </pre>
+              <ContaAzulFinancialSource tipo={r.tipo} dados={r.dados} />
             </details>
           ))}
           {dados.total === 0 && (
-            <p>Nenhuma captura deste tipo nesta execução.</p>
+            <p>Nenhum registro deste tipo recebido nesta execução.</p>
           )}
           <button
             type="button"

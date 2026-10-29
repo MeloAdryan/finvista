@@ -1,0 +1,22 @@
+.ca-accountant-record { margin-block: 14px; }
+.ca-accountant-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
+.ca-accountant-summary > div { padding: 12px; border: 1px solid var(--fv-dark-border, #c8d8ea); border-radius: 8px; }
+.ca-accountant-summary dt { color: var(--fv-dark-muted, #526780); font-size: 13px; }
+.ca-accountant-summary dd { margin: 6px 0 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ca-accountant-check { padding: 14px; border: 1px solid var(--fv-dark-border, #c8d8ea); border-radius: 8px; margin-block: 12px; }
+.ca-accountant-warning { border-inline-start: 4px solid #d99637; }
+.ca-accountant-table { overflow-x: auto; max-width: 100%; margin-block: 12px; }
+.ca-accountant-table:focus-visible { outline: 2px solid #509de8; outline-offset: 3px; }
+.ca-accountant-table table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.ca-accountant-table caption { text-align: left; font-weight: 600; padding-bottom: 8px; }
+.ca-accountant-table th, .ca-accountant-table td { text-align: left; padding: 12px; border-bottom: 1px solid var(--fv-dark-border, #c8d8ea); min-width: 110px; vertical-align: top; }
+.ca-accountant-table th { color: var(--fv-dark-text, #173852); }
+.ca-accountant-table .ca-accountant-money { white-space: nowrap; font-variant-numeric: tabular-nums; }
+@media (max-width: 900px) { .ca-accountant-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .ca-accountant-summary { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .ca-accountant-summary > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px; }
+  .ca-accountant-summary dd { margin: 0; text-align: right; white-space: nowrap; }
+  .ca-accountant-table th, .ca-accountant-table td { padding: 9px; }
+  .ca-accountant-table::before { content: "Deslize para ver todas as colunas."; display: block; font-size: 12px; padding-bottom: 8px; color: var(--fv-dark-muted, #526780); }
+}
