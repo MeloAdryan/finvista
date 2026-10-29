@@ -1,3 +1,4 @@
+import ContaAzulPendingDiagnostic from "./ContaAzulPendingDiagnostic";
 import { useEffect, useState } from "react";
 import { API_URL } from "../config/api";
 import { apiFetch } from "../config/http";
@@ -72,6 +73,7 @@ export default function ContaAzulSourceReview({
         conciliação com um relatório externo. Dados de uma execução em andamento
         podem estar incompletos.
       </p>
+      <ContaAzulPendingDiagnostic key={`${clienteId}:${execucaoId}`} clienteId={clienteId} execucaoId={execucaoId} />
       <label>
         Tipo de informação{" "}
         <select

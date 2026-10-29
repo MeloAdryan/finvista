@@ -288,7 +288,7 @@ public class ContaAzulApiSyncService {
     private Proposta propor(Long cliente, ContaAzulParcelDetail p, Estado estado, Long vincularId, boolean automatico) {
         var plano = automatico ? planos.analisar(cliente, p) : planos.planejar(cliente, p);
         if (plano.situacao() == ContaAzulApiPlanService.Situacao.BLOQUEADO) {
-            throw conflito("A conferência da parcela possui impedimentos. Revise o plano de conferência antes de sincronizar.");
+            throw conflito("Impedimentos: " + String.join(" | ", plano.avisos()));
         }
         if (vincularId == null && plano.situacao() == ContaAzulApiPlanService.Situacao.CORRESPONDENCIA_POSSIVEL) {
             throw conflito("Há possíveis lançamentos existentes. O vínculo com registros de arquivo ou cadastro manual exige conferência específica; a inclusão foi bloqueada.");

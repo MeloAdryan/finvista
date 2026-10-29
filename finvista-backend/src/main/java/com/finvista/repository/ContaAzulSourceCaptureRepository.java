@@ -9,5 +9,7 @@ public interface ContaAzulSourceCaptureRepository extends JpaRepository<ContaAzu
 
     java.util.List<ContaAzulSourceCapture> findByClienteIdAndExecucaoIdOrderByTipoAscChaveAsc(Long clienteId, UUID execucaoId);
 
+    java.util.Optional<ContaAzulSourceCapture> findFirstByClienteIdAndExecucaoIdAndTipoAndChave(Long clienteId, UUID execucaoId, String tipo, String chave);
+
     Page<ContaAzulSourceCapture> findByClienteIdAndExecucaoIdAndTipoOrderByChaveAsc(Long clienteId, UUID execucaoId, String tipo, Pageable pagina);
 }

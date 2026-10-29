@@ -88,7 +88,7 @@ public class ContaAzulApiPlanService {
     }
 
     private boolean possivel(FinancialTransaction l, ContaAzulParcelDetail p) {
-        // Parcelas distintas já identificadas não são duplicatas por descrição/competência.
+       
         if (ORIGEM_API.equals(l.getOrigem()) && texto(l.getDocumentoReferencia())
                 .matches("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) return false;
         if (p.evento() == null || !Objects.equals(l.getTipo(), p.evento().tipo())) {
@@ -128,7 +128,9 @@ public class ContaAzulApiPlanService {
         if (!dinheiro(p.liquidoConferido()) || !dinheiro(p.pago()) || !dinheiro(p.pendente())) {
             avisos.add("Valores da parcela ausentes, negativos ou fora da precisão aceita.");
             if (p.liquido() == null && p.liquidoConferido() == null) {
-                avisos.add("Líquido principal ausente. A conferência pela composição exige uma única parcela, valores consistentes, ajustes explicitamente zerados e situação sem baixa parcial, perda ou renegociação.");
+                avisos.add("L\u00edquido principal ausente e a composi\u00e7\u00e3o/baixas n\u00e3o permitiram conferir o valor.");
+                try { ContaAzulSettlementPolicy.conferir(p); }
+                catch (IllegalArgumentException e) { avisos.add("Confer\u00eancia financeira: " + e.getMessage()); }
             }
         } else if (p.pago().add(p.pendente()).compareTo(p.liquidoConferido()) != 0) {
             avisos.add("Pago mais pendente difere do líquido da parcela.");

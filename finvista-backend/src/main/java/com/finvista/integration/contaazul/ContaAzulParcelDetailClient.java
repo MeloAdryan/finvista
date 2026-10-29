@@ -47,7 +47,8 @@ public class ContaAzulParcelDetailClient {
             if (result == null || result.id() == null || !id.equalsIgnoreCase(result.id())) {
                 throw new IllegalArgumentException("Parcela diferente da solicitada.");
             }
-            if (result.pago() != null && result.pago().signum() > 0 && result.baixas() == null) {
+            // The dedicated settlement endpoint is authoritative even when detail embeds an empty/partial list.
+            if (result.pago() != null && result.pago().signum() > 0) {
                 var baixasRaw = http.get()
                         .uri(ContaAzulFinancialClient.BASE + "/v1/financeiro/eventos-financeiros/parcelas/{id}/baixa", id)
                         .headers(headers -> headers.setBearerAuth(acesso))

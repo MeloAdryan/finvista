@@ -14,7 +14,7 @@ public final class AuditedSettlementReader {
 
     public record Payment(String id, LocalDate data, BigDecimal principal, BigDecimal liquido) {}
 
-    public record Settlement(ContaAzulParcelDetail parcela, List<Payment> pagamentos) {}
+    public record Settlement(ContaAzulParcelDetail parcela, List<Payment> pagamentos, int baixasFuturas) {}
 
     private static boolean same(BigDecimal a, BigDecimal b) {
         return a != null && b != null && a.compareTo(b) == 0;
@@ -34,14 +34,17 @@ public final class AuditedSettlementReader {
                 throw new IllegalArgumentException();
             }
             List<Payment> rows = new ArrayList<>();
+            int futuras = 0;
             for (var q : p.baixas() == null ? List.<ContaAzulParcelDetail.Baixa>of() : p.baixas()) {
-                if (q.data().isAfter(today) || q.data().isBefore(LocalDate.of(1900, 1, 1))) {
+                if (q.data().isBefore(LocalDate.of(1900, 1, 1))) {
                     throw new IllegalArgumentException();
                 }
+                // A future-dated payment does not erase audited earlier payments of the same parcel.
+                if (q.data().isAfter(today)) { futuras++; continue; }
                 var c = q.composicao();
                 rows.add(new Payment(q.id(), q.data(), c.bruto(), c.bruto().add(c.juros()).add(c.multa()).subtract(c.desconto())));
             }
-            return new Settlement(p, List.copyOf(rows));
+            return new Settlement(p, List.copyOf(rows), futuras);
         } catch (Exception e) {
             throw new IllegalArgumentException("Sem baixas auditadas utilizáveis", e);
         }

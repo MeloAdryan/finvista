@@ -1,3 +1,4 @@
+import { uniqueReconciliationRows } from "../services/reconciliationExport";
 import { exportarCSV } from "../services/dashboardAnalysisService";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { API_URL } from "../config/api";
@@ -201,7 +202,7 @@ export default function ContaAzulReconciliationPanel({
                 type="button"
                 onClick={() => {
                   const d = dados.detalhes!;
-                  exportarCSV("conferencia-individual.csv", [
+                  exportarCSV("conferencia-individual.csv", uniqueReconciliationRows([
                     [
                       "Situação",
                       "Fonte",
@@ -283,7 +284,7 @@ export default function ContaAzulReconciliationPanel({
                         x.valor,
                       ]),
                     ]),
-                  ]);
+                  ]));
                 }}
               >
                 Exportar conferência individual

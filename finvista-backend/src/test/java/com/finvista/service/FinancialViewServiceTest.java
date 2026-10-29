@@ -283,6 +283,22 @@ class FinancialViewServiceTest {
     }
 
     @Test
+    void baixaFuturaNaoExcluiPagamentoHistoricoDaMesmaParcela() throws Exception {
+        snapshotWithTwoPayments(false, "RECEITA");
+        var mapper = new ObjectMapper().findAndRegisterModules();
+        var node = mapper.readTree(operations.snapshotsAtuais(7L).get(0).getOrigemSnapshot());
+        ((com.fasterxml.jackson.databind.node.ObjectNode) node.path("baixas").get(1)).put("data_pagamento", "2026-11-10");
+        var op = new ContaAzulApiOperation(UUID.randomUUID(), new Cliente("Teste"), 3L, "parcela", "INCLUIR", 1L, Instant.now(), null, "{}", mapper.writeValueAsString(node));
+        when(operations.snapshotsAtuais(7L)).thenReturn(List.of(op));
+        var september = service.consultar(filter(Criterio.BAIXA, Periodo.PERSONALIZADO));
+        assertEquals(0, new BigDecimal("40").compareTo(september.totais().receita()));
+        assertTrue(september.exclusoes().isEmpty());
+        var november = service.consultar(new Filtro(Criterio.BAIXA, Periodo.PERSONALIZADO, Situacao.TODAS, today,
+            LocalDate.of(2026,11,1), LocalDate.of(2026,11,30), null, null));
+        assertEquals(0, november.totais().receita().signum());
+    }
+
+    @Test
     void historicoDeBaixasAntesDe2000RespeitaFaixaSuportada() throws Exception {
         snapshotWithTwoPayments(false, "RECEITA");
         var t = transactions.findByClienteId(7L).get(0);

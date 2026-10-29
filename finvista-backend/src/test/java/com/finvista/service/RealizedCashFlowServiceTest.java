@@ -116,7 +116,9 @@ class RealizedCashFlowServiceTest {
         snapshot(source(b));
         var r = service.consultar("6");
         assertTrue(r.parcial());
-        assertEquals(0, r.baixasNoPeriodo());
+        assertEquals(1, r.baixasNoPeriodo());
+        assertEquals(new BigDecimal("40.00"), r.meses().stream().filter(m -> m.mes().equals("2026-09")).findFirst().orElseThrow().entradas());
+        assertEquals(0, r.meses().stream().filter(m -> m.mes().equals("2026-10")).findFirst().orElseThrow().entradas().signum());
     }
 
     @Test

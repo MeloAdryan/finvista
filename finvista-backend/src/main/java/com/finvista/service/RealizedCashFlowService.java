@@ -55,6 +55,7 @@ public class RealizedCashFlowService {
         }
         List<Movimento> movimentos = new ArrayList<>();
         int conhecidos = 0, desconhecidos = 0;
+        boolean possuiBaixasFuturas = false;
         for (var t : transactions.findByClienteId(cliente)) {
             if (!Set.of("RECEITA", "DESPESA").contains(t.getTipo() == null ? "" : t.getTipo().trim().toUpperCase(Locale.ROOT))) {
                 continue;
@@ -62,6 +63,7 @@ public class RealizedCashFlowService {
             var o = atuais.get(t.getId());
             try {
                 var audited = AuditedSettlementReader.read(t, o, ambiguos.contains(t.getId()), json, hoje);
+                possuiBaixasFuturas |= audited.baixasFuturas() > 0;
                 for (var baixa : audited.pagamentos()) {
                     movimentos.add(new Movimento(baixa.data(), baixa.liquido(), "RECEITA".equals(t.getTipo())));
                 }
@@ -102,7 +104,7 @@ public class RealizedCashFlowService {
         if (!cliente.equals(context.getClienteAtualId())) {
             throw new IllegalStateException("A empresa selecionada mudou.");
         }
-        return new RealizedCashFlowResponse(cliente, inicio, fim, conhecidos, desconhecidos, baixas, desconhecidos > 0,
+        return new RealizedCashFlowResponse(cliente, inicio, fim, conhecidos, desconhecidos, baixas, desconhecidos > 0 || possuiBaixasFuturas,
                 "BAIXAS_AUDITADAS_LIQUIDAS", List.copyOf(resultado));
     }
 }

@@ -161,9 +161,41 @@ class ContaAzulParcelDetailClientTest {
         assertEquals(429,assertThrows(ResponseStatusException.class,this::query).getStatusCode().value()); server.verify();
     }
     @Test
-    void baixasEmbutidasSaoMantidasSemConsultarOutraRota() {
+    void listaVaziaEmDetalhePagoNaoDispensaConsultaDasBaixas() {
         response("\"valor_pago\":10,\"baixas\":[]");
-        assertTrue(query().baixas().isEmpty()); server.verify();
+        server.expect(requestTo(url()+"/baixa")).andRespond(withSuccess(
+            "[{\"id\":\"baixa-real\",\"data_pagamento\":\"2026-10-19\",\"valor_composicao\":{\"valor_bruto\":10,\"juros\":0,\"multa\":0,\"desconto\":0,\"taxa\":0}}]", MediaType.APPLICATION_JSON));
+        assertEquals("baixa-real",query().baixas().get(0).id()); server.verify();
+    }
+    @Test
+    void listaEmbutidaParcialEsubstituidaPorHistoricoDaRotaEspecifica() {
+        response("\"valor_pago\":30,\"baixas\":[{\"id\":\"antiga\"}]");
+        server.expect(requestTo(url()+"/baixa")).andRespond(withSuccess(
+            "[{\"id\":\"primeira\",\"data_pagamento\":\"2026-09-01\",\"valor_composicao\":{\"valor_bruto\":10}},{\"id\":\"segunda\",\"data_pagamento\":\"2026-10-01\",\"valor_composicao\":{\"valor_bruto\":20}}]",MediaType.APPLICATION_JSON));
+        assertEquals(2,query().baixas().size());server.verify();
+    }
+    @Test
+    void parcelaSemPagamentoNaoExigeConsultaAdicional() {
+        response("\"valor_pago\":0,\"baixas\":[]");
+        assertTrue(query().baixas().isEmpty());server.verify();
+    }
+
+    @Test
+    void quitacao200SemLiquidoPrincipalPodeSerConferidaAposBuscarBaixas() {
+        response("""
+            "status":"QUITADO","valor_pago":200,"nao_pago":0,"baixas":[],
+            "valor_composicao":{"valor_bruto":200,"valor_liquido":200,"juros":0,"multa":0,"desconto":0,"taxa":0},
+            "evento":{"id":"evento","tipo":"RECEITA","data_competencia":"2026-08-26","condicao_pagamento":{"quantidade_parcelas":1}}
+            """);
+        server.expect(requestTo(url()+"/baixa")).andRespond(withSuccess("""
+            [{"id":"pagamento-200","id_parcela":"9986f173-f531-4660-96ae-04b71c879264","data_pagamento":"2026-08-26",
+              "valor_composicao":{"valor_bruto":200,"valor_liquido":200,"juros":0,"multa":0,"desconto":0,"taxa":0}}]
+            """, MediaType.APPLICATION_JSON));
+        var result=client.consultarCompleto("private-token",ID);
+        assertEquals(0,new java.math.BigDecimal("200").compareTo(result.parcela().liquidoConferido()));
+        assertEquals(0,new java.math.BigDecimal("200").compareTo(ContaAzulSettlementPolicy.conferir(result.parcela()).totalPago()));
+        assertEquals("pagamento-200",result.fonte().path("baixas").get(0).path("id").asText());
+        server.verify();
     }
 
 }
