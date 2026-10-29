@@ -20,29 +20,30 @@ export default function ContaAzulFinancialSource({ tipo, dados }: { tipo: string
     </div>;
   }
   const event = object(p.evento);
-  const check = paymentCheck(p.valor_pago, p.baixas);
+  const check = paymentCheck(p.valor_pago, p.baixas, p);
   const composition = object(p.valor_composicao);
   return <div className="ca-accountant-record">
     <dl className="ca-accountant-summary">
       <div><dt>Situação</dt><dd>{statusLabel(p.status)}</dd></div>
       <div><dt>Competência</dt><dd>{date(event.data_competencia)}</dd></div>
       <div><dt>Vencimento</dt><dd>{date(p.data_vencimento)}</dd></div>
-      <div><dt>Pago / recebido informado</dt><dd>{money(p.valor_pago)}</dd></div>
+      <div><dt>{check.basis === "PRINCIPAL" ? "Principal pago informado" : "Pago / recebido informado"}</dt><dd>{money(p.valor_pago)}</dd></div>
       <div><dt>Em aberto informado</dt><dd>{money(p.nao_pago)}</dd></div>
       <div><dt>Líquido da composição</dt><dd>{money(composition.valor_liquido)}</dd></div>
     </dl>
     <div className={`ca-accountant-check ${check.difference !== null && check.difference !== 0 ? "ca-accountant-warning" : ""}`}>
       <strong>Conferência dos pagamentos</strong>
       <dl className="ca-accountant-summary">
-        <div><dt>Pago / recebido informado</dt><dd>{money(check.paid)}</dd></div>
-        <div><dt>Soma dos pagamentos detalhados</dt><dd>{money(check.sum)}</dd></div>
-        <div><dt>Diferença</dt><dd>{money(check.difference)}</dd></div>
+        <div><dt>{check.basis === "PRINCIPAL" ? "Principal pago informado" : "Pago / recebido informado"}</dt><dd>{money(check.paid)}</dd></div>
+        <div><dt>{check.basis === "PRINCIPAL" ? "Principal das baixas" : "Soma líquida das baixas"}</dt><dd>{money(check.basis === "PRINCIPAL" ? check.principal : check.sum)}</dd></div>
+        <div><dt>Diferença na base comparada</dt><dd>{money(check.difference)}</dd></div>
       </dl>
+      {check.basis === "PRINCIPAL" && <p>O campo informado representa o principal. Ajustes das baixas: <strong>{money(check.adjustment)}</strong>. Total efetivamente pago / recebido: <strong>{money(check.sum)}</strong>.</p>}
       <p>{check.difference === null ? "Não há informações suficientes para conferir a soma dos pagamentos. Os campos ausentes não são considerados zero."
         : check.difference !== 0 ? "O valor pago informado e os pagamentos detalhados não conferem. Revise as baixas e prepare uma nova conferência da parcela."
         : "Os valores desta soma conferem. Isso não confirma os demais critérios nem a conciliação com o extrato."}</p>
     </div>
-    {check.rows.length > 0 ? <div className="ca-accountant-table" tabIndex={0} role="region" aria-label="Pagamentos detalhados">
+    {check.rows.length > 0 ? <div className="ca-accountant-table ca-accountant-payments" tabIndex={0} role="region" aria-label="Pagamentos detalhados">
       <table><caption>Pagamentos detalhados</caption>
         <thead><tr><th>Data do pagamento</th><th>Conta financeira</th><th>Bruto</th><th>Juros</th><th>Multa</th><th>Desconto</th><th>Taxa</th><th>Valor líquido</th></tr></thead>
         <tbody>{check.rows.map((payment, index) => <tr key={index}>
@@ -54,9 +55,20 @@ export default function ContaAzulFinancialSource({ tipo, dados }: { tipo: string
       <summary>Categorias informadas no evento</summary>
       <p>A distribuição precisa ser conferida para esta parcela. Esta consulta não aplica rateios.</p>
       <div className="ca-accountant-table" tabIndex={0} role="region" aria-label="Categorias do evento">
-        <table><thead><tr><th>Categoria</th><th>Valor informado</th></tr></thead>
-          <tbody>{event.rateio.map((value, index) => <tr key={index}><td>{text(object(value).nome_categoria)}</td>
-            <td className="ca-accountant-money">{money(object(value).valor)}</td></tr>)}</tbody></table>
+        <table><thead><tr><th>Categoria</th><th>Bruto da categoria</th><th>Líquido da categoria</th><th>Centro de custo</th><th>Bruto do centro</th><th>Líquido do centro</th></tr></thead>
+          <tbody>{event.rateio.flatMap((value, index) => {
+            const category = object(value);
+            const centers = Array.isArray(category.rateio_centro_custo) && category.rateio_centro_custo.length
+              ? category.rateio_centro_custo : [null];
+            return centers.map((center, position) => <tr key={`${index}:${position}`}>
+              <td>{text(category.nome_categoria)}</td>
+              <td className="ca-accountant-money">{position ? "" : money(category.valor_bruto)}</td>
+              <td className="ca-accountant-money">{position ? "" : money(category.valor)}</td>
+              <td>{center === null ? "Sem centro detalhado" : text(object(center).nome_centro_custo)}</td>
+              <td className="ca-accountant-money">{center === null ? "" : money(object(center).valor_bruto)}</td>
+              <td className="ca-accountant-money">{center === null ? "" : money(object(center).valor)}</td>
+            </tr>);
+          })}</tbody></table>
       </div>
     </details>}
   </div>;

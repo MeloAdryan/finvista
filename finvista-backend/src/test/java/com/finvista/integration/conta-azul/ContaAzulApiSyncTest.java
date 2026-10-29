@@ -763,13 +763,47 @@ class ContaAzulApiSyncTest {
             assertEquals(1, records.size());
             assertEquals(1, operations.size());
         }
-    
-    @Test void automaticoReutilizaCadastroCarregadoNaConferenciaDoPlano() {
-        service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), parcela("RECEITA", "50"), true);
-        verify(tx,times(1)).findByClienteId(7L);
-    }
-}
 
-                                                      
-         
-             
+        @Test
+        void automaticoReutilizaCadastroCarregadoNaConferenciaDoPlano() {
+            service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), parcela("RECEITA", "50"), true);
+            verify(tx, times(1)).findByClienteId(7L);
+        }
+
+        private ContaAzulParcelDetail pagamentoComAjuste(String tipo, String principal, String juros, String multa, String desconto) {
+            var original = parcela(tipo, principal);
+            var zero = new BigDecimal("0.00");
+            var bruto = new BigDecimal(principal);
+            var liquid = bruto.add(new BigDecimal(juros)).add(new BigDecimal(multa)).subtract(new BigDecimal(desconto));
+            return new ContaAzulParcelDetail(original.id(), original.descricao(), "QUITADO", original.vencimento(), null, bruto, zero,
+                    original.composicao(), original.evento(), null, null, List.of(new ContaAzulParcelDetail.Baixa("pagamento-ajustado", original.id(),
+                    LocalDate.of(2026, 10, 21), new ContaAzulParcelDetail.Composicao(bruto, liquid, new BigDecimal(juros), new BigDecimal(multa), new BigDecimal(desconto), zero))));
+        }
+
+        @Test
+        void sincronizaPrincipalEDescontoSemDuplicarReceitaNemPerderAuditoria() {
+            var p = pagamentoComAjuste("RECEITA", "1068", "0", "0", "106.8");
+            var result = service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), p, true);
+            assertEquals("INCLUIR", result.acao());
+            var t = records.get(0);
+            assertEquals(new BigDecimal("1068.00"), t.getValor());
+            assertEquals(new BigDecimal("961.20"), t.getValorTotalRealizado());
+            var op = operations.get(result.operacaoId());
+            var read = com.finvista.service.AuditedSettlementReader.read(t, op, false, json, LocalDate.of(2026, 10, 29));
+            assertEquals(0, new BigDecimal("961.20").compareTo(read.pagamentos().get(0).liquido()));
+            var again = service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), p, true);
+            assertEquals("SEM_ALTERACAO", again.acao());
+            assertEquals(1, records.size());
+        }
+
+        @Test
+        void sincronizaJurosEMultaExplicitosSemAlterarPrincipal() {
+            var p = pagamentoComAjuste("DESPESA", "193.5", "0.66", "3.87", "0");
+            service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), p, true);
+            var t = records.get(0);
+            assertEquals(new BigDecimal("193.50"), t.getValor());
+            assertEquals(new BigDecimal("198.03"), t.getValorTotalRealizado());
+        }
+    }
+
+        

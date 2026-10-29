@@ -61,6 +61,21 @@ public final class ContaAzulSettlementPolicy {
         } else if (p.pago().signum() != 0) {
             throw erro("A parcela tem pagamento, mas as baixas não foram informadas.");
         }
+        // Some parcel responses report settled principal, while the dedicated payment
+        // endpoint carries the actual interest/fine/discount. Accept this representation
+        // only when the nominal parcel has explicitly zero adjustments and principal closes.
+        boolean pagoRepresentaPrincipal = c.juros().signum() == 0 && c.multa().signum() == 0
+                && c.desconto().signum() == 0 && principal.compareTo(p.pago()) == 0;
+        if (pagoRepresentaPrincipal) {
+            valor(total);
+            valor(juros);
+            valor(multa);
+            valor(desconto);
+            BigDecimal aberto = diferenca(c.bruto(), principal);
+            igual(aberto, p.pendente(), "Principal aberto difere do saldo informado.");
+            return new Valores(moeda(c.bruto()), moeda(principal), moeda(aberto), moeda(total), moeda(aberto),
+                    moeda(juros), moeda(multa), moeda(desconto), ZERO, ZERO, ZERO, ultima, moeda(liquido));
+        }
         igual(total, p.pago(), "A soma líquida das baixas difere do pago informado.");
         BigDecimal aberto = diferenca(c.bruto(), principal);
         BigDecimal jurosAberto = diferenca(c.juros(), juros);
