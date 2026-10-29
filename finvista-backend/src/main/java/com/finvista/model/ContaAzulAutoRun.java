@@ -12,6 +12,13 @@ import java.util.UUID;
         @Column(name = "sincronizacao_completa")
         public Boolean sincronizacaoCompleta;
 
+        @Column(name = "incremental")
+        public Boolean incremental;
+        @Column(name = "alteracoes_desde")
+        public Instant alteracoesDesde;
+        @Column(name = "alteracoes_ate")
+        public Instant alteracoesAte;
+
         @Id
         @Column(name = "id")
         public UUID id;

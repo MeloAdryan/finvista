@@ -5,7 +5,7 @@ import java.time.*;
 import java.util.UUID;
 
 @Entity
-@Table(name = "conta_azul_auto_itens")
+@Table(name = "conta_azul_auto_itens", indexes = @Index(name = "idx_ca_auto_fila", columnList = "execucao_id,status,id"))
 public class ContaAzulAutoItem {
 
     @Column(name = "listada")

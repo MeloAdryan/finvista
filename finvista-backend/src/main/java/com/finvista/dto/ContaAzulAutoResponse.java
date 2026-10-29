@@ -51,7 +51,13 @@ public final class ContaAzulAutoResponse {
     }
 
     public record Execucao(UUID id, String status, LocalDate inicio, LocalDate fim, Instant criadoEm, Instant concluidoEm,
-            int incluidas, int atualizadas, int mantidas, int pendentes, long emFila, String mensagem) {}
+            int incluidas, int atualizadas, int mantidas, int pendentes, long emFila, String mensagem,
+            String modo, Instant alteracoesDesde, Instant alteracoesAte) {
+        public Execucao(UUID id, String status, LocalDate inicio, LocalDate fim, Instant criadoEm, Instant concluidoEm,
+                int incluidas, int atualizadas, int mantidas, int pendentes, long emFila, String mensagem) {
+            this(id,status,inicio,fim,criadoEm,concluidoEm,incluidas,atualizadas,mantidas,pendentes,emFila,mensagem,null,null,null);
+        }
+    }
 
     public record Pendencia(String parcelaId, String tipo, String descricao, String mensagem, Long lancamentoId) {}
 

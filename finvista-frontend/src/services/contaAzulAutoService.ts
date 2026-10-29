@@ -14,6 +14,9 @@ export interface AutoConfig {
   alteradoEm: string | null;
 }
 export interface AutoRun {
+  modo?: "ALTERACOES" | "HISTORICO" | "PERIODO";
+  alteracoesDesde?: string | null;
+  alteracoesAte?: string | null;
   id: string;
   status: string;
   inicio: string;

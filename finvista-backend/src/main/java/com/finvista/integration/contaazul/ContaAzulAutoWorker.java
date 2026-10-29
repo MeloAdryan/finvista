@@ -101,7 +101,9 @@ import com.finvista.integration.contaazul.ContaAzulAutoState.*;
                         etapa = "ACESSO";
                         var token = acesso.acesso(cliente);
                         etapa = cursor.etapa() == 0 ? "LISTAR_RECEITAS" : "LISTAR_DESPESAS";
-                        var pagina = financeiro.consultar(token, tipo, cursor.inicio(), cursor.fim(), cursor.pagina());
+                        var pagina = cursor.alteracoesDesde() == null
+                                ? financeiro.consultar(token, tipo, cursor.inicio(), cursor.fim(), cursor.pagina())
+                                : financeiro.consultarAlteradas(token, tipo, cursor.inicio(), cursor.fim(), cursor.pagina(), cursor.alteracoesDesde(), cursor.alteracoesAte());
                         etapa = "GRAVAR_PAGINA";
                         estado.pagina(reserva, pagina);
                     }

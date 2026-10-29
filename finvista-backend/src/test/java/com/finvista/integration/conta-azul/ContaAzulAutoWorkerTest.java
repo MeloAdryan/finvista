@@ -181,4 +181,15 @@ class ContaAzulAutoWorkerTest {
             appender.stop();
         }
     }
+    @Test void consultaIncrementalEncaminhaFiltroCongeladoAoCliente() {
+        var desde=Instant.parse("2026-10-27T12:00:00Z");var ate=Instant.parse("2026-10-29T12:00:00Z");
+        when(state.cursor(reserva)).thenReturn(new ContaAzulAutoState.Cursor(LocalDate.of(2000,1,1),LocalDate.of(2200,12,31),0,1,true,desde,ate));
+        when(financial.consultarAlteradas(any(),any(),any(),any(),anyInt(),any(),any()))
+            .thenThrow(new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS));
+        worker.executar(7L);
+        verify(financial).consultarAlteradas("access-teste",ContaAzulFinancialClient.Tipo.RECEITA,LocalDate.of(2000,1,1),LocalDate.of(2200,12,31),1,desde,ate);
+        verify(financial,never()).consultar(any(),any(),any(),any(),anyInt());
+        verify(state).falhar(eq(reserva),contains("Limite"),eq(false));
+    }
+
 }

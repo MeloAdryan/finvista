@@ -587,4 +587,76 @@ class ContaAzulAutoStateTest {
         var f=movimentos(ContaAzulFullScope.INICIO,ContaAzulFullScope.FIM);f.run().movimentosEscopoInicio=LocalDate.of(2000,1,1);
         assertThrows(IllegalStateException.class,()->state.cursor(f.reserva()));verifyNoInteractions(f.archive());
     }
+    private ContaAzulAutoState.Reserva incremental() {
+        config.sincronizacaoCompleta=true;
+        config.alteracoesConfirmadasAte=agora.minusSeconds(3600);
+        config.historicoRevisadoEm=agora.minusSeconds(86400);
+        return state.assumir(7L);
+    }
+    @Test void incrementalUsaMarcoComSobreposicaoESemReenfileirarTodoCadastro() {
+        var res=incremental();var run=execucoes.get(res.execucaoId());var cursor=state.cursor(res);
+        assertTrue(run.incremental);assertEquals(agora.minusSeconds(3600+2*86400),cursor.alteracoesDesde());
+        assertEquals(agora,cursor.alteracoesAte());
+        assertEquals(ContaAzulFullScope.INICIO,cursor.inicio());assertEquals(ContaAzulFullScope.FIM,cursor.fim());
+        verify(tx,never()).findByClienteIdAndOrigemOrderByIdAsc(anyLong(),anyString());
+    }
+    @Test void cargaHistoricaConcluidaEstabelecePrimeiroMarcoMesmoComPendencias() {
+        config.sincronizacaoCompleta=true;var res=state.assumir(7L);var run=execucoes.get(res.execucaoId());
+        run.etapa=4;run.pendentes=2;agora=agora.plusSeconds(60);state.devolver(res,true);
+        assertEquals(run.criadoEm,config.alteracoesConfirmadasAte);assertEquals(agora,config.historicoRevisadoEm);
+        assertEquals("CONCLUIDA_COM_PENDENCIAS",run.status);
+    }
+    @Test void historicoVencidoForcaNovaRevisaoCompleta() {
+        config.sincronizacaoCompleta=true;config.alteracoesConfirmadasAte=agora.minusSeconds(3600);
+        config.historicoRevisadoEm=agora.minusSeconds(7*86400);
+        var res=state.assumir(7L);assertFalse(execucoes.get(res.execucaoId()).incremental);
+        assertNull(state.cursor(res).alteracoesDesde());
+        verify(tx).findByClienteIdAndOrigemOrderByIdAsc(7L,"CONTA_AZUL_API");
+    }
+    @Test void falhaNaoAvancaMarcoERetomaMesmoIntervalo() {
+        var res=incremental();var cursor=state.cursor(res);var before=config.alteracoesConfirmadasAte;
+        state.falhar(res,"Limite de consultas",false);assertEquals(before,config.alteracoesConfirmadasAte);
+        agora=agora.plusSeconds(3600);var resumed=state.assumir(7L);
+        assertEquals(res.execucaoId(),resumed.execucaoId());assertEquals(cursor.alteracoesDesde(),state.cursor(resumed).alteracoesDesde());
+        assertEquals(cursor.alteracoesAte(),state.cursor(resumed).alteracoesAte());
+    }
+    @Test void listagemParcialNaoAvancaMarco() {
+        var res=incremental();var run=execucoes.get(res.execucaoId());var before=config.alteracoesConfirmadasAte;
+        run.etapa=4;run.listagemMudou=true;state.devolver(res,true);
+        assertEquals(before,config.alteracoesConfirmadasAte);assertEquals("PARCIAL",run.status);
+    }
+    @Test void soConfirmaMarcoDepoisDeTodasAsFontes() {
+        var res=incremental();var run=execucoes.get(res.execucaoId());var before=config.alteracoesConfirmadasAte;
+        run.etapa=2;assertThrows(ContaAzulAutoState.ReservaPerdida.class,()->state.devolver(res,true));
+        assertEquals(before,config.alteracoesConfirmadasAte);run.etapa=4;state.devolver(res,true);
+        assertEquals(run.alteracoesAte,config.alteracoesConfirmadasAte);
+        assertEquals(agora.minusSeconds(86400),config.historicoRevisadoEm);
+    }
+    @Test void incrementalReconsultaPendenciaMaisRecenteSemRepetirJaResolvida() {
+        var first=new ContaAzulAutoItem();first.parcelaId=id;first.tipo="RECEITA";first.status="CONFERIR";
+        var resolved=new ContaAzulAutoItem();resolved.parcelaId="1986f173-f531-4660-96ae-04b71c879264";resolved.tipo="DESPESA";resolved.status="SEM_ALTERACAO";
+        var old=new ContaAzulAutoItem();old.parcelaId=resolved.parcelaId;old.tipo="DESPESA";old.status="CONFERIR";
+        when(itens.findTerminalByCliente(7L)).thenReturn(List.of(first,resolved,old));
+        var res=incremental();assertEquals(1,fila.size());assertEquals(id,state.proximo(res).parcelaId);
+    }
+    @Test void legadoEmAndamentoMantemIdEtapaEAlcance() {
+        config.sincronizacaoCompleta=true;var res=state.assumir(7L);var run=execucoes.get(res.execucaoId());run.etapa=1;
+        state.devolver(res,false);config.alteracoesConfirmadasAte=agora.minusSeconds(3600);config.historicoRevisadoEm=agora;
+        var again=state.assumir(7L);assertEquals(res.execucaoId(),again.execucaoId());assertFalse(run.incremental);
+        assertEquals(1,state.cursor(again).etapa());assertNull(state.cursor(again).alteracoesDesde());
+    }
+    @Test void mudarAutorizacaoExigeNovaCargaAntesDeIncremental() {
+        incremental();state.configurar(new Configurar(7L,true,config.inicio,config.fim,30,true,true,true,false,true));
+        assertNull(config.alteracoesConfirmadasAte);assertNull(config.historicoRevisadoEm);
+    }
+    @Test void fontesAuxiliaresIncrementaisUsamJanelaRecenteCongelada() throws Exception {
+        var f=movimentos(ContaAzulFullScope.INICIO,ContaAzulFullScope.FIM);
+        f.run().incremental=true;f.run().alteracoesDesde=Instant.parse("2026-10-29T12:00:00Z");f.run().alteracoesAte=Instant.parse("2026-10-31T12:00:00Z");
+        var c=state.cursor(f.reserva());assertEquals(LocalDate.of(2026,10,29),c.inicio());assertEquals(LocalDate.of(2026,10,31),c.fim());
+    }
+    @Test void marcoCorrompidoNaoExecutaConsultaSemFiltro() {
+        var res=incremental();execucoes.get(res.execucaoId()).alteracoesAte=null;
+        assertThrows(IllegalStateException.class,()->state.cursor(res));
+    }
+
 }

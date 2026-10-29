@@ -21,7 +21,7 @@ public class ContaAzulAutoScheduler {
         this.habilitado = habilitado;
     }
 
-    @Scheduled(fixedDelayString = "${CONTA_AZUL_AUTO_TICK_MS:60000}", initialDelayString = "${CONTA_AZUL_AUTO_INITIAL_MS:30000}")
+    @Scheduled(fixedDelayString = "${CONTA_AZUL_AUTO_TICK_MS:5000}", initialDelayString = "${CONTA_AZUL_AUTO_INITIAL_MS:30000}")
     public void processar() {
         if (!habilitado) {
             return;

@@ -286,7 +286,7 @@ public class ContaAzulApiSyncService {
     }
 
     private Proposta propor(Long cliente, ContaAzulParcelDetail p, Estado estado, Long vincularId, boolean automatico) {
-        var plano = automatico ? planos.analisar(cliente, p) : planos.planejar(cliente, p);
+        var plano = automatico ? planos.analisar(cliente, p, estado.registros()) : planos.planejar(cliente, p);
         if (plano.situacao() == ContaAzulApiPlanService.Situacao.BLOQUEADO) {
             throw conflito("Impedimentos: " + String.join(" | ", plano.avisos()));
         }

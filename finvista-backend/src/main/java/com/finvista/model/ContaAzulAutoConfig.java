@@ -43,6 +43,11 @@ import java.util.UUID;
         public Instant reservaAte;
         @Column(name = "falhas")
         public int falhas;
+        @Column(name = "alteracoes_confirmadas_ate")
+        public Instant alteracoesConfirmadasAte;
+        @Column(name = "historico_revisado_em")
+        public Instant historicoRevisadoEm;
+
         @Version
         @Column(name = "versao")
         public Long versao;

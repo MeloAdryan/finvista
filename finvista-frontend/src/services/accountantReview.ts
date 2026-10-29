@@ -67,7 +67,7 @@ export function pendingReport(payload: unknown): (string | number)[][] {
   const output: (string | number)[][] = [["Referência da parcela", "Descrição", "Tipo", "Situação da conferência",
     "Valor pago informado (uma vez por parcela)", "Soma dos pagamentos detalhados (uma vez por parcela)",
     "Diferença: informado menos detalhado (uma vez por parcela)", "Data do pagamento", "Valor do pagamento",
-    "Motivos para conferência", "Consulta arquivada (horário de Brasília)"]];
+    "Motivos para conferência", "Consulta arquivada (horário de Brasília)", "Bruto da baixa", "Juros da baixa", "Multa da baixa", "Desconto da baixa", "Taxa da baixa", "Líquido informado na baixa"]];
   for (const value of data.pendencias) {
     const p = object(value);
     const check = paymentCheck(p.pagoInformado, p.capturadoEm ? p.baixas : undefined);
@@ -81,6 +81,11 @@ export function pendingReport(payload: unknown): (string | number)[][] {
       payment === null ? "" : check.amounts[index] ?? "Não informado",
       index ? "" : reasons || text(p.mensagemOriginal, "Revisar os documentos e preparar uma nova conferência."),
       dateTime(p.capturadoEm),
+      ...["valor_bruto", "juros", "multa", "desconto", "taxa", "valor_liquido"].map(key => {
+        if (payment === null) return "";
+        const value = object(object(payment).valor_composicao)[key];
+        return cents(value) === null ? "Não informado" : value as number;
+      }),
     ]));
   }
   return output;

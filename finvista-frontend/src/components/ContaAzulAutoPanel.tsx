@@ -505,7 +505,7 @@ export default function ContaAzulAutoPanel({
             </h3>
           </div>
           <p>
-            Período consultado: {data(atual.inicio)} a {data(atual.fim)} ·
+            {atual.modo === "ALTERACOES" ? "Alcance das parcelas" : "Período consultado"}: {data(atual.inicio)} a {data(atual.fim)} ·
             início {horario(atual.criadoEm)}
             {atual.concluidoEm
               ? ` · término ${horario(atual.concluidoEm)}`
@@ -527,6 +527,11 @@ export default function ContaAzulAutoPanel({
               </div>
             ))}
           </dl>
+          {atual.modo === "ALTERACOES" && <p>
+            Atualizando alterações de {horario(atual.alteracoesDesde ?? null)} até {horario(atual.alteracoesAte ?? null)}.
+            Parcelas futuras continuam abrangidas. Revisão histórica completa a cada sete dias.
+          </p>}
+          {atual.modo === "HISTORICO" && <p>Revisão histórica: conferindo os dados da empresa e preservando as pendências para análise.</p>}
           {atual.mensagem &&
             !["CONCLUIDA", "CONCLUIDA_COM_PENDENCIAS"].includes(
               atual.status,

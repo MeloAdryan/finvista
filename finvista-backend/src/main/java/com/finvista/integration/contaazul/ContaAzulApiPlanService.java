@@ -48,12 +48,16 @@ public class ContaAzulApiPlanService {
     }
 
     Plano analisar(Long clienteId, ContaAzulParcelDetail parcela) {
+        return analisar(clienteId, parcela, lancamentos.findByClienteId(clienteId));
+    }
+
+    Plano analisar(Long clienteId, ContaAzulParcelDetail parcela, List<FinancialTransaction> existentes) {
         if (parcela == null || parcela.id() == null) {
             throw new IllegalArgumentException("Parcela inválida.");
         }
         var avisos = new ArrayList<String>();
         validar(parcela, avisos);
-        var existentes = lancamentos.findByClienteId(clienteId);
+
         var identificados = existentes.stream().filter(l -> ORIGEM_API.equals(l.getOrigem())
                 && parcela.id().equalsIgnoreCase(texto(l.getDocumentoReferencia()))).toList();
         List<FinancialTransaction> encontrados;

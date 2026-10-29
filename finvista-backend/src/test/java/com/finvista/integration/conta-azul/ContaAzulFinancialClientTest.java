@@ -128,4 +128,19 @@ class ContaAzulFinancialClientTest {
         assertEquals(LocalDate.parse("2027-01-05"), r.itens().get(0).vencimento());
         server.verify();
     }
+    @Test void alteracoesUsamHorarioSaoPauloSemRestringirTitulosFuturos() {
+        server.expect(queryParam("data_vencimento_de","2000-01-01"))
+            .andExpect(queryParam("data_vencimento_ate","2200-12-31"))
+            .andExpect(queryParam("data_alteracao_de","2026-10-27T09:00:00"))
+            .andExpect(queryParam("data_alteracao_ate","2026-10-29T09:00:00"))
+            .andRespond(withSuccess("{\"itens_totais\":1,\"itens\":[{\"id\":\"futura\",\"data_vencimento\":\"2029-01-01\"}]}",MediaType.APPLICATION_JSON));
+        var p=client.consultarAlteradas("t",ContaAzulFinancialClient.Tipo.RECEITA,LocalDate.of(2000,1,1),LocalDate.of(2200,12,31),1,
+            java.time.Instant.parse("2026-10-27T12:00:00Z"),java.time.Instant.parse("2026-10-29T12:00:00Z"));
+        assertEquals("futura",p.itens().get(0).id());server.verify();
+    }
+    @Test void filtroDeAlteracoesIncompletoNaoFazRequisicao() {
+        assertThrows(IllegalArgumentException.class,()->client.consultarAlteradas("t",ContaAzulFinancialClient.Tipo.RECEITA,inicio,fim,1,null,java.time.Instant.now()));
+        server.verify();
+    }
+
 }

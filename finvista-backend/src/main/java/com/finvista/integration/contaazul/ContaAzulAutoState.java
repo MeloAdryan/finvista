@@ -21,7 +21,11 @@ import org.springframework.beans.factory.annotation.Value;
 
         public record Reserva(Long clienteId, UUID execucaoId, UUID dono) {}
 
-        public record Cursor(LocalDate inicio, LocalDate fim, int etapa, int pagina, boolean completa) {
+        public record Cursor(LocalDate inicio, LocalDate fim, int etapa, int pagina, boolean completa,
+                Instant alteracoesDesde, Instant alteracoesAte) {
+            public Cursor(LocalDate inicio, LocalDate fim, int etapa, int pagina, boolean completa) {
+                this(inicio, fim, etapa, pagina, completa, null, null);
+            }
 
             public Cursor(LocalDate inicio, LocalDate fim, int etapa, int pagina) {
                 this(inicio, fim, etapa, pagina, false);
@@ -74,8 +78,7 @@ import org.springframework.beans.factory.annotation.Value;
             Config config = c == null ? new Config(cliente, false, hoje.minusDays(90), hoje.plusDays(90), 30, false, null, null)
                     : new Config(cliente, c.habilitada, Boolean.TRUE.equals(c.sincronizacaoCompleta) ? ContaAzulFullScope.INICIO : Boolean.TRUE.equals(c.periodoMovel) ? hoje.minusDays(90) : c.inicio, Boolean.TRUE.equals(c.sincronizacaoCompleta) ? ContaAzulFullScope.FIM : Boolean.TRUE.equals(c.periodoMovel) ? hoje.plusDays(90) : c.fim, c.intervaloMinutos, c.incluirNovas, c.proximaEm, c.alteradoEm, Boolean.TRUE.equals(c.periodoMovel), Boolean.TRUE.equals(c.sincronizacaoCompleta));
             var lista = runs.findTop10ByClienteIdOrderByCriadoEmDesc(cliente);
-            List<Execucao> execucoes = lista.stream().map(r -> new Execucao(r.id, r.status, r.inicio, r.fim, r.criadoEm, r.concluidoEm,
-                    r.incluidas, r.atualizadas, r.mantidas, r.pendentes, itens.countByExecucaoIdAndStatus(r.id, "EM_FILA"), r.mensagem)).toList();
+            List<Execucao> execucoes = lista.stream().map(this::resumo).toList();
             if (lista.isEmpty()) {
                 return new Status(habilitado, config, execucoes, List.of(), 0, pagina);
             }
@@ -87,7 +90,9 @@ import org.springframework.beans.factory.annotation.Value;
 
         private Execucao resumo(ContaAzulAutoRun r) {
             return new Execucao(r.id, r.status, r.inicio, r.fim, r.criadoEm, r.concluidoEm,
-                    r.incluidas, r.atualizadas, r.mantidas, r.pendentes, itens.countByExecucaoIdAndStatus(r.id, "EM_FILA"), r.mensagem);
+                    r.incluidas, r.atualizadas, r.mantidas, r.pendentes, itens.countByExecucaoIdAndStatus(r.id, "EM_FILA"), r.mensagem,
+                    Boolean.TRUE.equals(r.incremental) ? "ALTERACOES" : Boolean.TRUE.equals(r.sincronizacaoCompleta) ? "HISTORICO" : "PERIODO",
+                    r.alteracoesDesde, r.alteracoesAte);
         }
 
         @Transactional(readOnly = true)
@@ -153,6 +158,8 @@ import org.springframework.beans.factory.annotation.Value;
             c.revisao = UUID.randomUUID();
             c.alteradoEm = clock.instant();
             c.falhas = 0;
+            c.alteracoesConfirmadasAte = null;
+            c.historicoRevisadoEm = null;
             c.proximaEm = c.habilitada ? clock.instant() : null;
             conferir(pedido.clienteId());
             configs.saveAndFlush(c);
@@ -212,12 +219,30 @@ import org.springframework.beans.factory.annotation.Value;
                 r.fim = Boolean.TRUE.equals(c.sincronizacaoCompleta) ? ContaAzulFullScope.FIM : Boolean.TRUE.equals(c.periodoMovel) ? hoje.plusDays(90) : c.fim;
                 r.incluirNovas = c.incluirNovas;
                 r.sincronizacaoCompleta = Boolean.TRUE.equals(c.sincronizacaoCompleta);
+                r.incremental = Boolean.TRUE.equals(r.sincronizacaoCompleta)
+                        && c.alteracoesConfirmadasAte != null && c.historicoRevisadoEm != null
+                        && !c.alteracoesConfirmadasAte.isAfter(agora)
+                        && c.historicoRevisadoEm.isAfter(agora.minus(7, ChronoUnit.DAYS));
+                if (Boolean.TRUE.equals(r.incremental)) {
+                    r.alteracoesDesde = c.alteracoesConfirmadasAte.minus(2, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
+                    r.alteracoesAte = agora.truncatedTo(ChronoUnit.SECONDS);
+                }
                 r.criadoEm = agora;
                 r.status = "EM_ANDAMENTO";
                 r.pagina = 1;
                 runs.saveAndFlush(r);
                 c.execucaoId = r.id;
-                for (var t : transacoes.findByClienteIdAndOrigemOrderByIdAsc(cliente, "CONTA_AZUL_API")) {
+                if (Boolean.TRUE.equals(r.incremental)) {
+                    Set<String> vistos = new HashSet<>();
+                    for (var i : itens.findTerminalByCliente(cliente)) {
+                        if (i.parcelaId != null && vistos.add(i.parcelaId.toLowerCase(Locale.ROOT))
+                                && "CONFERIR".equals(i.status) && uuid(i.parcelaId)
+                                && Set.of("RECEITA", "DESPESA").contains(i.tipo))
+                            enfileirar(r, i.parcelaId, i.tipo, i.descricao, false);
+                    }
+                }
+                for (var t : Boolean.TRUE.equals(r.incremental) ? List.<FinancialTransaction>of()
+                        : transacoes.findByClienteIdAndOrigemOrderByIdAsc(cliente, "CONTA_AZUL_API")) {
                     if (Boolean.TRUE.equals(r.sincronizacaoCompleta) || (t.getDataVencimento() != null && !t.getDataVencimento().isBefore(r.inicio) && !t.getDataVencimento().isAfter(r.fim))) {
                         if (uuid(t.getDocumentoReferencia()) && ("RECEITA".equals(t.getTipo()) || "DESPESA".equals(t.getTipo()))) {
                             enfileirar(r, t.getDocumentoReferencia(), t.getTipo(), t.getDescricao(), false);
@@ -228,10 +253,14 @@ import org.springframework.beans.factory.annotation.Value;
                     }
                 }
             }
+            boolean retomandoFalha = "AGUARDANDO_REPETICAO".equals(r.status);
             r.status = "EM_ANDAMENTO";
             if (!r.listagemMudou) {
-                r.mensagem = null;
-
+                if (retomandoFalha) r.mensagem = null;
+                if (Boolean.TRUE.equals(r.incremental)) r.mensagem = "Atualizando parcelas alteradas e pendencias. Revisao historica semanal preservada.";
+                else if (Boolean.TRUE.equals(r.sincronizacaoCompleta)) {
+                    if (r.mensagem == null) r.mensagem = "Conferindo o historico financeiro da empresa.";
+                } else r.mensagem = null;
             }
             c.dono = UUID.randomUUID();
             c.reservaAte = agora.plusSeconds(120);
@@ -248,13 +277,16 @@ import org.springframework.beans.factory.annotation.Value;
         public Cursor cursor(Reserva reserva) {
             var c = validar(reserva);
             var r = execucao(c);
+            if (Boolean.TRUE.equals(r.incremental) && (r.alteracoesDesde == null || r.alteracoesAte == null || r.alteracoesAte.isBefore(r.alteracoesDesde)))
+                throw new IllegalStateException("Intervalo incremental incompleto.");
             if (Boolean.TRUE.equals(r.sincronizacaoCompleta) && r.etapa >= 2 && r.etapa <= 3) {
                 prepararEscopoMovimentos(r);
                 if (r.etapa == 4) return new Cursor(r.inicio, r.fim, r.etapa, r.pagina, true);
                 var janela = janelaMovimentos(r);
                 return new Cursor(janela.inicio(), janela.fim(), r.etapa, r.pagina, true);
             }
-            return new Cursor(r.inicio, r.fim, r.etapa, r.pagina, Boolean.TRUE.equals(r.sincronizacaoCompleta));
+            return new Cursor(r.inicio, r.fim, r.etapa, r.pagina, Boolean.TRUE.equals(r.sincronizacaoCompleta),
+                    r.alteracoesDesde, r.alteracoesAte);
         }
 
         @Transactional
@@ -317,7 +349,15 @@ import org.springframework.beans.factory.annotation.Value;
                 if (!primeiraPaginaLivre) return; // Finish the already committed pagination unchanged.
                 LocalDate hoje = LocalDate.now(clock.withZone(ZoneId.of("America/Sao_Paulo")));
                 r.movimentosEscopoInicio = r.inicio.isAfter(ContaAzulFullScope.INICIO) ? r.inicio : ContaAzulFullScope.INICIO;
-                r.movimentosEscopoFim = r.fim.isBefore(hoje) ? r.fim : hoje;
+                if (Boolean.TRUE.equals(r.incremental)) {
+                    if (r.alteracoesDesde == null || r.alteracoesAte == null || r.alteracoesAte.isBefore(r.alteracoesDesde))
+                        throw new IllegalStateException("Intervalo incremental incompleto.");
+                    LocalDate recente = r.alteracoesDesde.atZone(ZoneId.of("America/Sao_Paulo")).toLocalDate();
+                    if (recente.isAfter(r.movimentosEscopoInicio)) r.movimentosEscopoInicio = recente;
+                }
+                LocalDate limite = Boolean.TRUE.equals(r.incremental)
+                        ? r.alteracoesAte.atZone(ZoneId.of("America/Sao_Paulo")).toLocalDate() : hoje;
+                r.movimentosEscopoFim = r.fim.isBefore(limite) ? r.fim : limite;
             }
             if (!primeiraPaginaLivre) return;
             while (r.etapa >= 2 && r.etapa <= 3) {
@@ -502,6 +542,14 @@ import org.springframework.beans.factory.annotation.Value;
                     r.mensagem = null;
                 }
                 r.concluidoEm = clock.instant();
+                if (Boolean.TRUE.equals(r.sincronizacaoCompleta) && !r.listagemMudou) {
+                    // Commit the search watermark only after all sources/pages have completed.
+                    Instant ate = Boolean.TRUE.equals(r.incremental) ? r.alteracoesAte : r.criadoEm;
+                    if (ate == null) throw new IllegalStateException("Marco da coleta ausente.");
+                    if (c.alteracoesConfirmadasAte == null || ate.isAfter(c.alteracoesConfirmadasAte))
+                        c.alteracoesConfirmadasAte = ate;
+                    if (!Boolean.TRUE.equals(r.incremental)) c.historicoRevisadoEm = r.concluidoEm;
+                }
                 c.proximaEm = clock.instant().plusSeconds(c.intervaloMinutos * 60L);
                 c.falhas = 0;
             } else {

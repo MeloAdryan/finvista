@@ -61,14 +61,21 @@ public class ContaAzulFinancialClient {
     }
 
     public Pagina consultar(String acesso, Tipo tipo, LocalDate inicio, LocalDate fim, int pagina) {
-        return consultar(acesso, tipo, inicio, fim, pagina, false, inicio, fim);
+        return consultar(acesso, tipo, inicio, fim, pagina, false, inicio, fim, null, null);
     }
 
     public Pagina consultarPorCompetencia(String acesso, Tipo tipo, LocalDate inicio, LocalDate fim, LocalDate vencimentoInicio, LocalDate vencimentoFim, int pagina) {
-        return consultar(acesso, tipo, inicio, fim, pagina, true, vencimentoInicio, vencimentoFim);
+        return consultar(acesso, tipo, inicio, fim, pagina, true, vencimentoInicio, vencimentoFim, null, null);
     }
 
-    private Pagina consultar(String acesso, Tipo tipo, LocalDate inicio, LocalDate fim, int pagina, boolean competencia, LocalDate vencimentoInicio, LocalDate vencimentoFim) {
+    public Pagina consultarAlteradas(String acesso, Tipo tipo, LocalDate inicio, LocalDate fim, int pagina,
+            java.time.Instant desde, java.time.Instant ate) {
+        if (desde == null || ate == null || ate.isBefore(desde)) throw new IllegalArgumentException("Periodo de alteracoes invalido.");
+        return consultar(acesso, tipo, inicio, fim, pagina, false, inicio, fim, desde, ate);
+    }
+
+    private Pagina consultar(String acesso, Tipo tipo, LocalDate inicio, LocalDate fim, int pagina, boolean competencia, LocalDate vencimentoInicio, LocalDate vencimentoFim,
+            java.time.Instant desde, java.time.Instant ate) {
         try {
             String endpoint = BASE + "/v1/financeiro/eventos-financeiros/" + tipo.segmento + "/buscar";
             var builder = org.springframework.web.util.UriComponentsBuilder.fromUriString(endpoint)
@@ -76,6 +83,12 @@ public class ContaAzulFinancialClient {
                     .queryParam("data_vencimento_de", vencimentoInicio).queryParam("data_vencimento_ate", vencimentoFim);
             if (competencia) {
                 builder.queryParam("data_competencia_de", inicio).queryParam("data_competencia_ate", fim);
+            }
+            if (desde != null) {
+                var zone = java.time.ZoneId.of("America/Sao_Paulo");
+                var format = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+                builder.queryParam("data_alteracao_de", format.format(desde.atZone(zone)))
+                        .queryParam("data_alteracao_ate", format.format(ate.atZone(zone)));
             }
             var uri = builder.build().toUri();
             Pagina result = http.get().uri(uri).headers(h -> h.setBearerAuth(acesso)).retrieve().body(Pagina.class);

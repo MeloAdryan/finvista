@@ -44,9 +44,10 @@ export default function ContaAzulFinancialSource({ tipo, dados }: { tipo: string
     </div>
     {check.rows.length > 0 ? <div className="ca-accountant-table" tabIndex={0} role="region" aria-label="Pagamentos detalhados">
       <table><caption>Pagamentos detalhados</caption>
-        <thead><tr><th>Data do pagamento</th><th>Conta financeira</th><th>Valor líquido</th></tr></thead>
+        <thead><tr><th>Data do pagamento</th><th>Conta financeira</th><th>Bruto</th><th>Juros</th><th>Multa</th><th>Desconto</th><th>Taxa</th><th>Valor líquido</th></tr></thead>
         <tbody>{check.rows.map((payment, index) => <tr key={index}>
           <td>{date(object(payment).data_pagamento)}</td><td>{accountName(object(payment).conta_financeira)}</td>
+          {["valor_bruto", "juros", "multa", "desconto", "taxa"].map(key => <td key={key} className="ca-accountant-money">{money(object(object(payment).valor_composicao)[key])}</td>)}
           <td className="ca-accountant-money">{money(check.amounts[index])}</td></tr>)}</tbody>
       </table></div> : <p>Nenhum pagamento detalhado disponível nesta consulta arquivada.</p>}
     {Array.isArray(event.rateio) && event.rateio.length > 0 && <details>

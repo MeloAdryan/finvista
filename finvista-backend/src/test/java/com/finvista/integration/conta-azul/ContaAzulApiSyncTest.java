@@ -763,7 +763,12 @@ class ContaAzulApiSyncTest {
             assertEquals(1, records.size());
             assertEquals(1, operations.size());
         }
+    
+    @Test void automaticoReutilizaCadastroCarregadoNaConferenciaDoPlano() {
+        service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), parcela("RECEITA", "50"), true);
+        verify(tx,times(1)).findByClienteId(7L);
     }
+}
 
                                                       
          
