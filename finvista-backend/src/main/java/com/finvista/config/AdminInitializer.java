@@ -6,6 +6,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "finvista.seed.enabled", havingValue = "true")
 public class AdminInitializer implements CommandLineRunner {
 
     private final UsuarioService usuarioService;
@@ -46,3 +47,4 @@ public class AdminInitializer implements CommandLineRunner {
                 "Administrador inicial do FinVista criado com sucesso.");
     }
 }
+

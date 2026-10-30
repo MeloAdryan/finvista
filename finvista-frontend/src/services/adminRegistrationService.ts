@@ -9,6 +9,7 @@ export interface AdminUser {
   clienteId: number | null;
   clienteNome: string | null;
   ativo: boolean;
+  revisao?: string;
 }
 export interface NewUser {
   nome: string;
@@ -66,4 +67,41 @@ export const atualizarEmpresaAdmin = (
       ativoAnterior: original.ativo,
     },
     "PUT",
+  );
+
+export const atualizarUsuarioAdmin = (
+  original: AdminUser,
+  nome: string,
+  email: string,
+  ativo: boolean,
+  novaSenha: string | null,
+  confirmarSenha: string | null,
+) =>
+  request<AdminUser>(
+    `usuarios/${original.id}`,
+    {
+      nome,
+      email,
+      ativo,
+      revisao: original.revisao,
+      novaSenha,
+      confirmarSenha,
+    },
+    "PUT",
+  );
+export const excluirUsuarioAdmin = (original: AdminUser) =>
+  request<{ excluido: boolean }>(
+    `usuarios/${original.id}`,
+    { confirmacao: "EXCLUIR", revisao: original.revisao },
+    "DELETE",
+  );
+export const excluirEmpresaAdmin = (original: Cliente) =>
+  request<{ excluido: boolean }>(
+    `clientes/${original.id}`,
+    {
+      confirmacao: "EXCLUIR",
+      nomeAnterior: original.nome,
+      ativoAnterior: original.ativo,
+    },
+    "DELETE",
   );

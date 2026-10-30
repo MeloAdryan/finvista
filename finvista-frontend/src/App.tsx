@@ -1033,6 +1033,7 @@ function App() {
               <PageBoundary key={paginaAtiva}>
                 {paginaAtiva === "cadastros" && usuarioAdmin ? (
                   <AdminRegistration
+                    usuarioAtualId={usuario.id}
                     onVoltar={() => navigate("/metas")}
                     textoVoltar="Voltar às metas"
                   />

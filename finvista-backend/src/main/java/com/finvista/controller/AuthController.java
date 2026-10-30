@@ -33,11 +33,13 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request,
             HttpServletRequest httpRequest) {
-        LoginResponse response = authService.login(request);
+        var result = authService.autenticar(request);
+        LoginResponse response = result.usuario();
 
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 response.email(), null,
                 List.of(new SimpleGrantedAuthority("ROLE_" + response.perfil())));
+        ((UsernamePasswordAuthenticationToken) authentication).setDetails(result.proof());
         SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
         securityContext.setAuthentication(authentication);
 
@@ -59,7 +61,7 @@ public class AuthController {
             return ResponseEntity.status(401).cacheControl(CacheControl.noStore()).build();
         }
         Usuario usuario = usuarioService.buscarPorEmail(authentication.getName()).orElse(null);
-        if (usuario == null || !Boolean.TRUE.equals(usuario.getAtivo())) {
+        if (!com.finvista.service.AuthSessionProof.valid(usuario, authentication.getDetails())) {
             return ResponseEntity.status(401).cacheControl(CacheControl.noStore()).build();
         }
         LoginResponse response = new LoginResponse(usuario.getId(), usuario.getNome(),

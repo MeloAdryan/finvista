@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { Cliente } from "../services/clientService";
+import AdminUserManagement from "./AdminUserManagement";
 import AdminClientManagement from "./AdminClientManagement";
 import {
   criarEmpresa,
@@ -20,9 +21,11 @@ const vazio: NewUser = {
 export default function AdminRegistration({
   onVoltar,
   textoVoltar = "Voltar à seleção de clientes",
+  usuarioAtualId,
 }: {
   onVoltar: () => void;
   textoVoltar?: string;
+  usuarioAtualId?: number;
 }) {
   const [clientes, setClientes] = useState<Cliente[]>([]),
     [usuarios, setUsuarios] = useState<AdminUser[]>([]);
@@ -291,39 +294,23 @@ export default function AdminRegistration({
                 );
             }}
           />
-          <section>
-            <h2>Usuários cadastrados ({usuarios.length})</h2>
-            <div className="ar-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Nome</th>
-                    <th>E-mail</th>
-                    <th>Perfil</th>
-                    <th>Empresa</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {usuarios.map((u) => (
-                    <tr key={u.id}>
-                      <td>{u.nome}</td>
-                      <td>{u.email}</td>
-                      <td>{u.perfil}</td>
-                      <td>
-                        {u.clienteNome ??
-                          (u.perfil === "ADMIN"
-                            ? "Carteira de clientes"
-                            : "Sem vínculo")}
-                      </td>
-                      <td>{u.ativo ? "Ativo" : "Inativo"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {!usuarios.length && <p>Nenhum usuário encontrado.</p>}
-          </section>
+          <AdminUserManagement
+            usuarios={usuarios}
+            ocupado={salvando}
+            usuarioAtualId={usuarioAtualId}
+            aoOcupar={setSalvando}
+            aoAtualizar={(u) =>
+              setUsuarios((v) =>
+                v
+                  .map((x) => (x.id === u.id ? u : x))
+                  .sort((a, b) => a.nome.localeCompare(b.nome)),
+              )
+            }
+            aoRecarregar={() => {
+              setCarregando(true);
+              setRevisao((v) => v + 1);
+            }}
+          />
         </>
       )}
     </main>

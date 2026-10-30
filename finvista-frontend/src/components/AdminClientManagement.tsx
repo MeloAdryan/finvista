@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import type { Cliente } from "../services/clientService";
-import { atualizarEmpresaAdmin } from "../services/adminRegistrationService";
+import { atualizarEmpresaAdmin, excluirEmpresaAdmin } from "../services/adminRegistrationService";
 
 interface Props {
   empresas: Cliente[];
@@ -17,6 +17,8 @@ export default function AdminClientManagement({
   aoAtualizar,
   aoRecarregar,
 }: Props) {
+  const [remover,setRemover]=useState<Cliente|null>(null);
+  const [confirmacao,setConfirmacao]=useState("");
   const [original, setOriginal] = useState<Cliente | null>(null);
   const [nome, setNome] = useState("");
   const [ativo, setAtivo] = useState(true);
@@ -25,6 +27,7 @@ export default function AdminClientManagement({
   const [sucesso, setSucesso] = useState("");
 
   function editar(empresa: Cliente) {
+    setRemover(null);
     setOriginal({ ...empresa });
     setNome(empresa.nome);
     setAtivo(empresa.ativo);
@@ -65,6 +68,7 @@ export default function AdminClientManagement({
     }
   }
 
+  async function excluir(e:FormEvent){e.preventDefault();if(ocupado||!remover||confirmacao!==remover.nome)return;aoOcupar(true);setErro("");setSucesso("");try{await excluirEmpresaAdmin(remover);setRemover(null);setSucesso("Empresa sem vínculos excluída.");aoRecarregar();}catch(e){setErro(e instanceof Error?e.message:"Não foi possível excluir.");}finally{aoOcupar(false);}}
   return (
     <section aria-labelledby="empresas-cadastradas">
       <h2 id="empresas-cadastradas">
@@ -112,12 +116,14 @@ export default function AdminClientManagement({
                   >
                     Editar
                   </button>
+                  <button type="button" disabled={ocupado} onClick={()=>{setOriginal(null);setRemover({...empresa});setConfirmacao("");setErro("");setSucesso("");}}>Excluir</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {remover&&<form onSubmit={e=>void excluir(e)}><h3>Excluir empresa #{remover.id}</h3><p>Somente empresas sem usuários, dados, conexão ou histórico podem ser excluídas. Para preservar vínculos, use a desativação.</p><label>Digite {remover.nome} para confirmar<input value={confirmacao} disabled={ocupado} onChange={e=>setConfirmacao(e.target.value)} autoComplete="off"/></label><button type="submit" disabled={ocupado||confirmacao!==remover.nome}>Confirmar exclusão</button><button type="button" disabled={ocupado} onClick={()=>setRemover(null)}>Cancelar</button></form>}
       {!empresas.length && <p>Nenhuma empresa cadastrada.</p>}
       {original && (
         <form onSubmit={(event) => void salvar(event)}>

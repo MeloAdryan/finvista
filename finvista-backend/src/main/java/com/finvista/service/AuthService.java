@@ -14,7 +14,13 @@ public class AuthService {
         this.usuarioService = usuarioService;
     }
 
+    public record Authenticated(LoginResponse usuario, String proof) {}
+
     public LoginResponse login(LoginRequest request) {
+        return autenticar(request).usuario();
+    }
+
+    public Authenticated autenticar(LoginRequest request) {
 
         if (request == null) {
             throw new IllegalArgumentException(
@@ -48,10 +54,10 @@ public class AuthService {
                     "E-mail ou senha inválidos.");
         }
 
-        return new LoginResponse(
+        return new Authenticated(new LoginResponse(
                 usuario.getId(),
                 usuario.getNome(),
                 usuario.getEmail(),
-                usuario.getPerfil());
+                usuario.getPerfil()), AuthSessionProof.session(usuario));
     }
 }

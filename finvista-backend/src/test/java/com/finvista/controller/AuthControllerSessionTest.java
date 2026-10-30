@@ -32,7 +32,7 @@ class AuthControllerSessionTest {
         controller = new AuthController(auth, usuarios);
         credenciais = new LoginRequest("admin@example.test", "senha-apenas-do-teste");
         usuario = new LoginResponse(1L, "Administrador", credenciais.email(), "ADMIN");
-        when(auth.login(credenciais)).thenReturn(usuario);
+        when(auth.autenticar(credenciais)).thenReturn(new AuthService.Authenticated(usuario, "proof-do-teste"));
     }
 
     @AfterEach
@@ -74,7 +74,7 @@ class AuthControllerSessionTest {
 
     @Test
     void senhaInvalidaNaoCriaSessao() {
-        when(auth.login(credenciais)).thenThrow(new IllegalArgumentException("Credenciais inválidas"));
+        when(auth.autenticar(credenciais)).thenThrow(new IllegalArgumentException("Credenciais inválidas"));
         var request = new MockHttpServletRequest();
         assertThrows(IllegalArgumentException.class, () -> controller.login(credenciais, request));
         assertNull(request.getSession(false));
@@ -83,7 +83,7 @@ class AuthControllerSessionTest {
 
     @Test
     void tentativaInvalidaNaoInvalidaSessaoExistente() {
-        when(auth.login(credenciais)).thenThrow(new IllegalArgumentException("Credenciais inválidas"));
+        when(auth.autenticar(credenciais)).thenThrow(new IllegalArgumentException("Credenciais inválidas"));
         var request = new MockHttpServletRequest();
         var anterior = new MockHttpSession();
         anterior.setAttribute("FINVISTA_CLIENTE_SELECIONADO_ID", 42L);
@@ -127,6 +127,7 @@ class AuthControllerSessionTest {
         var autenticacao = new UsernamePasswordAuthenticationToken(credenciais.email(), null, java.util.List.of());
         var registro = new Usuario("Administrador", credenciais.email(), "hash-de-teste", "ADMIN");
         when(usuarios.buscarPorEmail(credenciais.email())).thenReturn(Optional.of(registro));
+        autenticacao.setDetails(com.finvista.service.AuthSessionProof.session(registro));
         var response = controller.me(autenticacao);
         assertEquals(200, response.getStatusCode().value());
         assertEquals(credenciais.email(), response.getBody().email());

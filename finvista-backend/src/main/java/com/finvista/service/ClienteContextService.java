@@ -49,18 +49,9 @@ public class ClienteContextService {
             );
         }
 
-        Usuario usuario = usuarioService
-                .buscarPorEmail(authentication.getName())
-                .orElseThrow(() -> new IllegalStateException(
-                        "O usuário autenticado não foi encontrado."
-                ));
-
-        if (!Boolean.TRUE.equals(usuario.getAtivo())) {
-            throw new IllegalStateException(
-                    "O usuário autenticado está inativo."
-            );
-        }
-
+        Usuario usuario = (escrita()?usuarioService.bloquearPorEmail(authentication.getName()):usuarioService.buscarPorEmail(authentication.getName()))
+                .orElseThrow(this::invalidarSessao);
+        if (!AuthSessionProof.valid(usuario, authentication.getDetails())) throw invalidarSessao();
         return usuario;
     }
 
@@ -83,6 +74,7 @@ public class ClienteContextService {
 
         validarClienteAtivo(cliente);
 
+        if(escrita())return clienteRepository.bloquearAtivoPorId(cliente.getId()).orElseThrow(()->new IllegalStateException("Empresa removida ou inativa."));
         return cliente;
     }
 
@@ -110,8 +102,7 @@ public class ClienteContextService {
             );
         }
 
-        return clienteRepository
-                .findByIdAndAtivoTrue(clienteId)
+        return (escrita()?clienteRepository.bloquearAtivoPorId(clienteId):clienteRepository.findByIdAndAtivoTrue(clienteId))
                 .orElseThrow(() -> {
                     limparClienteSelecionado();
 
@@ -251,6 +242,13 @@ public class ClienteContextService {
         }
     }
 
+    private boolean escrita(){return org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()
+        && !org.springframework.transaction.support.TransactionSynchronizationManager.isCurrentTransactionReadOnly();}
+    private org.springframework.web.server.ResponseStatusException invalidarSessao(){
+        var session=httpServletRequest.getSession(false);if(session!=null)session.invalidate();
+        SecurityContextHolder.clearContext();
+        return new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED,"Sessão expirada após alteração do cadastro. Entre novamente.");
+    }
     private void validarClienteAtivo(
             Cliente cliente
     ) {

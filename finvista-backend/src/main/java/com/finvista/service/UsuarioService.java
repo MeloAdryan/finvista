@@ -71,6 +71,13 @@ public class UsuarioService {
         );
     }
 
+    public Optional<Usuario> bloquearPorEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return Optional.empty();
+        }
+        return usuarioRepository.bloquearPorEmail(email.trim().toLowerCase(Locale.ROOT));
+    }
+
     public boolean verificarSenha(
             Usuario usuario,
             String senha
@@ -83,6 +90,13 @@ public class UsuarioService {
                 senha,
                 usuario.getSenhaHash()
         );
+    }
+
+    public void definirSenha(Usuario usuario, String senha) {
+        if (senha == null || senha.isBlank() || senha.length() < 8 || senha.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+            throw new IllegalArgumentException("Use uma senha de pelo menos 8 caracteres e até 72 bytes em UTF-8.");
+        }
+        usuario.setSenhaHash(passwordEncoder.encode(senha));
     }
 
     private void validarTexto(String valor, String campo) {

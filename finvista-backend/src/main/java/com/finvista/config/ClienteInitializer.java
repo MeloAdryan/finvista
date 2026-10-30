@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "finvista.seed.enabled", havingValue = "true")
 public class ClienteInitializer implements CommandLineRunner {
 
     private final UsuarioService usuarioService;
@@ -48,8 +49,8 @@ public class ClienteInitializer implements CommandLineRunner {
 
         Usuario usuario = usuarioService
                 .buscarPorEmail(email)
-                .orElseGet(() ->
-                        usuarioService.criarUsuario(
+                .orElseGet(()
+                        -> usuarioService.criarUsuario(
                                 nome,
                                 email,
                                 senha,
@@ -57,15 +58,14 @@ public class ClienteInitializer implements CommandLineRunner {
                         )
                 );
 
-      
         if (usuario.getCliente() != null) {
             return;
         }
 
         Cliente cliente = new Cliente(nome.trim());
 
-        Cliente clienteSalvo =
-                clienteRepository.save(cliente);
+        Cliente clienteSalvo
+                = clienteRepository.save(cliente);
 
         usuario.setCliente(clienteSalvo);
 
@@ -75,3 +75,4 @@ public class ClienteInitializer implements CommandLineRunner {
                 "Cliente inicial do FinVista configurado com sucesso.");
     }
 }
+

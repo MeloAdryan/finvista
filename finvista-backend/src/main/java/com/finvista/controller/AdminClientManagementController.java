@@ -30,6 +30,17 @@ public class AdminClientManagementController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.atualizar(id, pedido));
     }
 
+    @DeleteMapping(value = "/{id}", consumes = "application/json", headers = "X-Finvista-Admin=1")
+    public ResponseEntity<Map<String, Boolean>> excluir(@PathVariable Long id, @Valid @RequestBody com.finvista.dto.admin.AdminDeleteRequest r) {
+        service.excluir(id, r);
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(Map.of("excluido", true));
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> vinculos() {
+        return ResponseEntity.status(409).body(Map.of("mensagem", "A empresa possui vínculos. Atualize a listagem e desative-a se necessário."));
+    }
+
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, String>> falha(ResponseStatusException erro) {
         return ResponseEntity.status(erro.getStatusCode()).cacheControl(CacheControl.noStore())

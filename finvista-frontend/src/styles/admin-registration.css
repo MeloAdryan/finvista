@@ -119,3 +119,19 @@
     margin: 12px 0;
   }
 }
+
+.ar-access-form {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color, #71839a);
+  border-radius: 12px;
+  display: grid;
+  gap: 0.8rem;
+}
+.ar-access-form label {
+  display: grid;
+  gap: 0.35rem;
+}
+.ar-access-form input[type="checkbox"] {
+  width: auto;
+}

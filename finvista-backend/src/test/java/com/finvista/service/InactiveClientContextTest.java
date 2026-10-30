@@ -31,6 +31,7 @@ class InactiveClientContextTest {
         empresa.setAtivo(false);
         usuario.setCliente(empresa);
         when(usuarios.buscarPorEmail("teste@example.test")).thenReturn(Optional.of(usuario));
+        ((org.springframework.security.authentication.AbstractAuthenticationToken) SecurityContextHolder.getContext().getAuthentication()).setDetails(AuthSessionProof.session(usuarios.buscarPorEmail("teste@example.test").orElseThrow()));
         var contexto = new ClienteContextService(usuarios, clientes, new MockHttpServletRequest());
         assertThrows(IllegalStateException.class, contexto::getClienteAtual);
         verifyNoInteractions(clientes);
@@ -45,6 +46,7 @@ class InactiveClientContextTest {
         var request = new MockHttpServletRequest();
         request.getSession().setAttribute(ClienteContextService.CLIENTE_SELECIONADO_SESSION_KEY, 1L);
         when(clientes.findByIdAndAtivoTrue(1L)).thenReturn(Optional.empty());
+        ((org.springframework.security.authentication.AbstractAuthenticationToken) SecurityContextHolder.getContext().getAuthentication()).setDetails(AuthSessionProof.session(usuarios.buscarPorEmail("teste@example.test").orElseThrow()));
         var contexto = new ClienteContextService(usuarios, clientes, request);
         assertThrows(IllegalStateException.class, contexto::getClienteAtual);
         assertNull(request.getSession().getAttribute(ClienteContextService.CLIENTE_SELECIONADO_SESSION_KEY));

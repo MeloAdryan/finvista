@@ -45,7 +45,7 @@ class CsrfIntegrationTest {
         @Bean
         AuthService authService() {
             var service = mock(AuthService.class);
-            when(service.login(any())).thenReturn(new LoginResponse(1L, "Admin", "admin@example.test", "ADMIN"));
+            when(service.autenticar(any())).thenReturn(new AuthService.Authenticated(new LoginResponse(1L, "Admin", "admin@example.test", "ADMIN"), "proof-do-teste"));
             return service;
         }
 

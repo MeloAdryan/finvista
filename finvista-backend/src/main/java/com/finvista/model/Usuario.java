@@ -42,6 +42,18 @@ public class Usuario {
     @Column(name = "data_criacao", nullable = false)
     private LocalDateTime dataCriacao;
 
+    @Column(name = "acesso_revisao", length = 36)
+    private String acessoRevisao;
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public String getAcessoRevisao() {
+        return acessoRevisao;
+    }
+
+    private void revogarAcessos() {
+        acessoRevisao = java.util.UUID.randomUUID().toString();
+    }
+
     protected Usuario() {
     }
 
@@ -87,14 +99,21 @@ public class Usuario {
     }
 
     public void setEmail(String email) {
+        if (!java.util.Objects.equals(this.email, email)) {
+            revogarAcessos();
+        }
         this.email = email;
     }
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     public String getSenhaHash() {
         return senhaHash;
     }
 
     public void setSenhaHash(String senhaHash) {
+        if (!java.util.Objects.equals(this.senhaHash, senhaHash)) {
+            revogarAcessos();
+        }
         this.senhaHash = senhaHash;
     }
 
@@ -103,6 +122,9 @@ public class Usuario {
     }
 
     public void setPerfil(String perfil) {
+        if (!java.util.Objects.equals(this.perfil, perfil)) {
+            revogarAcessos();
+        }
         this.perfil = perfil;
     }
 
@@ -111,6 +133,9 @@ public class Usuario {
     }
 
     public void setAtivo(Boolean ativo) {
+        if (!java.util.Objects.equals(this.ativo, ativo)) {
+            revogarAcessos();
+        }
         this.ativo = ativo;
     }
 
@@ -123,6 +148,9 @@ public class Usuario {
     }
 
     public void setCliente(Cliente cliente) {
+        if (!java.util.Objects.equals(this.cliente == null ? null : this.cliente.getId(), cliente == null ? null : cliente.getId())) {
+            revogarAcessos();
+        }
         this.cliente = cliente;
     }
 }

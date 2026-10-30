@@ -23,6 +23,15 @@ class FinancialRepositoryQueryTest {
                 sources.addAnnotatedClass(type);
             }
             try (var factory = (SessionFactoryImplementor) sources.buildMetadata().buildSessionFactory()) {
+                for (var entity : factory.getMetamodel().getEntities()) {
+                    for (var attr : entity.getAttributes()) {
+                        boolean association = attr.getJavaType() == com.finvista.model.Cliente.class || attr.getJavaType() == com.finvista.model.Usuario.class;
+                        boolean scalar = attr.getJavaType() == Long.class && java.util.Set.of("clienteId", "usuarioId", "autorizadoPor").contains(attr.getName());
+                        if (association || scalar) {
+                            assertNotNull(factory.getQueryEngine().getHqlTranslator().translate("select count(e) from " + entity.getName() + " e where e." + attr.getName() + (association ? ".id" : "") + " = :id", Long.class));
+                        }
+                    }
+                }
                 var method = ContaAzulAutoItemRepository.class.getMethod("findTerminalByCliente", Long.class);
                 String hql = method.getAnnotation(Query.class).value();
                 assertNotNull(factory.getQueryEngine().getHqlTranslator().translate(hql, com.finvista.model.ContaAzulAutoItem.class));
