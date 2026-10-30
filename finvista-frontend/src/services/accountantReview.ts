@@ -206,6 +206,7 @@ export function pendingReport(payload: unknown): (string | number)[][] {
       "Principal das baixas (uma vez por parcela)",
       "Ajuste líquido das baixas (uma vez por parcela)",
       "Categorias e centros para conferência",
+      "Motivo registrado na execução",
     ],
   ];
   for (const value of data.pendencias) {
@@ -262,6 +263,7 @@ export function pendingReport(payload: unknown): (string | number)[][] {
         index ? "" : (check.principal ?? "Não informado"),
         index ? "" : (check.adjustment ?? "Não calculável"),
         index ? "" : allocationReview(p.parcelaArquivada),
+        index ? "" : text(p.mensagemOriginal, "Motivo original não informado"),
       ]),
     );
   }
