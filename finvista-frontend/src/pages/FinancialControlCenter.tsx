@@ -4,6 +4,8 @@ import ContaAzulReconciliationPanel from "../components/ContaAzulReconciliationP
 import FinancialRecordDialog from "../components/FinancialRecordDialog";
 import {
   managementGet,
+  openPositionRows,
+  type OpenPosition,
   saveDre,
   money,
   dateLabel,
@@ -23,6 +25,7 @@ import {
   type ViewCriterion,
 } from "../services/financialViewService";
 import "../styles/financial-management.css";
+import { exportarCSV } from "../services/dashboardAnalysisService";
 const bands: Record<string, string> = {
   HOJE: "Vence hoje",
   DIAS_1_30: "1–30 dias",
@@ -325,6 +328,36 @@ function AgingPanel({ clienteId }: { clienteId: number }) {
     setFaixa(f);
     setPage(p);
   }
+  const [exporting, setExporting] = useState(false);
+  const exportController = useRef<AbortController | null>(null);
+  useEffect(() => () => exportController.current?.abort(), [clienteId]);
+  async function exportPosition() {
+    exportController.current?.abort();
+    const c = new AbortController();
+    exportController.current = c;
+    setExporting(true);
+    setError("");
+    try {
+      const snapshot = await managementGet<OpenPosition>(
+        "posicao",
+        clienteId,
+        {},
+        c.signal,
+      );
+      if (!c.signal.aborted)
+        exportarCSV(
+          `posicao-completa-${clienteId}-${snapshot.referencia}.csv`,
+          openPositionRows(snapshot),
+        );
+    } catch (e) {
+      if (!c.signal.aborted)
+        setError(
+          e instanceof Error ? e.message : "Falha ao exportar a posição.",
+        );
+    } finally {
+      if (exportController.current === c) setExporting(false);
+    }
+  }
   return (
     <>
       <h2>Recebíveis e pagamentos por atraso</h2>
@@ -339,6 +372,17 @@ function AgingPanel({ clienteId }: { clienteId: number }) {
           <option value="RECEITA">A receber</option>
         </select>
       </label>
+      <button
+        type="button"
+        disabled={exporting}
+        onClick={() => void exportPosition()}
+      >
+        {exporting ? "Preparando posição…" : "Exportar posição completa em CSV"}
+      </button>
+      <p>
+        Exporta a pagar e a receber, todas as faixas e páginas da empresa atual,
+        com referência e horário da consulta.
+      </p>
       <ErrorText text={error} />
       {busy && <p role="status">Consultando…</p>}
       {data && (

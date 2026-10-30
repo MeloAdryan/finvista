@@ -53,6 +53,7 @@ type Ledger = {
   contas: Account[];
   movimentos: Move[];
   parcial: boolean;
+  verificacao?: {detalhesConferidos:boolean;saldoContas:number;saldoMensal:number;coberturaConfirmada:boolean};
   avisos: string[];
 };
 export default function FinancialLedgerPanel({
@@ -125,6 +126,15 @@ export default function FinancialLedgerPanel({
               : "não disponível"}
             . O saldo calculado não certifica o saldo bancário atual.
           </p>
+          <p role={data.verificacao?.detalhesConferidos ? "status" : "alert"}>
+            {data.verificacao?.detalhesConferidos
+              ? "Soma dos detalhes e saldos calculados conferida. Isso não certifica cobertura nem igualdade com o banco."
+              : "Conferência dos detalhes não aprovada ou indisponível. Revise antes de usar o saldo."}
+          </p>
+          <button type="button" onClick={() => exportarCSV("saldos-por-conta.csv", [
+            ["Empresa","Início","Fim","ID da conta","Conta","Saldo anterior ao recorte","Recebido","Pago","Transferências de entrada","Transferências de saída","Aberturas no recorte","Saldo calculado","Abertura anterior ao recorte","Detalhes conferidos","Cobertura certificada"],
+            ...data.contas.map(x=>[data.clienteId,data.inicio,data.fim,x.id,x.nome,x.saldoInicial,x.recebimentos,x.pagamentos,x.transferenciasEntrada,x.transferenciasSaida,x.ajustesAbertura,x.saldoFinal,x.semSaldoInicial?"Não":"Sim",data.verificacao?.detalhesConferidos?"Sim":"Não","Não"])
+          ])}>Exportar saldos por conta em CSV</button>
           {data.avisos.map((x) => (
             <p key={x} role="status">
               {x}
@@ -184,8 +194,8 @@ export default function FinancialLedgerPanel({
                 {data.contas.map((x) => (
                   <tr key={x.id}>
                     <th>
-                      {x.nome}
-                      {x.semSaldoInicial ? " · sem abertura identificada" : ""}
+                      {x.nome === x.id ? "Nome da conta não informado" : x.nome}
+                      {x.semSaldoInicial ? " · sem abertura anterior ao recorte" : ""}
                     </th>
                     {[
                       x.saldoInicial,
@@ -211,12 +221,13 @@ export default function FinancialLedgerPanel({
               type="button"
               onClick={() =>
                 exportarCSV("movimentos-por-conta.csv", [
-                  ["ID", "Origem", "Tipo", "Data", "Conta", "Valor"],
+                  ["ID", "Origem", "Tipo", "Data", "ID da conta", "Conta", "Valor"],
                   ...data.movimentos.map((x) => [
                     x.id,
                     x.origem,
                     x.tipo,
                     x.data,
+                    x.contaId,
                     x.conta,
                     x.valor,
                   ]),
@@ -244,7 +255,11 @@ export default function FinancialLedgerPanel({
                     <tr key={x.id}>
                       <td>{x.data}</td>
                       <td>{x.tipo}</td>
-                      <td>{x.conta}</td>
+                      <td>
+                        {x.conta === x.contaId
+                          ? "Nome da conta não informado"
+                          : x.conta}
+                      </td>
                       <td>{brl(x.valor)}</td>
                     </tr>
                   ))}

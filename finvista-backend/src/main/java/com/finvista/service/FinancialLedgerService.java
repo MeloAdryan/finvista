@@ -18,8 +18,16 @@ public class FinancialLedgerService {
     public record Account(String id, String nome, BigDecimal saldoInicial, BigDecimal recebimentos, BigDecimal pagamentos,
             BigDecimal transferenciasEntrada, BigDecimal transferenciasSaida, BigDecimal ajustesAbertura, BigDecimal saldoFinal, boolean semSaldoInicial) {}
 
+    public record Check(boolean detalhesConferidos, BigDecimal saldoContas, BigDecimal saldoMensal, boolean coberturaConfirmada) {}
+
     public record Result(Long clienteId, LocalDate inicio, LocalDate fim, UUID execucaoId, Instant capturadoEm,
-            List<CashFlowResponse> meses, List<Account> contas, List<Movement> movimentos, boolean parcial, List<String> avisos) {}
+            List<CashFlowResponse> meses, List<Account> contas, List<Movement> movimentos, boolean parcial, List<String> avisos, Check verificacao) {
+
+        public Result(Long clienteId, LocalDate inicio, LocalDate fim, UUID execucaoId, Instant capturadoEm,
+                List<CashFlowResponse> meses, List<Account> contas, List<Movement> movimentos, boolean parcial, List<String> avisos) {
+            this(clienteId, inicio, fim, execucaoId, capturadoEm, meses, contas, movimentos, parcial, avisos, null);
+        }
+    }
     private final FinancialTransactionRepository tx;
     private final ContaAzulApiOperationRepository ops;
     private final ContaAzulSourceCaptureRepository captures;
@@ -47,30 +55,43 @@ public class FinancialLedgerService {
     static BigDecimal money(JsonNode n) {
         if (n == null || !n.isNumber()) {
             throw new IllegalArgumentException("Valor ausente ou inválido");
-        
-        }var v = n.decimalValue();
+
+        }
+        var v = n.decimalValue();
         if (v.stripTrailingZeros().scale() > 2 || v.abs().compareTo(new BigDecimal("9999999999999.99")) > 0) {
             throw new IllegalArgumentException("Valor fora do contrato");
-        
-        }return v.setScale(2);
+
+        }
+        return v.setScale(2);
     }
 
     static LocalDate date(JsonNode n) {
         var d = LocalDate.parse(n.asText());
         if (d.getYear() < 1900 || d.getYear() > 2200) {
             throw new IllegalArgumentException("Data fora do contrato");
-        
-        }return d;
+
+        }
+        return d;
     }
 
     private static String required(JsonNode n) {
         if (n == null || !n.isTextual() || n.asText().isBlank()) {
             throw new IllegalArgumentException("Identificador ausente");
-        
-        }return n.asText();
+
+        }
+        return n.asText();
     }
 
-    @Transactional(readOnly = true)
+    private static boolean naJanela(JsonNode data, LocalDate de, LocalDate ate) {
+        try {
+            var d = date(data);
+            return !d.isBefore(de) && !d.isAfter(ate);
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    @Transactional(readOnly = true, isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
     public Result consultar(LocalDate inicio, LocalDate fim) {
         if (inicio == null || fim == null || fim.isBefore(inicio) || inicio.getYear() < 1900 || fim.getYear() > 2200) {
             throw new IllegalArgumentException("Informe um intervalo válido entre 1900 e 2200.");
@@ -79,59 +100,106 @@ public class FinancialLedgerService {
         LocalDate today = LocalDate.now(clock.withZone(ZoneId.of("America/Sao_Paulo")));
         var run = runs.findFirstByClienteIdAndSincronizacaoCompletaTrueAndStatusInOrderByConcluidoEmDesc(client, List.of("CONCLUIDA", "CONCLUIDA_COM_PENDENCIAS")).orElse(null);
         Set<String> warnings = new LinkedHashSet<>();
+        List<ContaAzulAutoRun> historico = run == null ? List.of() : List.of(run);
+        if (run != null && Boolean.TRUE.equals(run.incremental)) {
+            var base = runs.basesHistoricas(client, run.concluidoEm, org.springframework.data.domain.PageRequest.of(0, 1));
+            if (base == null || base.isEmpty()) {
+                warnings.add("Captura incremental sem base histórica concluída: saldo por conta não certificado.");
+            } else {
+                var anteriores = runs.historicoConcluido(client, base.getContent().get(0).concluidoEm, run.concluidoEm,
+                        org.springframework.data.domain.PageRequest.of(0, 1000));
+                if (anteriores == null || anteriores.isEmpty() || anteriores.getTotalElements() > 1000) {
+                    warnings.add("Histórico de capturas excede o limite ou está incompleto; saldo por conta não certificado.");
+                } else {
+                    historico = anteriores.getContent();
+                    if (!historico.get(0).id.equals(base.getContent().get(0).id) || !historico.get(historico.size() - 1).id.equals(run.id)) {
+                        warnings.add("Sequência das capturas históricas não foi confirmada; saldo por conta não certificado.");
+                    }
+                }
+            }
+        }
         Map<String, JsonNode> parcels = new HashMap<>();
         Map<String, Seed> seeds = new HashMap<>();
         Map<String, JsonNode> transfers = new LinkedHashMap<>();
         Set<String> conflictTransfers = new HashSet<>();
         Set<String> conflictSeeds = new HashSet<>();
         if (run == null) {
-            warnings.add("Nenhuma sincronização ampla concluída: transferências e saldos iniciais não têm cobertura confirmada."); 
-        }else {
-            if (!"CONCLUIDA".equals(run.status)) {
-                warnings.add("A execução ampla concluiu com pendências financeiras.");
-            }
-            for (var capture : captures.findByClienteIdAndExecucaoIdOrderByTipoAscChaveAsc(client, run.id))try {
-                JsonNode raw = json.readTree(capture.conteudo);
-                if ("PARCELA".equals(capture.tipo)) {
-                    parcels.put(capture.chave.toLowerCase(Locale.ROOT), raw);
-                    continue;
+            warnings.add("Nenhuma sincronização ampla concluída: transferências e saldos iniciais não têm cobertura confirmada.");
+        } else {
+            for (var fonteRun : historico) {
+                if (!"CONCLUIDA".equals(fonteRun.status)) {
+                    warnings.add("Há execução com pendências financeiras no histórico consultado.");
                 }
-                if (!raw.path("itens").isArray()) {
-                    throw new IllegalArgumentException();
+                var capturas = captures.findByClienteIdAndExecucaoIdOrderByTipoAscChaveAsc(client, fonteRun.id);
+                if (capturas.stream().noneMatch(c -> "TRANSFERENCIA".equals(c.tipo)) || capturas.stream().noneMatch(c -> "SALDO_INICIAL".equals(c.tipo))) {
+                    warnings.add("Execução sem todas as capturas auxiliares; cobertura de saldos não confirmada.");
                 }
-                for (var item : raw.path("itens"))try {
-                    if ("TRANSFERENCIA".equals(capture.tipo)) {
-                        String key = required(item.get("id"));
-                        var old = transfers.putIfAbsent(key, item);
-                        if (old != null && !old.equals(item)) {
-                            conflictTransfers.add(key);
-                            warnings.add("Transferência repetida com conteúdo divergente: " + key);
+                if (Boolean.TRUE.equals(fonteRun.incremental)) {
+                    var de = fonteRun.movimentosEscopoInicio;
+                    var ate = fonteRun.movimentosEscopoFim;
+                    boolean transferencias = capturas.stream().anyMatch(c -> "TRANSFERENCIA".equals(c.tipo));
+                    boolean aberturas = capturas.stream().anyMatch(c -> "SALDO_INICIAL".equals(c.tipo));
+                    if (de == null || ate == null || ate.isBefore(de) || !transferencias || !aberturas) {
+                        warnings.add("Captura incremental sem janela auxiliar completa; cobertura de saldos não confirmada.");
+                    } else {
+                        // Complete window snapshots replace previous observations, including removals.
+                        transfers.entrySet().removeIf(e -> naJanela(e.getValue().path("data"), de, ate));
+                        seeds.entrySet().removeIf(e -> !e.getValue().date().isBefore(de) && !e.getValue().date().isAfter(ate));
+                    }
+                }
+                Set<String> transferidosNestaExecucao = new HashSet<>();
+                Set<String> aberturasNestaExecucao = new HashSet<>();
+                for (var capture : capturas)try {
+                    JsonNode raw = json.readTree(capture.conteudo);
+                    if ("PARCELA".equals(capture.tipo)) {
+                        parcels.put(capture.chave.toLowerCase(Locale.ROOT), raw);
+                        continue;
+                    }
+                    if (!raw.path("itens").isArray()) {
+                        throw new IllegalArgumentException();
+                    }
+                    for (var item : raw.path("itens"))try {
+                        if ("TRANSFERENCIA".equals(capture.tipo)) {
+                            String key = required(item.get("id"));
+                            if (transferidosNestaExecucao.add(key)) {
+                                transfers.remove(key);
+                                conflictTransfers.remove(key);
+                            }
+                            var old = transfers.putIfAbsent(key, item);
+                            if (old != null && !old.equals(item)) {
+                                conflictTransfers.add(key);
+                                warnings.add("Transferência repetida com conteúdo divergente: " + key);
+                            }
+                        } else if ("SALDO_INICIAL".equals(capture.tipo)) {
+                            String account = required(item.get("id_conta_financeira"));
+                            var day = date(item.path("data_competencia"));
+                            var value = money(item.get("saldo_inicial"));
+                            String type = required(item.get("tipo"));
+                            if (!Set.of("RECEITA", "DESPESA").contains(type) || ("RECEITA".equals(type) && value.signum() < 0)) {
+                                throw new IllegalArgumentException();
+                            }
+                            if (day.isAfter(today)) {
+                                warnings.add("Saldo inicial futuro preservado fora do caixa realizado.");
+                                continue;
+                            }
+                            value = "DESPESA".equals(type) ? value.abs().negate() : value;
+                            var seed = new Seed(day, value, account);
+                            if (aberturasNestaExecucao.add(account)) {
+                                seeds.remove(account);
+                                conflictSeeds.remove(account);
+                            }
+                            var old = seeds.putIfAbsent(account, seed);
+                            if (old != null && !old.equals(seed)) {
+                                conflictSeeds.add(account);
+                                warnings.add("Mais de um saldo inicial divergente para a conta " + account + "; abertura excluída para revisão.");
+                            }
                         }
-                    } else if ("SALDO_INICIAL".equals(capture.tipo)) {
-                        String account = required(item.get("id_conta_financeira"));
-                        var day = date(item.path("data_competencia"));
-                        var value = money(item.get("saldo_inicial"));
-                        String type = required(item.get("tipo"));
-                        if (!Set.of("RECEITA", "DESPESA").contains(type) || ("RECEITA".equals(type) && value.signum() < 0)) {
-                            throw new IllegalArgumentException();
-                        }
-                        if (day.isAfter(today)) {
-                            warnings.add("Saldo inicial futuro preservado fora do caixa realizado.");
-                            continue;
-                        }
-                        value = "DESPESA".equals(type) ? value.abs().negate() : value;
-                        var seed = new Seed(day, value, account);
-                        var old = seeds.putIfAbsent(account, seed);
-                        if (old != null && !old.equals(seed)) {
-                            conflictSeeds.add(account);
-                            warnings.add("Mais de um saldo inicial divergente para a conta " + account + "; abertura excluída para revisão.");
-                        }
+                    } catch (Exception e) {
+                        warnings.add("Registro auxiliar inválido na captura " + capture.chave + "; não convertido em zero.");
                     }
                 } catch (Exception e) {
-                    warnings.add("Registro auxiliar inválido na captura " + capture.chave + "; não convertido em zero.");
+                    warnings.add("Captura auxiliar ilegível: " + capture.chave);
                 }
-            } catch (Exception e) {
-                warnings.add("Captura auxiliar ilegível: " + capture.chave);
             }
         }
         conflictSeeds.forEach(seeds::remove);
@@ -172,8 +240,9 @@ public class FinancialLedgerService {
             var old = snapshots.putIfAbsent(op.getLancamentoId(), op);
             if (old != null && !Objects.equals(old.getOrigemSnapshot(), op.getOrigemSnapshot())) {
                 ambiguous.add(op.getLancamentoId());
-        
-            }}
+
+            }
+        }
         for (var t : tx.findByClienteId(client)) {
             if (!Set.of("RECEITA", "DESPESA").contains(t.getTipo() == null ? "" : t.getTipo())) {
                 continue;
@@ -191,8 +260,18 @@ public class FinancialLedgerService {
                             }
                         }
                     }
-                    String accountId = account == null ? "" : account.path("id").asText("");
-                    String name = account == null ? "Sem conta identificada" : account.path("nome").asText(accountId);
+                    // The audited payment carries its own account, independent of the last run's capture.
+                    for (var baixa : settlement.parcela().baixas()) {
+                        if (p.id().equals(baixa.id()) && baixa.conta() != null && !baixa.conta().isNull()) {
+                            account = baixa.conta();
+                            break;
+                        }
+                    }
+                    String accountId = account == null ? "" : account.isTextual() ? account.asText() : account.path("id").asText("");
+                    String name = account == null ? "Sem conta identificada" : account.isObject() ? account.path("nome").asText(accountId) : accountId;
+                    if (name.isBlank() || name.equals(accountId)) {
+                        name = "Nome da conta não informado";
+                    }
                     if (accountId.isBlank()) {
                         accountId = "SEM_CONTA";
                         name = "Sem conta identificada";
@@ -234,15 +313,19 @@ public class FinancialLedgerService {
                             opening = opening.add(m.valor());
                         default -> {
                             if (m.valor().signum() > 0) {
-                                in = in.add(m.valor()); 
-                            }else {
+                                in = in.add(m.valor());
+                            } else {
                                 out = out.subtract(m.valor());
-                        
-                            }}
+
+                            }
+                        }
                     }
                 }
             }
-            boolean missing = !seeds.containsKey(e.getKey());
+            boolean missing = !seeds.containsKey(e.getKey()) || seeds.get(e.getKey()).date().isAfter(inicio);
+            if (seeds.containsKey(e.getKey()) && seeds.get(e.getKey()).date().isAfter(inicio)) {
+                warnings.add("Abertura posterior ao início do recorte: o saldo anterior à abertura não está reconstruído.");
+            }
             if (missing) {
                 warnings.add("Há contas sem saldo inicial; os saldos são movimentos acumulados conhecidos, não saldos bancários certificados.");
             }
@@ -255,11 +338,12 @@ public class FinancialLedgerService {
             for (var m : all) {
                 if (YearMonth.from(m.data()).equals(month) && !m.data().isBefore(inicio) && !m.data().isAfter(fim)) {
                     if (m.valor().signum() > 0) {
-                        in = in.add(m.valor()); 
-                    }else {
+                        in = in.add(m.valor());
+                    } else {
                         out = out.subtract(m.valor());
-                
-                    }}
+
+                    }
+                }
             }
             BigDecimal next = balance.add(in).subtract(out);
             months.add(new CashFlowResponse(month.toString(), balance, in, out, next));
@@ -268,6 +352,40 @@ public class FinancialLedgerService {
         if (!client.equals(context.getClienteAtualId())) {
             throw new IllegalStateException("A empresa mudou durante a consulta.");
         }
-        return new Result(client, inicio, fim, run == null ? null : run.id, run == null ? null : run.concluidoEm, List.copyOf(months), List.copyOf(accounts), all.stream().filter(m -> !m.data().isBefore(inicio) && !m.data().isAfter(fim)).toList(), !warnings.isEmpty(), List.copyOf(warnings));
+        var selectedMovements = all.stream().filter(m -> !m.data().isBefore(inicio) && !m.data().isAfter(fim)).toList();
+        var verification = verify(months, accounts, selectedMovements);
+        if (!verification.detalhesConferidos()) {
+            warnings.add("A soma dos detalhes não reproduz os saldos ou há movimentos repetidos. Não aprovar esta conferência.");
+        }
+        return new Result(client, inicio, fim, run == null ? null : run.id, run == null ? null : run.concluidoEm, List.copyOf(months), List.copyOf(accounts), selectedMovements, !warnings.isEmpty(), List.copyOf(warnings), verification);
+    }
+
+    static Check verify(List<CashFlowResponse> months, List<Account> accounts, List<Movement> moves) {
+        BigDecimal total = accounts.stream().map(Account::saldoFinal).reduce(zero(), BigDecimal::add);
+        BigDecimal end = months.isEmpty() ? zero() : months.get(months.size() - 1).saldoFinal();
+        BigDecimal start = accounts.stream().map(Account::saldoInicial).reduce(zero(), BigDecimal::add);
+        boolean valid = total.compareTo(end) == 0 && (months.isEmpty() ? start.signum() == 0 : start.compareTo(months.get(0).saldoInicial()) == 0);
+        Set<String> ids = new HashSet<>();
+        for (var m : moves) {
+            if (!ids.add(m.id())) {
+                valid = false;
+            }
+        }
+        for (var a : accounts) {
+            BigDecimal formula = a.saldoInicial().add(a.recebimentos()).subtract(a.pagamentos()).add(a.transferenciasEntrada()).subtract(a.transferenciasSaida()).add(a.ajustesAbertura());
+            BigDecimal detail = moves.stream().filter(m -> a.id().equals(m.contaId())).map(Movement::valor).reduce(zero(), BigDecimal::add);
+            valid &= formula.compareTo(a.saldoFinal()) == 0 && a.saldoInicial().add(detail).compareTo(a.saldoFinal()) == 0;
+        }
+        Set<String> known = new HashSet<>();
+        accounts.forEach(a -> known.add(a.id()));
+        valid &= moves.stream().allMatch(m -> known.contains(m.contaId()));
+        BigDecimal previous = start;
+        for (var month : months) {
+            BigDecimal detail = moves.stream().filter(m -> YearMonth.from(m.data()).toString().equals(month.mes())).map(Movement::valor).reduce(zero(), BigDecimal::add);
+            valid &= previous.compareTo(month.saldoInicial()) == 0 && month.saldoInicial().add(month.entradas()).subtract(month.saidas()).compareTo(month.saldoFinal()) == 0
+                    && month.entradas().subtract(month.saidas()).compareTo(detail) == 0;
+            previous = month.saldoFinal();
+        }
+        return new Check(valid, total, end, false);
     }
 }

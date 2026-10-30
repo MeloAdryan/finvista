@@ -12,7 +12,12 @@ public final class AuditedSettlementReader {
     private AuditedSettlementReader() {
     }
 
-    public record Payment(String id, LocalDate data, BigDecimal principal, BigDecimal liquido) {}
+    public record Payment(String id, LocalDate data, BigDecimal principal, BigDecimal liquido, String contaId) {
+
+        public Payment(String id, LocalDate data, BigDecimal principal, BigDecimal liquido) {
+            this(id, data, principal, liquido, null);
+        }
+    }
 
     public record Settlement(ContaAzulParcelDetail parcela, List<Payment> pagamentos, int baixasFuturas) {}
 
@@ -40,9 +45,14 @@ public final class AuditedSettlementReader {
                     throw new IllegalArgumentException();
                 }
                 // A future-dated payment does not erase audited earlier payments of the same parcel.
-                if (q.data().isAfter(today)) { futuras++; continue; }
+                if (q.data().isAfter(today)) {
+                    futuras++;
+                    continue;
+                }
                 var c = q.composicao();
-                rows.add(new Payment(q.id(), q.data(), c.bruto(), c.bruto().add(c.juros()).add(c.multa()).subtract(c.desconto())));
+                var account = q.conta();
+                String accountId = account == null ? null : account.isTextual() ? account.asText() : account.path("id").asText(null);
+                rows.add(new Payment(q.id(), q.data(), c.bruto(), ContaAzulSettlementPolicy.liquidoComposicao(c), accountId));
             }
             return new Settlement(p, List.copyOf(rows), futuras);
         } catch (Exception e) {

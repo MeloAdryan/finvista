@@ -34,7 +34,14 @@ public class FinancialViewService {
     public record Linha(Long id, String documento, String descricao, String tipo, LocalDate data,
             LocalDate competencia, LocalDate vencimento, String categoria, String centro, BigDecimal valor,
             BigDecimal principalOriginal, BigDecimal principalRealizado, BigDecimal principalAberto,
-            BigDecimal liquidoRealizado, BigDecimal liquidoAberto, String movimentoId) {
+            BigDecimal liquidoRealizado, BigDecimal liquidoAberto, String movimentoId, String contaId) {
+
+        public Linha(Long id, String documento, String descricao, String tipo, LocalDate data, LocalDate competencia,
+                LocalDate vencimento, String categoria, String centro, BigDecimal valor, BigDecimal principalOriginal,
+                BigDecimal principalRealizado, BigDecimal principalAberto, BigDecimal liquidoRealizado, BigDecimal liquidoAberto, String movimentoId) {
+            this(id, documento, descricao, tipo, data, competencia, vencimento, categoria, centro, valor, principalOriginal,
+                    principalRealizado, principalAberto, liquidoRealizado, liquidoAberto, movimentoId, null);
+        }
 
         public Linha(Long id, String documento, String descricao, String tipo, LocalDate data, LocalDate competencia, LocalDate vencimento, String categoria, String centro, BigDecimal valor, BigDecimal principalOriginal, BigDecimal principalRealizado, BigDecimal principalAberto, BigDecimal liquidoRealizado, BigDecimal liquidoAberto) {
             this(id, documento, descricao, tipo, data, competencia, vencimento, categoria, centro, valor, principalOriginal, principalRealizado, principalAberto, liquidoRealizado, liquidoAberto, null);
@@ -59,10 +66,10 @@ public class FinancialViewService {
             List<String> categorias, List<String> centros, List<Limite> metas, List<Limite> orcamentos,
             String baseValor, String aviso) {}
 
-    private record Movimento(FinancialTransaction origem, LocalDate data, BigDecimal principal, BigDecimal valor, String movimentoId) {
+    private record Movimento(FinancialTransaction origem, LocalDate data, BigDecimal principal, BigDecimal valor, String movimentoId, String contaId) {
 
         Movimento(FinancialTransaction origem, LocalDate data, BigDecimal principal, BigDecimal valor) {
-            this(origem, data, principal, valor, null);
+            this(origem, data, principal, valor, null, null);
         }
     }
 
@@ -153,7 +160,7 @@ public class FinancialViewService {
             if (!Set.of("RECEITA", "DESPESA").contains(tipo(t))) {
                 continue;
             }
-            if (!FinancialStatusPolicy.ativo(t)) {
+            if (!FinancialStatusPolicy.ativo(t) && f.criterio() != Criterio.BAIXA) {
                 contar(excluidos, "Cancelados");
                 continue;
             }
@@ -161,7 +168,7 @@ public class FinancialViewService {
                 try {
                     var audited = AuditedSettlementReader.read(t, snapshots.get(t.getId()), ambiguos.contains(t.getId()), json, hoje);
                     for (var b : audited.pagamentos()) {
-                        movimentos.add(new Movimento(t, b.data(), b.principal(), b.liquido(), b.id()));
+                        movimentos.add(new Movimento(t, b.data(), b.principal(), b.liquido(), b.id(), b.contaId()));
                     }
                 } catch (Exception e) {
                     contar(excluidos, "Sem baixas auditadas utilizáveis");
@@ -183,6 +190,10 @@ public class FinancialViewService {
                 contar(excluidos, "Data fora de 1900–2200");
                 continue;
             }
+            if (f.criterio() == Criterio.COMPETENCIA && "RENEGOCIADO".equals(t.getSituacao())) {
+                contar(excluidos, "Renegociação: competência depende de vínculo conferido com o novo evento");
+                continue;
+            }
             BigDecimal valor = t.getValor();
             if (f.criterio() == Criterio.VENCIMENTO) {
                 if (t.getValorTotalRealizado() == null || t.getValorTotalAberto() == null) {
@@ -199,7 +210,9 @@ public class FinancialViewService {
         }
         Faixa faixa = intervalo(f, hoje, movimentos.stream().map(Movimento::data).toList());
         Map<Long, List<ExpenseAllocationService.Parte>> partes = new HashMap<>();
-        for (var p : allocations.dividirDetalhado(cliente, registros)) {
+        var partesConferidas = f.criterio() == Criterio.BAIXA && registros.stream().anyMatch(t -> FinancialStatusPolicy.cancelado(t.getSituacao()))
+                ? allocations.dividirDetalhadoParaBaixas(cliente, registros) : allocations.dividirDetalhado(cliente, registros);
+        for (var p : partesConferidas) {
             partes.computeIfAbsent(p.lancamento().getId(), k -> new ArrayList<>()).add(p.parte());
         }
         List<Linha> todas = new ArrayList<>();
@@ -208,14 +221,14 @@ public class FinancialViewService {
                 continue;
             }
             var t = m.origem();
-            var ps = partes.getOrDefault(t.getId(), List.of(new ExpenseAllocationService.Parte("Sem categoria", "Sem centro de custo", t.getValor())));
+            var ps = partes.getOrDefault(t.getId(), List.of(new ExpenseAllocationService.Parte(FinancialStatusPolicy.cancelado(t.getSituacao()) ? "Categoria a revisar" : "Sem categoria", FinancialStatusPolicy.cancelado(t.getSituacao()) ? "Centro a revisar" : "Sem centro de custo", t.getValor())));
             var valores = distribuir(m.principal(), t.getValor(), ps.stream().map(ExpenseAllocationService.Parte::valor).toList());
             for (int i = 0; i < ps.size(); i++) {
                 todas.add(linha(m, ps.get(i).categoria(), ps.get(i).centroCusto(), valores.get(i)));
             }
             BigDecimal ajuste = m.valor().subtract(m.principal());
             if (ajuste.signum() != 0) {
-                todas.add(linha(m, "Ajustes financeiros (juros, multa e desconto)", "Sem centro de custo", ajuste));
+                todas.add(linha(m, "Ajustes financeiros (juros, multa, desconto e taxa)", "Sem centro de custo", ajuste));
             }
         }
         var categorias = todas.stream().map(Linha::categoria).distinct().sorted().toList();
@@ -365,7 +378,7 @@ public class FinancialViewService {
     private static Linha linha(Movimento m, String categoria, String centro, BigDecimal valor) {
         var t = m.origem();
         return new Linha(t.getId(), t.getDocumentoReferencia(), t.getDescricao(), tipo(t), m.data(), t.getDataCompetencia(), t.getDataVencimento(), categoria, centro, valor,
-                t.getValor(), t.getValorRealizado(), t.getValorAberto(), t.getValorTotalRealizado(), t.getValorTotalAberto(), m.movimentoId());
+                t.getValor(), t.getValorRealizado(), t.getValorAberto(), t.getValorTotalRealizado(), t.getValorTotalAberto(), m.movimentoId(), m.contaId());
     }
 
     private static boolean cruza(LocalDate a, LocalDate b, Faixa f) {

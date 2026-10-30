@@ -11,9 +11,12 @@ type Move = {
   tipo: string;
   data: string;
   valor: number;
+  contaId?: string | null;
 };
 type Match = { criterio: string; api: Move; extrato: Move };
+type Difference = { api: Move; extrato: Move; campos: string[]; diferencaValor: number };
 type Details = {
+  divergencias?: Difference[];
   correspondencias: Match[];
   somenteApi: Move[];
   somenteExtrato: Move[];
@@ -22,6 +25,8 @@ type Details = {
 type Total = { receita: number; despesa: number; resultado: number };
 type Resultado = {
   detalhes?: Details;
+  resumo?: { movimentosApi: number; movimentosExtrato: number; porId: number; sugestoes: number; divergencias: number; ambiguidades: number; contasNaoComparaveis: number; totaisReproduzidos: boolean };
+  cobertura?: { fonte: string; ultimaSituacao: string | null; ultimoTermino: string | null; pendenciasEmpresa: number | null; consultaAoVivo: boolean; coberturaConfirmada: boolean };
   clienteId: number;
   inicio: string;
   fim: string;
@@ -36,6 +41,11 @@ type Resultado = {
 };
 const moeda = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const criterionLabel = (value: string) => value === "ID_BAIXA_DATA_TIPO_VALOR" ? "Correspondência por ID e valores" : "Sugestão por data, tipo e valor — identidade não confirmada";
+const runLabels: Record<string,string> = { CONCLUIDA: "Concluída", CONCLUIDA_COM_PENDENCIAS: "Concluída com pendências", EM_ANDAMENTO: "Em andamento", AGUARDANDO: "Aguardando nova tentativa", CANCELADA: "Cancelada", PARCIAL: "Parcial" };
+const runLabel = (value: string | null) => runLabels[value ?? ""] ?? "Não informada";
+const movementRow = (status: string, source: string, x: Move, fields = "", difference: number | string = ""): (string | number)[] =>
+  [status, source, x.chave, x.parcelaId ?? "", x.baixaId ?? "", x.data, x.tipo, x.descricao, x.valor, x.contaId ?? "", fields, difference];
 export default function ContaAzulReconciliationPanel({
   clienteId,
   endpoint = "/api/integracoes/conta-azul/automatica/conferencia",
@@ -144,12 +154,20 @@ export default function ContaAzulReconciliationPanel({
       {dados && (
         <div role="status">
           <strong>
-            {dados.situacao === "DIVERGENCIA"
-              ? "Há diferenças a conferir"
+            {dados.situacao === "DIVERGENCIA" || dados.situacao === "DIVERGENCIA_DE_REGISTROS"
+              ? "Há diferenças de valores ou registros a conferir"
               : dados.situacao === "SEM_DADOS_COMPARAVEIS"
                 ? "Sem dados suficientes nas duas fontes"
-                : "Totais iguais; vínculos e cobertura ainda precisam ser conferidos"}
+                : dados.situacao === "VALORES_POR_ID_CONFERIDOS_COBERTURA_NAO_CERTIFICADA"
+                  ? "Valores correspondentes por ID; cobertura ainda não certificada"
+                  : "Totais iguais; vínculos e cobertura ainda precisam ser conferidos"}
           </strong>
+          {dados.resumo && <>
+            <p>{dados.resumo.movimentosApi} movimentos da API · {dados.resumo.movimentosExtrato} movimentos do extrato, sem repetir rateios.</p>
+            {!dados.resumo.totaisReproduzidos && <p role="alert">A soma dos movimentos não reproduz os totais apresentados. Esta conferência não pode ser aprovada.</p>}
+            {dados.resumo.contasNaoComparaveis > 0 && <p role="status">Em {dados.resumo.contasNaoComparaveis} correspondências ou sugestões, falta identificação da conta em pelo menos uma fonte. A conta financeira ainda não foi conferida.</p>}
+          </>}
+          {dados.cobertura && <p role="status">Dados armazenados no FinVista; sem consulta ao vivo ao Conta Azul. Execução mais recente: {runLabel(dados.cobertura.ultimaSituacao)} · término: {dados.cobertura.ultimoTermino ? new Date(dados.cobertura.ultimoTermino).toLocaleString("pt-BR") : "não informado"}. Pendências ainda não resolvidas na empresa inteira: {dados.cobertura.pendenciasEmpresa ?? "não apuradas"}. A cobertura integral ainda não foi certificada.</p>}
           <div style={{ overflowX: "auto" }}>
             <table>
               <thead>
@@ -192,98 +210,24 @@ export default function ContaAzulReconciliationPanel({
                   ).length
                 }{" "}
                 sugestões sem vínculo certificado ·{" "}
-                {dados.detalhes.ambiguidades.length} ambiguidades.
+                {dados.detalhes.ambiguidades.length} ambiguidades · {dados.detalhes.divergencias?.length ?? 0} divergências por ID.
               </p>
               <p>
-                Sugestões não gravam vínculos nem mesclam fontes. Ausência de ID
-                exige revisão do documento original.
+                Sugestões não gravam vínculos nem mesclam fontes. Ausência de ID exige revisão do documento original.
+                Listas sem correspondência conclusiva incluem os candidatos ambíguos; não some suas contagens às ambiguidades.
+                O CSV mantém cada movimento uma única vez por fonte e chave.
               </p>
               <button
                 type="button"
                 onClick={() => {
                   const d = dados.detalhes!;
                   exportarCSV("conferencia-individual.csv", uniqueReconciliationRows([
-                    [
-                      "Situação",
-                      "Fonte",
-                      "Chave",
-                      "Parcela",
-                      "Baixa",
-                      "Data",
-                      "Tipo",
-                      "Descrição",
-                      "Valor",
-                    ],
-                    ...d.correspondencias.flatMap((x) => [
-                      [
-                        x.criterio,
-                        "API",
-                        x.api.chave,
-                        x.api.parcelaId ?? "",
-                        x.api.baixaId ?? "",
-                        x.api.data,
-                        x.api.tipo,
-                        x.api.descricao,
-                        x.api.valor,
-                      ],
-                      [
-                        x.criterio,
-                        "EXTRATO",
-                        x.extrato.chave,
-                        x.extrato.parcelaId ?? "",
-                        x.extrato.baixaId ?? "",
-                        x.extrato.data,
-                        x.extrato.tipo,
-                        x.extrato.descricao,
-                        x.extrato.valor,
-                      ],
-                    ]),
-                    ...d.somenteApi.map((x) => [
-                      "SEM_CORRESPONDENCIA",
-                      "API",
-                      x.chave,
-                      x.parcelaId ?? "",
-                      x.baixaId ?? "",
-                      x.data,
-                      x.tipo,
-                      x.descricao,
-                      x.valor,
-                    ]),
-                    ...d.somenteExtrato.map((x) => [
-                      "SEM_CORRESPONDENCIA",
-                      "EXTRATO",
-                      x.chave,
-                      x.parcelaId ?? "",
-                      x.baixaId ?? "",
-                      x.data,
-                      x.tipo,
-                      x.descricao,
-                      x.valor,
-                    ]),
-                    ...d.ambiguidades.flatMap((a) => [
-                      [
-                        "AMBIGUIDADE",
-                        "EXTRATO",
-                        a.extrato.chave,
-                        a.extrato.parcelaId ?? "",
-                        a.extrato.baixaId ?? "",
-                        a.extrato.data,
-                        a.extrato.tipo,
-                        a.extrato.descricao,
-                        a.extrato.valor,
-                      ],
-                      ...a.candidatos.map((x) => [
-                        "CANDIDATO_NAO_VINCULADO",
-                        "API",
-                        x.chave,
-                        x.parcelaId ?? "",
-                        x.baixaId ?? "",
-                        x.data,
-                        x.tipo,
-                        x.descricao,
-                        x.valor,
-                      ]),
-                    ]),
+                    ["Situação", "Fonte", "Chave", "Parcela", "Baixa", "Data", "Tipo", "Descrição", "Valor", "ID da conta financeira", "Campos divergentes", "Diferença API menos extrato (uma vez por par)"],
+                    ...d.correspondencias.flatMap(x => [movementRow(x.criterio,"API",x.api),movementRow(x.criterio,"EXTRATO",x.extrato)]),
+                    ...(d.divergencias ?? []).flatMap(x => [movementRow("DIVERGENCIA_POR_ID","API",x.api,x.campos.join("; "),x.diferencaValor),movementRow("DIVERGENCIA_POR_ID","EXTRATO",x.extrato,x.campos.join("; "))]),
+                    ...d.somenteApi.map(x => movementRow("SEM_CORRESPONDENCIA","API",x)),
+                    ...d.somenteExtrato.map(x => movementRow("SEM_CORRESPONDENCIA","EXTRATO",x)),
+                    ...d.ambiguidades.flatMap(a => [movementRow("AMBIGUIDADE","EXTRATO",a.extrato),...a.candidatos.map(x => movementRow("CANDIDATO_NAO_VINCULADO","API",x))]),
                   ]));
                 }}
               >
@@ -296,10 +240,14 @@ export default function ContaAzulReconciliationPanel({
                 </summary>
                 {dados.detalhes.correspondencias.slice(0, 100).map((x) => (
                   <p key={x.extrato.chave}>
-                    {x.criterio} · {x.api.data} · {x.api.descricao} ↔{" "}
+                    {criterionLabel(x.criterio)} · {x.api.data} · {x.api.descricao} ↔{" "}
                     {x.extrato.descricao} · {moeda(x.api.valor)}
                   </p>
                 ))}
+              </details>
+              <details>
+                <summary>Divergências identificadas pelo mesmo ID ({dados.detalhes.divergencias?.length ?? 0})</summary>
+                {(dados.detalhes.divergencias ?? []).slice(0,100).map(x => <p key={x.extrato.chave}><strong>{x.campos.join(", ")}</strong> · {x.api.descricao} · API: {x.api.data}, {moeda(x.api.valor)} · Extrato: {x.extrato.data}, {moeda(x.extrato.valor)} · Diferença: {moeda(x.diferencaValor)}</p>)}
               </details>
               <details>
                 <summary>

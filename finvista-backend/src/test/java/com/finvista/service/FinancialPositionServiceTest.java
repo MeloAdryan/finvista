@@ -19,6 +19,7 @@ class FinancialPositionServiceTest {
         t.setDataVencimento(dia);
         if (aberto != null) {
             t.setValorAberto(new BigDecimal(aberto));
+            t.setValorTotalAberto(new BigDecimal(aberto));
         }
         t.setValor(new BigDecimal("9999"));
         return t;
@@ -58,7 +59,7 @@ class FinancialPositionServiceTest {
         when(repo.findByClienteId(8L)).thenReturn(List.of(item("RECEITA", hoje, null),
                 item("DESPESA", null, "10"), item("DESPESA", hoje, "-5"), cancelado));
         var r = new FinancialPositionService(repo, ctx).consultar(hoje);
-        assertEquals(1, r.semValorAberto());
+        assertEquals(2, r.semValorAberto());
         assertEquals(1, r.semVencimento());
         assertEquals(0, r.pagar().aVencer().signum());
         assertEquals(0, r.receber().aVencer().signum());
@@ -102,4 +103,38 @@ class FinancialPositionServiceTest {
         assertNull(r.cobertura().get(0).primeiraDataAnalise());
     }
 
+    @Test
+    void principalNaoSubstituiLiquidoAusente() {
+        var repo = mock(FinancialTransactionRepository.class);
+        var ctx = mock(ClienteContextService.class);
+        when(ctx.getClienteAtualId()).thenReturn(7L);
+        var t = item("DESPESA", hoje, "100");
+        t.setValorTotalAberto(null);
+        when(repo.findByClienteId(7L)).thenReturn(List.of(t));
+        var r = new FinancialPositionService(repo, ctx).consultar(hoje);
+        assertEquals(1, r.semValorAberto());
+        assertEquals(0, r.pagar().aVencer().signum());
+        verify(repo, never()).save(any());
+    }
+
+    @Test
+    void valorInvalidoOuVencimentoForaDaFaixaPermanecemParaRevisao() {
+        var repo = mock(FinancialTransactionRepository.class);
+        var ctx = mock(ClienteContextService.class);
+        when(ctx.getClienteAtualId()).thenReturn(7L);
+        when(repo.findByClienteId(7L)).thenReturn(List.of(item("RECEITA", hoje, "1.001"), item("DESPESA", LocalDate.of(2300, 1, 1), "20")));
+        var r = new FinancialPositionService(repo, ctx).consultar(hoje);
+        assertEquals(1, r.semValorAberto());
+        assertEquals(1, r.semVencimento());
+        assertEquals(0, r.pagar().aVencer().signum());
+    }
+
+    @Test
+    void trocaDeEmpresaNaoEntregaPosicaoAnterior() {
+        var repo = mock(FinancialTransactionRepository.class);
+        var ctx = mock(ClienteContextService.class);
+        when(ctx.getClienteAtualId()).thenReturn(7L, 8L);
+        when(repo.findByClienteId(7L)).thenReturn(List.of());
+        assertThrows(IllegalArgumentException.class, () -> new FinancialPositionService(repo, ctx).consultar(hoje));
+    }
 }

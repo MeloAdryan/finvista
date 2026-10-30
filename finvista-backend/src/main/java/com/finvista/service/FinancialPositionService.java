@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
@@ -22,7 +23,7 @@ public class FinancialPositionService {
         this.contexto = contexto;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
     public FinancialPositionResponse consultar() {
         return consultar(LocalDate.now(ZoneId.of("America/Sao_Paulo")));
     }
@@ -35,35 +36,32 @@ public class FinancialPositionService {
         Map<String, Resumo> cobertura = new TreeMap<>();
 
         for (var item : repository.findByClienteId(clienteId)) {
-            String tipo = item.getTipo() == null ? "" : item.getTipo().trim().toUpperCase(Locale.ROOT);
-            if (!tipo.equals("RECEITA") && !tipo.equals("DESPESA")) {
+            var rows = FinancialOpenItems.read(List.of(item), hoje);
+            if (rows.isEmpty()) {
                 continue;
             }
-            String situacao = item.getSituacao() == null ? "" : item.getSituacao().trim().toUpperCase(Locale.ROOT);
-            if (FinancialStatusPolicy.cancelado(situacao)) {
-                continue;
-            }
-            BigDecimal aberto = item.getValorTotalAberto() != null
-                    ? item.getValorTotalAberto() : item.getValorAberto();
+            var open = rows.get(0);
+            String tipo = open.tipo();
+            BigDecimal aberto = open.aberto();
             if (aberto == null) {
                 semValor++;
                 registrar(cobertura, item, true);
                 continue;
             }
-            if (aberto.signum() <= 0) {
-                continue;
-            }
-            if (item.getDataVencimento() == null) {
+            if (open.vencimento() == null) {
                 semVencimento++;
                 registrar(cobertura, item, false);
                 continue;
             }
             BigDecimal[] grupo = tipo.equals("RECEITA") ? receber : pagar;
-            int indice = item.getDataVencimento().isBefore(hoje) ? 0 : 1;
+            int indice = open.vencimento().isBefore(hoje) ? 0 : 1;
             grupo[indice] = grupo[indice].add(aberto);
-            if (item.getDataVencimento().equals(hoje)) {
+            if (open.vencimento().equals(hoje)) {
                 grupo[2] = grupo[2].add(aberto);
             }
+        }
+        if (!clienteId.equals(contexto.getClienteAtualId())) {
+            throw new IllegalArgumentException("A empresa mudou durante a consulta.");
         }
         return new FinancialPositionResponse(clienteId, hoje,
                 new FinancialPositionResponse.Grupo(receber[0], receber[1], receber[2], receber[1].subtract(receber[2])),
