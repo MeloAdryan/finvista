@@ -19,7 +19,7 @@ class FinancialRepositoryQueryTest {
                 .applySetting("hibernate.hbm2ddl.auto", "none").build();
         try {
             var sources = new MetadataSources(registry);
-            for (var type : new Class<?>[]{com.finvista.model.AdminClientChange.class, com.finvista.model.Budget.class, com.finvista.model.CashFlow.class, com.finvista.model.Cliente.class, com.finvista.model.ContaAzulApiOperation.class, com.finvista.model.ContaAzulAutoItem.class, com.finvista.model.ContaAzulConnection.class, com.finvista.model.ContaAzulSourceCapture.class, com.finvista.model.ContaAzulSyncBatch.class, com.finvista.model.CostCategoryClassification.class, com.finvista.model.CostCenter.class, com.finvista.model.DreCategoryMapping.class, com.finvista.model.ExpenseDistribution.class, com.finvista.model.FinancialAlertRead.class, com.finvista.model.FinancialAlertRecord.class, com.finvista.model.FinancialAllocation.class, com.finvista.model.FinancialHistory.class, com.finvista.model.FinancialTransaction.class, com.finvista.model.SpendingGoal.class, com.finvista.model.StatementMovement.class, com.finvista.model.Usuario.class}) {
+            for (var type : new Class<?>[]{com.finvista.model.ContaAzulAutoRun.class, com.finvista.model.AdminClientChange.class, com.finvista.model.Budget.class, com.finvista.model.CashFlow.class, com.finvista.model.Cliente.class, com.finvista.model.ContaAzulApiOperation.class, com.finvista.model.ContaAzulAutoItem.class, com.finvista.model.ContaAzulConnection.class, com.finvista.model.ContaAzulSourceCapture.class, com.finvista.model.ContaAzulSyncBatch.class, com.finvista.model.CostCategoryClassification.class, com.finvista.model.CostCenter.class, com.finvista.model.DreCategoryMapping.class, com.finvista.model.ExpenseDistribution.class, com.finvista.model.FinancialAlertRead.class, com.finvista.model.FinancialAlertRecord.class, com.finvista.model.FinancialAllocation.class, com.finvista.model.FinancialHistory.class, com.finvista.model.FinancialTransaction.class, com.finvista.model.SpendingGoal.class, com.finvista.model.StatementMovement.class, com.finvista.model.Usuario.class}) {
                 sources.addAnnotatedClass(type);
             }
             try (var factory = (SessionFactoryImplementor) sources.buildMetadata().buildSessionFactory()) {
@@ -27,6 +27,10 @@ class FinancialRepositoryQueryTest {
                 String hql = method.getAnnotation(Query.class).value();
                 assertNotNull(factory.getQueryEngine().getHqlTranslator().translate(hql, com.finvista.model.ContaAzulAutoItem.class));
                 assertNotNull(new PartTree("findFirstByClienteIdAndStatusInOrderByConcluidoEmDesc", com.finvista.model.ContaAzulAutoRun.class));
+                var base = com.finvista.repository.ContaAzulAutoRunRepository.class.getMethod("basesHistoricas", Long.class, java.time.Instant.class, org.springframework.data.domain.Pageable.class);
+                var history = com.finvista.repository.ContaAzulAutoRunRepository.class.getMethod("historicoConcluido", Long.class, java.time.Instant.class, java.time.Instant.class, org.springframework.data.domain.Pageable.class);
+                assertNotNull(factory.getQueryEngine().getHqlTranslator().translate(base.getAnnotation(Query.class).value(), com.finvista.model.ContaAzulAutoRun.class));
+                assertNotNull(factory.getQueryEngine().getHqlTranslator().translate(history.getAnnotation(Query.class).value(), com.finvista.model.ContaAzulAutoRun.class));
                 assertNotNull(new PartTree("findByClienteIdOrderByTipoAscCategoriaAsc", com.finvista.model.DreCategoryMapping.class));
             }
         } finally {

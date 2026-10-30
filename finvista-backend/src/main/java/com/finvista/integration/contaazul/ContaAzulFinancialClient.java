@@ -123,12 +123,8 @@ public class ContaAzulFinancialClient {
             if (dataFiltro != null && (dataFiltro.isBefore(inicio) || dataFiltro.isAfter(fim))) {
                 throw new IllegalArgumentException();
             }
-            if (item.categorias() != null && item.categorias().stream().anyMatch(java.util.Objects::isNull)) {
-                throw new IllegalArgumentException();
-            }
-            if (item.centros() != null && item.centros().stream().anyMatch(java.util.Objects::isNull)) {
-                throw new IllegalArgumentException();
-            }
+            
+
         }
     }
 }

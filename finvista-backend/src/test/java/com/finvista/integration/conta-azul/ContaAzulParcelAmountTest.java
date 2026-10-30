@@ -74,7 +74,7 @@ class ContaAzulParcelAmountTest {
 
     @Test
     void statusEspeciaisEQuitacaoIncompativelNaoSaoPresumidos() throws Exception {
-        for (String status : List.of("CANCELADO", "RENEGOCIADO", "PERDIDO", "RECEBIDO_PARCIAL", "QUITADO", "DESCONHECIDO")) {
+        for (String status : List.of("RENEGOCIADO", "PERDIDO", "RECEBIDO_PARCIAL", "QUITADO", "DESCONHECIDO")) {
             assertNull(ler(json.replace("\"status\":\"PENDENTE\"", "\"status\":\"" + status + "\"")).liquidoConferido());
         }
     }
@@ -84,7 +84,7 @@ class ContaAzulParcelAmountTest {
         for (String campo : List.of("perda", "renegociacao")) {
             var p = ler(json.replace("\"descricao\":", "\"" + campo + "\":{\"valor\":0},\"descricao\":"));
             assertNull(p.liquidoConferido());
-            assertFalse(mapper.readTree(mapper.writeValueAsString(p)).has(campo));
+            assertEquals(0, mapper.readTree(mapper.writeValueAsString(p)).path(campo).path("valor").decimalValue().signum());
         }
     }
 

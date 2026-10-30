@@ -41,7 +41,15 @@ public final class ContaAzulApiSyncResponse {
 
     public record Financeiro(BigDecimal principalPago, BigDecimal principalAberto, BigDecimal jurosPago,
             BigDecimal multaPaga, BigDecimal descontoPago, BigDecimal jurosAberto, BigDecimal multaAberta,
-            BigDecimal descontoAberto, LocalDate ultimaBaixa) {}
+            BigDecimal descontoAberto, LocalDate ultimaBaixa, BigDecimal taxaPaga, BigDecimal taxaAberta,
+            BigDecimal perda, BigDecimal renegociado) {
+        public Financeiro(BigDecimal principalPago, BigDecimal principalAberto, BigDecimal jurosPago,
+                BigDecimal multaPaga, BigDecimal descontoPago, BigDecimal jurosAberto, BigDecimal multaAberta,
+                BigDecimal descontoAberto, LocalDate ultimaBaixa) {
+            this(principalPago, principalAberto, jurosPago, multaPaga, descontoPago, jurosAberto, multaAberta,
+                    descontoAberto, ultimaBaixa, null, null, null, null);
+        }
+    }
 
     public record Resumo(String descricao, String tipo, LocalDate competencia, LocalDate vencimento,
             BigDecimal valor, BigDecimal pago, BigDecimal pendente, List<Rateio> rateios, Financeiro financeiro) {

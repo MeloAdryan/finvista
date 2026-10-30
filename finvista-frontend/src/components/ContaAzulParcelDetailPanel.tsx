@@ -132,9 +132,10 @@ export default function ContaAzulParcelDetailPanel({
             .
           </p>
           <p>
-            Os valores abaixo pertencem ao evento retornado pela Conta Azul. Não
-            representam uma distribuição confirmada desta parcela e não serão
-            aplicados automaticamente.
+            Os rateios abaixo são os originais do evento. A sincronização usa a
+            distribuição apenas quando ela fecha com a parcela. Valores
+            financeiros conferidos com classificação incompleta ficam em
+            Categoria a revisar ou Centro a revisar, sem presumir proporções.
           </p>
           {!p.evento?.rateio?.length ? (
             <p>Nenhum rateio informado no detalhe.</p>
@@ -143,25 +144,25 @@ export default function ContaAzulParcelDetailPanel({
               {p.evento.rateio.map((r, index) => (
                 <div className="ca-parcel-detail-category" key={index}>
                   <strong>
-                    {r.nome_categoria ||
-                      r.id_categoria ||
+                    {r?.nome_categoria ||
+                      r?.id_categoria ||
                       "Categoria não identificada"}
                   </strong>
                   <p>
-                    Valor: {dinheiro(r.valor)} · Bruto:{" "}
-                    {dinheiro(r.valor_bruto)}
+                    Valor: {dinheiro(r?.valor)} · Bruto:{" "}
+                    {dinheiro(r?.valor_bruto)}
                   </p>
-                  {!r.rateio_centro_custo?.length ? (
+                  {!r?.rateio_centro_custo?.length ? (
                     <p>Centros de custo não informados.</p>
                   ) : (
                     <ul>
-                      {r.rateio_centro_custo.map((c, n) => (
+                      {r?.rateio_centro_custo.map((c, n) => (
                         <li key={n}>
-                          {c.nome_centro_custo ||
-                            c.id_centro_custo ||
+                          {c?.nome_centro_custo ||
+                            c?.id_centro_custo ||
                             "Centro não identificado"}{" "}
-                          — valor: {dinheiro(c.valor)} · bruto:{" "}
-                          {dinheiro(c.valor_bruto)}
+                          — valor: {dinheiro(c?.valor)} · bruto:{" "}
+                          {dinheiro(c?.valor_bruto)}
                         </li>
                       ))}
                     </ul>

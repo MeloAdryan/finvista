@@ -36,6 +36,15 @@ public class ExpenseAllocationService {
 
     @Transactional(readOnly = true)
     public List<ParteDetalhada> dividirDetalhado(Long clienteId, List<FinancialTransaction> despesas) {
+        return dividirDetalhado(clienteId, despesas, false);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ParteDetalhada> dividirDetalhadoParaBaixas(Long clienteId, List<FinancialTransaction> despesas) {
+        return dividirDetalhado(clienteId, despesas, true);
+    }
+
+    private List<ParteDetalhada> dividirDetalhado(Long clienteId, List<FinancialTransaction> despesas, boolean incluirCancelados) {
         Objects.requireNonNull(clienteId, "Cliente obrigatório para consultar rateios.");
         List<Long> ids = despesas.stream().map(FinancialTransaction::getId)
                 .filter(Objects::nonNull).distinct().toList();
@@ -47,7 +56,7 @@ public class ExpenseAllocationService {
                         .collect(Collectors.groupingBy(r -> r.getLancamento().getId()));
         List<ParteDetalhada> resultado = new ArrayList<>();
         for (FinancialTransaction despesa : despesas) {
-            if (!FinancialStatusPolicy.ativo(despesa)) {
+            if (!incluirCancelados && !FinancialStatusPolicy.ativo(despesa)) {
                 continue;
             }
             List<FinancialAllocation> rateios = despesa.getId() == null ? List.of()

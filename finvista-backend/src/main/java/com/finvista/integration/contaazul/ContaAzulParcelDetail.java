@@ -22,11 +22,34 @@ public record ContaAzulParcelDetail(
         @JsonProperty("valor_composicao")
         Composicao composicao,
         Evento evento,
-        @JsonProperty(value = "perda", access = JsonProperty.Access.WRITE_ONLY)
+        @JsonProperty("perda")
         Ajuste perda,
-        @JsonProperty(value = "renegociacao", access = JsonProperty.Access.WRITE_ONLY)
+        @JsonProperty("renegociacao")
         Ajuste renegociacao,
-        List<Baixa> baixas) {
+        List<Baixa> baixas,
+        @JsonProperty("id_conta_financeira") String contaId,
+        @JsonProperty("conta_financeira") com.fasterxml.jackson.databind.JsonNode conta) {
+
+    public ContaAzulParcelDetail { conta = contaSegura(conta); }
+
+    private static com.fasterxml.jackson.databind.JsonNode contaSegura(com.fasterxml.jackson.databind.JsonNode source) {
+        if (source == null || source.isNull()) return null;
+        if (source.isTextual()) return source.asText().isBlank() || source.asText().length() > 160 ? null : source.deepCopy();
+        if (!source.isObject()) return null;
+        var result = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        for (String key : List.of("id", "nome")) {
+            var value = source.get(key);
+            if (value != null && value.isTextual() && !value.asText().isBlank() && value.asText().length() <= 255)
+                result.put(key, value.asText());
+        }
+        return result;
+    }
+
+    public ContaAzulParcelDetail(String id, String descricao, String status, LocalDate vencimento,
+            BigDecimal liquido, BigDecimal pago, BigDecimal pendente, Composicao composicao, Evento evento,
+            Ajuste perda, Ajuste renegociacao, List<Baixa> baixas) {
+        this(id, descricao, status, vencimento, liquido, pago, pendente, composicao, evento, perda, renegociacao, baixas, null, null);
+    }
 
     public ContaAzulParcelDetail(String id, String descricao, String status, LocalDate vencimento,
             BigDecimal liquido, BigDecimal pago, BigDecimal pendente, Composicao composicao, Evento evento,
@@ -37,7 +60,15 @@ public record ContaAzulParcelDetail(
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Baixa(String id, @JsonProperty("id_parcela") String parcelaId,
             @JsonProperty("data_pagamento") LocalDate data,
-            @JsonProperty("valor_composicao") Composicao composicao) {}
+            @JsonProperty("valor_composicao") Composicao composicao,
+            @JsonProperty("conta_financeira") com.fasterxml.jackson.databind.JsonNode conta,
+            @JsonProperty("metodo_pagamento") String metodo,
+            String origem, Long versao) {
+        public Baixa { conta = contaSegura(conta); }
+        public Baixa(String id, String parcelaId, LocalDate data, Composicao composicao) {
+            this(id, parcelaId, data, composicao, null, null, null, null);
+        }
+    }
 
     public ContaAzulParcelDetail(String id, String descricao, String status, LocalDate vencimento,
             BigDecimal liquido, BigDecimal pago, BigDecimal pendente, Composicao composicao, Evento evento) {
@@ -45,7 +76,9 @@ public record ContaAzulParcelDetail(
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record Ajuste(BigDecimal valor) {}
+    public record Ajuste(BigDecimal valor, LocalDate data, String id) {
+        public Ajuste(BigDecimal valor) { this(valor, null, null); }
+    }
 
     @JsonProperty("valor_liquido_conferido")
     public BigDecimal liquidoConferido() {
@@ -55,7 +88,8 @@ public record ContaAzulParcelDetail(
         if (evento == null || evento.condicao() == null || evento.condicao().quantidade() == null
                 || evento.condicao().quantidade() < 1 || composicao == null || composicao.liquido() == null
                 || !("RECEITA".equals(evento.tipo()) || "DESPESA".equals(evento.tipo()))) return null;
-        if (perda != null || renegociacao != null) return null;
+
+        if ((perda != null && !"PERDIDO".equals(status)) || (renegociacao != null && !"RENEGOCIADO".equals(status))) return null;
         // Mantém a conferência de leitura legada. A gravação exige baixas explícitas na policy.
         boolean aberto = "PENDENTE".equals(status) || "EM_ABERTO".equals(status) || "ATRASADO".equals(status);
         boolean quitado = "QUITADO".equals(status) || "RECEBIDO".equals(status);

@@ -314,4 +314,41 @@ class FinancialViewServiceTest {
         assertEquals(0, new BigDecimal("40").compareTo(r.totais().receita()));
         assertTrue(r.exclusoes().isEmpty());
     }
+
+    @Test
+    void classificacaoPendenteMantemTotalFinanceiroIgualASomaDasLinhas() {
+        var t = item();
+        t.setDataCompetencia(LocalDate.of(2026, 9, 1));
+        when(allocations.dividirDetalhado(7L, List.of(t))).thenReturn(List.of(new ExpenseAllocationService.ParteDetalhada(t,
+                new ExpenseAllocationService.Parte("Categoria a revisar", "Centro a revisar", t.getValor()))));
+        var competencia = service.consultar(filter(Criterio.COMPETENCIA, Periodo.PERSONALIZADO));
+        assertEquals(0, new BigDecimal("100").compareTo(competencia.totais().despesa()));
+        assertEquals("Categoria a revisar", competencia.linhas().get(0).categoria());
+        var vencimento = service.consultar(filter(Criterio.VENCIMENTO, Periodo.PERSONALIZADO));
+        assertEquals(0, new BigDecimal("102").compareTo(vencimento.totais().despesa()));
+        assertEquals(0, vencimento.totais().despesa().compareTo(vencimento.linhas().stream().map(Linha::valor).reduce(BigDecimal.ZERO, BigDecimal::add)));
+    }
+
+    @Test
+    void tituloCanceladoNaoApagaPagamentoComprovadoDoCartaoDeCaixa() throws Exception {
+        var t = item();t.setOrigem("CONTA_AZUL_API");t.setDocumentoReferencia("parcela");t.setSituacao("CANCELADO");
+        t.setValorRealizado(new BigDecimal("40"));t.setValorTotalRealizado(new BigDecimal("40"));t.setValorTotalAberto(BigDecimal.ZERO);
+        var b = new ContaAzulParcelDetail.Baixa("b","parcela",LocalDate.of(2026,9,10),composition("40","0"));
+        var source = new ContaAzulParcelDetail("parcela","Conta","CANCELADO",t.getDataVencimento(),null,new BigDecimal("40"),BigDecimal.ZERO,composition("100","0"),
+                new ContaAzulParcelDetail.Evento("evento","DESPESA",t.getDataCompetencia(),new ContaAzulParcelDetail.Condicao(1),List.of()),null,null,List.of(b));
+        var op = new ContaAzulApiOperation(UUID.randomUUID(),new Cliente("Teste"),3L,"parcela","ATUALIZAR",1L,Instant.now(),null,"{}",new ObjectMapper().findAndRegisterModules().writeValueAsString(source));
+        when(operations.snapshotsAtuais(7L)).thenReturn(List.of(op));
+        when(allocations.dividirDetalhadoParaBaixas(7L,List.of(t))).thenReturn(List.of(new ExpenseAllocationService.ParteDetalhada(t,new ExpenseAllocationService.Parte("Serviços","Geral",t.getValor()))));
+        var caixa = service.consultar(filter(Criterio.BAIXA,Periodo.PERSONALIZADO));
+        assertEquals(0,new BigDecimal("40").compareTo(caixa.totais().despesa()));assertEquals("Serviços",caixa.linhas().get(0).categoria());
+        assertTrue(service.consultar(filter(Criterio.VENCIMENTO,Periodo.PERSONALIZADO)).linhas().isEmpty());
+    }
+
+    @Test
+    void competenciaRenegociadaFicaSinalizadaSemReconhecerPrincipalDuasVezes() {
+        var t = item();t.setSituacao("RENEGOCIADO");t.setDataCompetencia(LocalDate.of(2026,9,1));
+        var r = service.consultar(filter(Criterio.COMPETENCIA,Periodo.PERSONALIZADO));
+        assertTrue(r.linhas().isEmpty());
+        assertEquals(1,r.exclusoes().get("Renegociação: competência depende de vínculo conferido com o novo evento"));
+    }
 }

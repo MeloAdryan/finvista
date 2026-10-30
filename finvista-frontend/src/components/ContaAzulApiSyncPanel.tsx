@@ -59,6 +59,16 @@ function Resumo({ titulo, resumo }: { titulo: string; resumo: SyncResumo }) {
                 ["Juros realizados", resumo.financeiro.jurosPago],
                 ["Multa realizada", resumo.financeiro.multaPaga],
                 ["Desconto realizado", resumo.financeiro.descontoPago],
+                ["Taxa realizada", resumo.financeiro.taxaPaga ?? null],
+                ["Taxa em aberto", resumo.financeiro.taxaAberta ?? null],
+                [
+                  "Perda — sem movimento de caixa",
+                  resumo.financeiro.perda ?? null,
+                ],
+                [
+                  "Renegociado — sem movimento de caixa",
+                  resumo.financeiro.renegociado ?? null,
+                ],
                 ["Juros em aberto", resumo.financeiro.jurosAberto],
                 ["Multa em aberto", resumo.financeiro.multaAberta],
                 ["Desconto em aberto", resumo.financeiro.descontoAberto],

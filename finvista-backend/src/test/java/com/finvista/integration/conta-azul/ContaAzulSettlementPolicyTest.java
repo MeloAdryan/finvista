@@ -69,7 +69,7 @@ class ContaAzulSettlementPolicyTest {
 
     @Test
     void situacoesEspeciaisESaldoIncompativelNaoSaoConvertidos() {
-        for (String status : List.of("CANCELADO", "RENEGOCIADO", "PERDIDO", "DESCONHECIDO", "QUITADO", "RECEBIDO_PARCIAL")) {
+        for (String status : List.of("RENEGOCIADO", "PERDIDO", "DESCONHECIDO", "QUITADO", "RECEBIDO_PARCIAL")) {
             assertThrows(IllegalArgumentException.class, () -> ContaAzulSettlementPolicy.conferir(p(status, "0", "100", c("100", "0", "0", "0", "0"), List.of())));
         }
     }
@@ -129,5 +129,50 @@ class ContaAzulSettlementPolicyTest {
         var b2 = baixa("b2", "parcela", "2026-10-23", c("0.5", "9999999999998", "0", "9999999999998", "0"));
         assertThrows(IllegalArgumentException.class, () -> ContaAzulSettlementPolicy.conferir(
                 p("QUITADO", "1", "0", c("1", "0", "0", "0", "0"), List.of(b1, b2))));
+    }
+
+    @Test
+    void taxaExplicitaReduzLiquidoSemVirarDesconto() {
+        var nominal = c("100", "0", "0", "0", "0");
+        var payment = new ContaAzulParcelDetail.Composicao(v("100"), v("97"), v("0"), v("0"), v("0"), v("3"));
+        var f = ContaAzulSettlementPolicy.conferir(p("QUITADO", "100", "0", nominal, List.of(baixa("b", "parcela", "2026-10-19", payment))));
+        assertEquals(v("97.00"), f.totalPago());
+        assertEquals(v("3.00"), f.taxaPaga());
+        assertEquals(v("0.00"), f.descontoPago());
+    }
+
+    @Test
+    void taxaSemLiquidoExplicitoContinuaBloqueada() {
+        var c = new ContaAzulParcelDetail.Composicao(v("100"), null, v("0"), v("0"), v("0"), v("3"));
+        assertThrows(IllegalArgumentException.class, () -> ContaAzulSettlementPolicy.liquidoComposicao(c));
+    }
+
+    @Test
+    void perdaSoEncerraSaldoQuandoPrincipalEDataConferem() {
+        var base = p("PERDIDO", "40", "0", c("100", "0", "0", "0", "0"), List.of(baixa("b", "parcela", "2026-10-19", c("40", "0", "0", "2", "0"))));
+        for (var amount : List.of("60", "59")) {
+            var perda = new ContaAzulParcelDetail.Ajuste(v(amount), LocalDate.of(2026,10,20), null);
+            var item = new ContaAzulParcelDetail(base.id(), base.descricao(), base.status(), base.vencimento(), base.liquido(), base.pago(), base.pendente(), base.composicao(), base.evento(), perda, null, base.baixas());
+            if ("60".equals(amount)) {
+                var f = ContaAzulSettlementPolicy.conferir(item);
+                assertEquals(v("38.00"), f.totalPago()); assertEquals(v("60.00"), f.perda()); assertEquals(v("0.00"), f.totalAberto());
+            } else assertThrows(IllegalArgumentException.class, () -> ContaAzulSettlementPolicy.conferir(item));
+        }
+    }
+
+    @Test
+    void renegociacaoExigeIdentidadeEFechamentoNaoViraPagamento() {
+        var base = p("RENEGOCIADO", "0", "0", c("100", "0", "0", "0", "0"), List.of());
+        for (String id : Arrays.asList(null,"9986f173-f531-4660-96ae-04b71c879264")) {
+            var item = new ContaAzulParcelDetail(base.id(), base.descricao(), base.status(), base.vencimento(), base.liquido(), base.pago(), base.pendente(), base.composicao(), null, null, new ContaAzulParcelDetail.Ajuste(v("100"), null, id), List.of());
+            if (id == null) assertThrows(IllegalArgumentException.class, () -> ContaAzulSettlementPolicy.conferir(item));
+            else { var f = ContaAzulSettlementPolicy.conferir(item); assertEquals(v("100.00"),f.renegociado()); assertEquals(v("0.00"),f.totalPago()); assertEquals(v("0.00"),f.totalAberto()); }
+        }
+    }
+
+    @Test
+    void cancelamentoFechaSaldoSemInventarEstorno() {
+        var f = ContaAzulSettlementPolicy.conferir(p("CANCELADO", "0", "100", c("100","0","0","0","0"), List.of()));
+        assertEquals(v("0.00"), f.totalPago()); assertEquals(v("0.00"), f.totalAberto()); assertEquals(v("100.00"), f.original());
     }
 }

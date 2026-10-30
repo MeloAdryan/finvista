@@ -226,7 +226,11 @@ public class ContaAzulApiSyncService {
         }
         try {
             var anterior = json.readValue(ultima.get().getOrigemSnapshot(), ContaAzulParcelDetail.class);
-            return !Objects.equals(baixasOrdenadas(anterior), baixasOrdenadas(p));
+            return !Objects.equals(baixasOrdenadas(anterior), baixasOrdenadas(p))
+                    || anterior.evento() == null || p.evento() == null
+                    || !Objects.equals(anterior.evento().rateio(), p.evento().rateio())
+                    || !Objects.equals(anterior.perda(), p.perda()) || !Objects.equals(anterior.renegociacao(), p.renegociacao())
+                    || !Objects.equals(anterior.contaId(), p.contaId()) || !Objects.equals(anterior.conta(), p.conta());
         } catch (Exception e) {
             return true;
         }
@@ -249,12 +253,13 @@ public class ContaAzulApiSyncService {
         if (!p.evento().tipo().equals(destino.getTipo())) {
             throw conflito("Cancelamento com tipo diferente do lançamento.");
         }
-        if (com.finvista.service.FinancialStatusPolicy.cancelado(destino.getSituacao())) {
-            return new Resultado(operacaoId, cliente.getId(), p.id(), "SEM_ALTERACAO", destino.getId(), clock.instant());
-        }
+        try { ContaAzulSettlementPolicy.conferir(p); }
+        catch (IllegalArgumentException e) { throw conflito("Cancelamento sem financeiro conferido: " + e.getMessage()); }
         var atuais = alocacoes(destino, estado.alocacoes());
         String antes = escrever(snapshot(destino, atuais));
-        destino.setSituacao("CANCELADO"); // Preserva principal, baixas e rateios para auditoria; cálculos ativos o excluem.
+        preencher(destino, cliente, p, atuais);
+        if (antes.equals(escrever(snapshot(destino, atuais))) && !baixasMudaram(destino, p))
+            return new Resultado(operacaoId, cliente.getId(), p.id(), "SEM_ALTERACAO", destino.getId(), clock.instant());
         transacoes.saveAndFlush(destino);
         var registro = new ContaAzulApiOperation(operacaoId, cliente, usuario, p.id(), "ATUALIZAR", destino.getId(), clock.instant(), antes, escrever(snapshot(destino, atuais)), escrever(p));
         operacoes.saveAndFlush(registro);
@@ -335,11 +340,17 @@ public class ContaAzulApiSyncService {
         }
         List<Rateio> novos = new ArrayList<>();
         Set<String> nomesCategorias = new HashSet<>();
-        for (var categoria : p.evento().rateio()) {
+        boolean categoriasConferidas = planos.avisosClassificacao(p, false).isEmpty();
+        if (!categoriasConferidas) {
+            novos.add(new Rateio("Categoria a revisar", financeiro.original(), "Centro a revisar", financeiro.original()));
+        }
+        for (var categoria : categoriasConferidas ? p.evento().rateio() : List.<ContaAzulParcelDetail.Rateio>of()) {
             if (!nomesCategorias.add(categoria.categoriaNome().trim().toLowerCase(Locale.ROOT))) {
                 throw conflito("Categorias de mesmo nome exigem conferência específica.");
             }
-            if (categoria.centros().isEmpty()) {
+            if (!planos.avisosCentros(categoria).isEmpty()) {
+                novos.add(new Rateio(categoria.categoriaNome().trim(), moeda(categoria.bruto()), "Centro a revisar", moeda(categoria.bruto())));
+            } else if (categoria.centros().isEmpty()) {
                 novos.add(new Rateio(categoria.categoriaNome().trim(), moeda(categoria.bruto()), null, null));
             } else {
                 Set<String> centros = new HashSet<>();
@@ -355,9 +366,10 @@ public class ContaAzulApiSyncService {
         Resumo antes = destino == null ? null : resumo(destino, alocacoes(destino, estado.alocacoes()));
         var depois = new Resumo(p.descricao(), p.evento().tipo(), p.evento().competencia(), p.vencimento(),
                 moeda(p.composicao().bruto()), financeiro.totalPago(), financeiro.totalAberto(), ordenados, detalhe(financeiro));
-        return new Proposta(destino == null ? "INCLUIR" : "ATUALIZAR", destino, antes, depois, ordenados,
-                destino == null ? List.of("A ausência de correspondências não comprova que a parcela seja nova. Confira os lançamentos da empresa antes de confirmar.")
+        var avisos = new ArrayList<String>(plano.avisos());
+        avisos.addAll(destino == null ? List.of("A ausência de correspondências não comprova que a parcela seja nova. Confira os lançamentos da empresa antes de confirmar.")
                         : List.of("Atualização restrita ao registro já identificado pelo ID externo da API."));
+        return new Proposta(destino == null ? "INCLUIR" : "ATUALIZAR", destino, antes, depois, ordenados, List.copyOf(avisos));
     }
 
     private void preencher(FinancialTransaction t, Cliente cliente, ContaAzulParcelDetail p, List<Rateio> r) {
@@ -466,7 +478,7 @@ public class ContaAzulApiSyncService {
 
     private Financeiro detalhe(ContaAzulSettlementPolicy.Valores f) {
         return new Financeiro(f.principalPago(), f.principalAberto(), f.jurosPago(), f.multaPaga(),
-                f.descontoPago(), f.jurosAberto(), f.multaAberta(), f.descontoAberto(), f.ultimaBaixa());
+                f.descontoPago(), f.jurosAberto(), f.multaAberta(), f.descontoAberto(), f.ultimaBaixa(), f.taxaPaga(), f.taxaAberta(), f.perda(), f.renegociado());
     }
 
     private Object snapshot(FinancialTransaction t, List<Rateio> lista) {

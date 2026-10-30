@@ -19,6 +19,10 @@ export interface SyncResumo {
     multaAberta: number | null;
     descontoAberto: number | null;
     ultimaBaixa: string | null;
+    taxaPaga?: number | null;
+    taxaAberta?: number | null;
+    perda?: number | null;
+    renegociado?: number | null;
   } | null;
   rateios: {
     categoria: string;

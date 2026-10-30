@@ -149,7 +149,7 @@ class ContaAzulApiPlanTest {
     void variasParcelasAceitamSomenteRateioQueFechaComAParcelaConsultada() {
         assertEquals(ContaAzulApiPlanService.Situacao.SEM_CORRESPONDENCIA,
                 service.planejar(1L, parcela(2, "100", "0", List.of(categoria("100", List.of())))).situacao());
-        bloqueado(parcela(2, "100", "0", List.of(categoria("200", List.of()))));
+        classificacaoPendente(parcela(2, "100", "0", List.of(categoria("200", List.of()))));
     }
 
     @Test
@@ -184,34 +184,34 @@ class ContaAzulApiPlanTest {
 
     @Test
     void categoriasDevemSomarValorDaParcela() {
-        bloqueado(parcela(1, "100", "0", List.of(categoria("90", List.of()))));
+        classificacaoPendente(parcela(1, "100", "0", List.of(categoria("90", List.of()))));
     }
 
     @Test
     void categoriasDuplicadasBloqueiam() {
-        bloqueado(parcela(1, "100", "0", List.of(categoria("50", List.of()), categoria("50", List.of()))));
+        classificacaoPendente(parcela(1, "100", "0", List.of(categoria("50", List.of()), categoria("50", List.of()))));
     }
 
     @Test
     void centrosAusentesDiferemDeListaVazia() {
-        bloqueado(parcela(1, "100", "0", List.of(categoria("100", null))));
+        classificacaoPendente(parcela(1, "100", "0", List.of(categoria("100", null))));
         assertEquals(ContaAzulApiPlanService.Situacao.SEM_CORRESPONDENCIA, service.planejar(1L, valida()).situacao());
     }
 
     @Test
     void centroSemBrutoNaoRecebeValorPresumido() {
-        bloqueado(parcela(1, "100", "0", List.of(categoria("100", List.of(new ContaAzulParcelDetail.Centro("c", "Centro", dinheiro("100"), null))))));
+        classificacaoPendente(parcela(1, "100", "0", List.of(categoria("100", List.of(new ContaAzulParcelDetail.Centro("c", "Centro", dinheiro("100"), null))))));
     }
 
     @Test
     void centrosDevemSomarCategoria() {
-        bloqueado(parcela(1, "100", "0", List.of(categoria("100", List.of(new ContaAzulParcelDetail.Centro("c", "Centro", dinheiro("90"), dinheiro("90")))))));
+        classificacaoPendente(parcela(1, "100", "0", List.of(categoria("100", List.of(new ContaAzulParcelDetail.Centro("c", "Centro", dinheiro("90"), dinheiro("90")))))));
     }
 
     @Test
     void centrosDuplicadosBloqueiam() {
         var c = new ContaAzulParcelDetail.Centro("c", "Centro", dinheiro("50"), dinheiro("50"));
-        bloqueado(parcela(1, "100", "0", List.of(categoria("100", List.of(c, c)))));
+        classificacaoPendente(parcela(1, "100", "0", List.of(categoria("100", List.of(c, c)))));
     }
 
     @Test
@@ -258,4 +258,10 @@ class ContaAzulApiPlanTest {
         assertThrows(IllegalArgumentException.class, () -> controller.planejar("id-invalido", 1L));
         verifyNoInteractions(conexoes, detalhes, planos);
     }
+    private void classificacaoPendente(ContaAzulParcelDetail p) {
+        var plano = service.planejar(1L, p);
+        assertEquals(ContaAzulApiPlanService.Situacao.SEM_CORRESPONDENCIA, plano.situacao());
+        assertTrue(plano.avisos().stream().anyMatch(a -> a.startsWith("Classificação a revisar:")));
+    }
+
 }

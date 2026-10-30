@@ -79,6 +79,11 @@ public class ContaAzulApiPlanService {
         if (!avisos.isEmpty()) {
             situacao = Situacao.BLOQUEADO;
         }
+        if ("PERDIDO".equals(parcela.status())) avisos.add("Perda preservada separadamente: não representa pagamento nem recebimento.");
+        if ("RENEGOCIADO".equals(parcela.status())) avisos.add("Saldo renegociado encerrado na parcela original; não representa entrada de caixa. Competência exige conferir o vínculo com o novo evento.");
+        for (String aviso : avisosClassificacao(parcela, true)) {
+            avisos.add("Classificação a revisar: " + aviso);
+        }
         if (identificados.isEmpty() && !encontrados.isEmpty()) {
             avisos.add("Sem vínculo externo confirmado. Descrição e data semelhantes não autorizam atualização nem criação automática.");
         }
@@ -123,11 +128,16 @@ public class ContaAzulApiPlanService {
         if (!Set.of("RECEITA", "DESPESA").contains(texto(evento.tipo()))) {
             avisos.add("Tipo financeiro não reconhecido.");
         }
-        if (!Set.of("PENDENTE", "EM_ABERTO", "QUITADO", "RECEBIDO", "RECEBIDO_PARCIAL", "ATRASADO").contains(texto(p.status()))) {
+        if (!Set.of("PENDENTE", "EM_ABERTO", "QUITADO", "RECEBIDO", "RECEBIDO_PARCIAL", "ATRASADO", "PERDIDO", "RENEGOCIADO").contains(texto(p.status()))) {
             avisos.add("Situação da parcela precisa de conferência específica.");
         }
         if (evento.condicao() == null || (evento.condicao().quantidade() == null || evento.condicao().quantidade() < 1)) {
             avisos.add("Quantidade de parcelas ausente ou inválida. Os rateios devem fechar com esta parcela, sem divisão presumida.");
+        }
+        boolean encerrado = Set.of("PERDIDO", "RENEGOCIADO").contains(texto(p.status()));
+        if (encerrado) {
+            try { ContaAzulSettlementPolicy.conferir(p); }
+            catch (IllegalArgumentException e) { avisos.add("Conferência financeira: " + e.getMessage()); }
         }
         if (!dinheiro(p.liquidoConferido()) || !dinheiro(p.pago()) || !dinheiro(p.pendente())) {
             avisos.add("Valores da parcela ausentes, negativos ou fora da precisão aceita.");
@@ -136,7 +146,7 @@ public class ContaAzulApiPlanService {
                 try { ContaAzulSettlementPolicy.conferir(p); }
                 catch (IllegalArgumentException e) { avisos.add("Confer\u00eancia financeira: " + e.getMessage()); }
             }
-        } else if (p.pago().add(p.pendente()).compareTo(p.liquidoConferido()) != 0) {
+        } else if (!encerrado && p.pago().add(p.pendente()).compareTo(p.liquidoConferido()) != 0) {
             avisos.add("Pago mais pendente difere do líquido da parcela.");
         }
         if (p.composicao() == null || !dinheiro(p.composicao().bruto()) || !dinheiro(p.composicao().liquido())) {
@@ -144,11 +154,29 @@ public class ContaAzulApiPlanService {
         } else if (p.liquidoConferido() != null && p.composicao().liquido().compareTo(p.liquidoConferido()) != 0) {
             avisos.add("Líquido da composição difere do líquido da parcela.");
         }
+    }
+
+    List<String> avisosClassificacao(ContaAzulParcelDetail p, boolean incluirCentros) {
+        var avisos = new ArrayList<String>();
+        validarClassificacao(p, avisos, incluirCentros);
+        return List.copyOf(avisos);
+    }
+
+    List<String> avisosCentros(ContaAzulParcelDetail.Rateio r) {
+        var avisos = new ArrayList<String>();
+        validarCentros(r, avisos);
+        return List.copyOf(avisos);
+    }
+
+    private void validarClassificacao(ContaAzulParcelDetail p, List<String> avisos, boolean incluirCentros) {
+        var evento = p.evento();
+        if (evento == null) { avisos.add("Evento sem classificação disponível."); return; }
         if (evento.rateio() == null || evento.rateio().isEmpty()) {
             avisos.add("Rateios de categoria não informados.");
             return;
         }
         var ids = new HashSet<String>();
+        var nomes = new HashSet<String>();
         BigDecimal liquido = BigDecimal.ZERO, bruto = BigDecimal.ZERO;
         boolean somavel = true;
         for (var r : evento.rateio()) {
@@ -157,7 +185,7 @@ public class ContaAzulApiPlanService {
                 somavel = false;
                 continue;
             }
-            if (!nome(r.categoriaNome()) || texto(r.categoriaId()).isEmpty() || !ids.add(texto(r.categoriaId()).toLowerCase(Locale.ROOT))) {
+            if (!nome(r.categoriaNome()) || !nomes.add(texto(r.categoriaNome()).toLowerCase(Locale.ROOT)) || texto(r.categoriaId()).isEmpty() || !ids.add(texto(r.categoriaId()).toLowerCase(Locale.ROOT))) {
                 avisos.add("Categoria sem identificação/nome válido ou repetida.");
             }
             if (!dinheiro(r.valor()) || !dinheiro(r.bruto())) {
@@ -167,7 +195,7 @@ public class ContaAzulApiPlanService {
                 liquido = liquido.add(r.valor());
                 bruto = bruto.add(r.bruto());
             }
-            validarCentros(r, avisos);
+            if (incluirCentros) validarCentros(r, avisos);
         }
         if (somavel && p.liquidoConferido() != null && liquido.compareTo(p.liquidoConferido()) != 0) {
             avisos.add("Soma líquida das categorias difere do líquido da parcela.");
@@ -187,6 +215,7 @@ public class ContaAzulApiPlanService {
 
         }
         var ids = new HashSet<String>();
+        var nomes = new HashSet<String>();
         BigDecimal liquido = BigDecimal.ZERO, bruto = BigDecimal.ZERO;
         boolean somavel = true;
         for (var c : r.centros()) {
@@ -195,7 +224,7 @@ public class ContaAzulApiPlanService {
                 somavel = false;
                 continue;
             }
-            if (!nome(c.centroNome()) || texto(c.centroId()).isEmpty() || !ids.add(texto(c.centroId()).toLowerCase(Locale.ROOT))) {
+            if (!nome(c.centroNome()) || !nomes.add(texto(c.centroNome()).toLowerCase(Locale.ROOT)) || texto(c.centroId()).isEmpty() || !ids.add(texto(c.centroId()).toLowerCase(Locale.ROOT))) {
                 avisos.add("Centro sem identificação/nome válido ou repetido na categoria.");
             }
             if (!dinheiro(c.valor()) || !dinheiro(c.bruto())) {

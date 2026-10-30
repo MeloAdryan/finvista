@@ -462,7 +462,7 @@ class ContaAzulApiSyncTest {
         }
 
         @Test
-        void ajusteComRateioDivergenteFicaPendenteSemAlterarValorLocal() {
+        void ajusteFinanceiroValidoMantemPrincipalEClassificacaoPendente() {
             var base = parcela("DESPESA", "50");
             service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), base, true);
             clearInvocations(tx, allocations, audit);
@@ -470,11 +470,12 @@ class ContaAzulApiSyncTest {
                     BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
             var ajuste = new ContaAzulParcelDetail(base.id(), base.descricao(), base.status(), base.vencimento(),
                     new BigDecimal("51"), BigDecimal.ZERO, new BigDecimal("51"), composta, base.evento());
-            assertThrows(ResponseStatusException.class, () -> service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), ajuste, false));
+            assertEquals("ATUALIZAR", service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), ajuste, false).acao());
             assertEquals(0, records.get(0).getValorOriginal().compareTo(new BigDecimal("50")));
-            verify(tx, never()).saveAndFlush(any());
-            verify(allocations, never()).saveAll(any());
-            verify(audit, never()).saveAndFlush(any());
+            assertEquals("Categoria a revisar", records.get(0).getCategoria());
+            assertEquals(0, new BigDecimal("51").compareTo(records.get(0).getValorTotalAberto()));
+            assertEquals(1, records.size());
+            verify(audit).saveAndFlush(any());
         }
 
         private ContaAzulParcelDetail liquidada(String id, String status, String principal, String juros,
@@ -804,6 +805,164 @@ class ContaAzulApiSyncTest {
             assertEquals(new BigDecimal("193.50"), t.getValor());
             assertEquals(new BigDecimal("198.03"), t.getValorTotalRealizado());
         }
-    }
 
-        
+
+       
+        private ContaAzulParcelDetail comClassificacao(ContaAzulParcelDetail p, List<ContaAzulParcelDetail.Rateio> rateio) {
+            var e = p.evento();
+            return new ContaAzulParcelDetail(p.id(), p.descricao(), p.status(), p.vencimento(), p.liquido(), p.pago(),
+                    p.pendente(), p.composicao(), new ContaAzulParcelDetail.Evento(e.id(), e.tipo(), e.competencia(), e.condicao(), rateio),
+                    p.perda(), p.renegociacao(), p.baixas());
+        }
+
+        @Test
+        void centroDivergenteMantemCategoriaERecebimentoAuditadoSemPresumirRateio() {
+            var base = pagamentoComAjuste("RECEITA", "1068.00", "0.00", "0.00", "106.80");
+            var centro = new ContaAzulParcelDetail.Centro("centro", "Administrativo", new BigDecimal("10.00"), new BigDecimal("10.00"));
+            var p = comClassificacao(base, List.of(new ContaAzulParcelDetail.Rateio("cat", "Categoria comprovada", base.composicao().liquido(), base.composicao().bruto(), List.of(centro))));
+            service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), p, true);
+            var registro = records.get(0);
+            assertEquals("Categoria comprovada", registro.getCategoria());
+            assertEquals("Centro a revisar", registro.getCentroCusto());
+            assertEquals(0, new BigDecimal("1068").compareTo(rows.get(0).getValorCategoria()));
+            var op = operations.values().iterator().next();
+            assertTrue(op.getOrigemSnapshot().contains("Administrativo"));
+            var auditado = com.finvista.service.AuditedSettlementReader.read(registro, op, false, json, LocalDate.of(2026, 10, 29));
+            assertEquals(0, new BigDecimal("961.20").compareTo(auditado.pagamentos().get(0).liquido()));
+            var distribuido = new com.finvista.service.ExpenseAllocationService(allocations).dividir(7L, records);
+            assertEquals("Centro a revisar", distribuido.get(0).centroCusto());
+            assertEquals(0, new BigDecimal("1068").compareTo(distribuido.get(0).valor()));
+            var replay = service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), p, true);
+            assertEquals("SEM_ALTERACAO", replay.acao());
+            assertEquals(1, records.size());
+        }
+
+        @Test
+        void categoriaDivergenteNaoApagaValorFinanceiroNemInventaDistribuicao() {
+            var base = parcela("DESPESA", "50");
+            var p = comClassificacao(base, List.of(new ContaAzulParcelDetail.Rateio("cat", "Categoria incompleta", new BigDecimal("40"), new BigDecimal("40"), List.of())));
+            when(source.consultar("test-token", ID)).thenReturn(p);
+            var previa = service.preparar(ID, 7L);
+            assertTrue(previa.avisos().stream().anyMatch(a -> a.startsWith("Classificação a revisar:")));
+            aplicar(previa);
+            assertEquals("Categoria a revisar", records.get(0).getCategoria());
+            assertEquals("Centro a revisar", records.get(0).getCentroCusto());
+            assertEquals(0, new BigDecimal("50").compareTo(records.get(0).getValorTotalAberto()));
+            assertEquals(0, new BigDecimal("50").compareTo(rows.get(0).getValorCategoria()));
+        }
+
+        @Test
+        void rateiosAusentesOuNulosSaoPreservadosSemBloquearFinanceiro() {
+            var base = parcela("RECEITA", "50");
+            var p = comClassificacao(base, Arrays.asList((ContaAzulParcelDetail.Rateio)null));
+            service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), p, true);
+            assertEquals("Categoria a revisar", records.get(0).getCategoria());
+            assertEquals(0, new BigDecimal("50").compareTo(records.get(0).getValorTotalAberto()));
+        }
+
+        @Test
+        void correcaoPosteriorDoRateioAtualizaMesmoRegistro() {
+            var base = parcela("RECEITA", "50");
+            service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), comClassificacao(base, null), true);
+            Long identidade = records.get(0).getId();
+            var resultado = service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), base, true);
+            assertEquals("ATUALIZAR", resultado.acao());
+            assertEquals(1, records.size());
+            assertEquals(identidade, records.get(0).getId());
+            assertEquals("Categoria de teste", records.get(0).getCategoria());
+            assertEquals(1, rows.size());
+        }
+
+        @Test
+        void financeiroInconsistenteContinuaBloqueadoMesmoSemClassificacao() {
+            var p = pagamentoComAjuste("RECEITA", "1068.00", "0.00", "0.00", "106.80");
+            var invalido = new ContaAzulParcelDetail(p.id(), p.descricao(), p.status(), p.vencimento(), p.liquido(),
+                    new BigDecimal("1067"), p.pendente(), p.composicao(), p.evento(), null, null, p.baixas());
+            assertThrows(ResponseStatusException.class, () -> service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), comClassificacao(invalido, null), true));
+            assertTrue(records.isEmpty());
+            assertTrue(operations.isEmpty());
+        }
+
+        @Test
+        void alteracaoDeClassificacaoPendenteAtualizaAuditoriaSemDuplicar() {
+            var base = parcela("RECEITA", "50");
+            var a = comClassificacao(base, List.of(new ContaAzulParcelDetail.Rateio("cat", "Original", new BigDecimal("40"), new BigDecimal("40"), List.of())));
+            var b = comClassificacao(base, List.of(new ContaAzulParcelDetail.Rateio("cat", "Revisado na fonte", new BigDecimal("41"), new BigDecimal("41"), List.of())));
+            service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), a, true);
+            assertEquals("ATUALIZAR", service.aplicarAutomatico(cliente, 3L, UUID.randomUUID(), b, true).acao());
+            assertEquals(1, records.size());
+            assertEquals(2, operations.size());
+            assertEquals("Categoria a revisar", records.get(0).getCategoria());
+            var ultima = operations.values().stream().max(Comparator.comparing(ContaAzulApiOperation::getConcluidoEm)).orElseThrow();
+            assertTrue(ultima.getOrigemSnapshot().contains("Revisado na fonte"));
+        }
+
+        @Test
+        void taxaNaBaixaEntraNoLiquidoAuditadoEPermaneceSeparadaDoDesconto() {
+            var base = pagamentoComAjuste("RECEITA", "100", "0", "0", "0");
+            var baixa = new ContaAzulParcelDetail.Baixa("b", base.id(), LocalDate.of(2026,10,21),
+                    new ContaAzulParcelDetail.Composicao(new BigDecimal("100"), new BigDecimal("97"), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("3")),
+                    json.getNodeFactory().textNode("conta-a"), "CARTAO_CREDITO", "LANCAMENTO_FINANCEIRO", 1L);
+            var p = new ContaAzulParcelDetail(base.id(), base.descricao(), base.status(), base.vencimento(), null, base.pago(), base.pendente(), base.composicao(), base.evento(), null, null, List.of(baixa));
+            when(source.consultar("test-token", ID)).thenReturn(p);
+            var previa = service.preparar(ID,7L);
+            assertEquals(0, new BigDecimal("3").compareTo(previa.depois().financeiro().taxaPaga()));
+            aplicar(previa);
+            assertEquals(0, new BigDecimal("97").compareTo(records.get(0).getValorTotalRealizado()));
+            assertEquals(0, records.get(0).getDescontoRealizado().signum());
+            var op = operations.values().iterator().next();
+            assertTrue(op.getOrigemSnapshot().contains("conta-a"));
+            var cash = com.finvista.service.AuditedSettlementReader.read(records.get(0),op,false,json,LocalDate.of(2026,10,29));
+            assertEquals(0,new BigDecimal("97").compareTo(cash.pagamentos().get(0).liquido()));
+        }
+
+        @Test
+        void perdaAuditadaFechaAbertoSemCriarRecebimento() {
+            var base = parcela("RECEITA", "50");
+            var perdida = new ContaAzulParcelDetail(base.id(), base.descricao(), "PERDIDO", base.vencimento(), null, BigDecimal.ZERO, BigDecimal.ZERO, base.composicao(), base.evento(),
+                    new ContaAzulParcelDetail.Ajuste(new BigDecimal("50"),LocalDate.of(2026,10,22),null),null,List.of());
+            service.aplicarAutomatico(cliente,3L,UUID.randomUUID(),perdida,true);
+            assertEquals("PERDIDO",records.get(0).getSituacao());
+            assertEquals(0,records.get(0).getValorTotalAberto().signum());
+            assertEquals(0,records.get(0).getValorTotalRealizado().signum());
+            assertTrue(operations.values().iterator().next().getOrigemSnapshot().contains("2026-10-22"));
+        }
+
+        @Test
+        void renegociacaoEncerraOriginalSemInventarNovaParcelaOuCaixa() {
+            var base = parcela("RECEITA", "50");
+            var renegociada = new ContaAzulParcelDetail(base.id(), base.descricao(), "RENEGOCIADO", base.vencimento(), null, BigDecimal.ZERO, BigDecimal.ZERO, base.composicao(), base.evento(),null,
+                    new ContaAzulParcelDetail.Ajuste(new BigDecimal("50"),null,"35db621a-4688-4f80-93d4-31024ff0c001"),List.of());
+            service.aplicarAutomatico(cliente,3L,UUID.randomUUID(),renegociada,true);
+            assertEquals(1,records.size());assertEquals(0,records.get(0).getValorTotalRealizado().signum());assertEquals(0,records.get(0).getValorTotalAberto().signum());
+            assertTrue(operations.values().iterator().next().getOrigemSnapshot().contains("35db621a-4688-4f80-93d4-31024ff0c001"));
+        }
+
+        @Test
+        void baixaRemovidaReabreMesmaParcelaERetiraSomenteCaixaEstornado() {
+            var paga = pagamentoComAjuste("RECEITA", "100", "0", "0", "0");
+            service.aplicarAutomatico(cliente,3L,UUID.randomUUID(),paga,true);
+            var original = records.get(0).getId();
+            service.aplicarAutomatico(cliente,3L,UUID.randomUUID(),parcela("RECEITA","100"),false);
+            assertEquals(1,records.size());assertEquals(original,records.get(0).getId());
+            assertEquals(0,records.get(0).getValorTotalRealizado().signum());assertEquals(0,new BigDecimal("100").compareTo(records.get(0).getValorTotalAberto()));
+            var ultima = operations.values().stream().max(Comparator.comparing(ContaAzulApiOperation::getConcluidoEm)).orElseThrow();
+            assertTrue(com.finvista.service.AuditedSettlementReader.read(records.get(0),ultima,false,json,LocalDate.of(2026,10,29)).pagamentos().isEmpty());
+        }
+
+        @Test
+        void cancelamentoNaoApagaBaixaRealERemocaoPosteriorNaoDuplica() {
+            var paga = pagamentoComAjuste("RECEITA","100","0","0","0");
+            service.aplicarAutomatico(cliente,3L,UUID.randomUUID(),paga,true);
+            var cancelada = new ContaAzulParcelDetail(paga.id(),paga.descricao(),"CANCELADO",paga.vencimento(),null,paga.pago(),paga.pendente(),paga.composicao(),paga.evento(),null,null,paga.baixas());
+            service.aplicarAutomatico(cliente,3L,UUID.randomUUID(),cancelada,false);
+            assertEquals(0,records.get(0).getValorTotalAberto().signum());
+            var ultima = operations.values().stream().max(Comparator.comparing(ContaAzulApiOperation::getConcluidoEm)).orElseThrow();
+            assertEquals(1,com.finvista.service.AuditedSettlementReader.read(records.get(0),ultima,false,json,LocalDate.of(2026,10,29)).pagamentos().size());
+            var removida = new ContaAzulParcelDetail(paga.id(),paga.descricao(),"CANCELADO",paga.vencimento(),null,BigDecimal.ZERO,BigDecimal.ZERO,paga.composicao(),paga.evento(),null,null,List.of());
+            service.aplicarAutomatico(cliente,3L,UUID.randomUUID(),removida,false);
+            ultima = operations.values().stream().max(Comparator.comparing(ContaAzulApiOperation::getConcluidoEm)).orElseThrow();
+            assertTrue(com.finvista.service.AuditedSettlementReader.read(records.get(0),ultima,false,json,LocalDate.of(2026,10,29)).pagamentos().isEmpty());
+            assertEquals(1,records.size());
+        }
+}

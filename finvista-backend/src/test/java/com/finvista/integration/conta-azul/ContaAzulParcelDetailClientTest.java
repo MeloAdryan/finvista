@@ -65,16 +65,16 @@ class ContaAzulParcelDetailClientTest {
     }
 
     @Test
-    void nullCategoryRejected() {
+    void nullCategoryPreservedForClassificationReview() {
         response("\"evento\":{\"rateio\":[null]}");
-        assertThrows(ResponseStatusException.class, this::query);
+        assertNull(query().evento().rateio().get(0));
         server.verify();
     }
 
     @Test
-    void nullCostCenterRejected() {
+    void nullCostCenterPreservedForClassificationReview() {
         response("\"evento\":{\"rateio\":[{\"rateio_centro_custo\":[null]}]}");
-        assertThrows(ResponseStatusException.class, this::query);
+        assertNull(query().evento().rateio().get(0).centros().get(0));
         server.verify();
     }
 
@@ -198,4 +198,29 @@ class ContaAzulParcelDetailClientTest {
         server.verify();
     }
 
+
+    @Test
+    void baixaEmbutidaComPagoZeradoConsultaRemocaoNaFonte() {
+        response("\"valor_pago\":0,\"baixas\":[{\"id\":\"antiga\"}]");
+        server.expect(requestTo(url()+"/baixa")).andRespond(withSuccess("[]",MediaType.APPLICATION_JSON));
+        assertTrue(query().baixas().isEmpty());server.verify();
+    }
+
+    @Test
+    void contaDaBaixaPreservaIdTextoOuObjetoSemDadosBancariosPrivados() throws Exception {
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        for (String conta : java.util.List.of("\"conta-a\"", "{\"id\":\"conta-a\",\"nome\":\"Banco A\",\"numero\":\"sensitive-account\"}")) {
+            var baixa = mapper.readValue("{\"id\":\"b\",\"conta_financeira\":"+conta+"}",ContaAzulParcelDetail.Baixa.class);
+            assertTrue(mapper.writeValueAsString(baixa).contains("conta-a"));
+            assertFalse(mapper.writeValueAsString(baixa).contains("sensitive-account"));
+        }
+    }
+
+    @Test
+    void contratoComContasEAjustesPodeSerRelidoDaAuditoria() throws Exception {
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        var original = new ContaAzulParcelDetail(ID,"Teste","PENDENTE",java.time.LocalDate.of(2026,10,21),null,java.math.BigDecimal.ZERO,java.math.BigDecimal.TEN,
+                new ContaAzulParcelDetail.Composicao(java.math.BigDecimal.TEN,java.math.BigDecimal.TEN,java.math.BigDecimal.ZERO,java.math.BigDecimal.ZERO,java.math.BigDecimal.ZERO,java.math.BigDecimal.ZERO),null);
+        assertEquals(original,mapper.readValue(mapper.writeValueAsString(original),ContaAzulParcelDetail.class));
+    }
 }

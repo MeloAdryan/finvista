@@ -48,7 +48,7 @@ public class ContaAzulParcelDetailClient {
                 throw new IllegalArgumentException("Parcela diferente da solicitada.");
             }
             // The dedicated settlement endpoint is authoritative even when detail embeds an empty/partial list.
-            if (result.pago() != null && result.pago().signum() > 0) {
+            if ((result.pago() != null && result.pago().signum() > 0) || (result.baixas() != null && !result.baixas().isEmpty())) {
                 var baixasRaw = http.get()
                         .uri(ContaAzulFinancialClient.BASE + "/v1/financeiro/eventos-financeiros/parcelas/{id}/baixa", id)
                         .headers(headers -> headers.setBearerAuth(acesso))
@@ -59,9 +59,10 @@ public class ContaAzulParcelDetailClient {
                 if (baixas == null || baixas.length > 1000) throw new IllegalArgumentException("Baixas incompletas.");
                 result = new ContaAzulParcelDetail(result.id(), result.descricao(), result.status(), result.vencimento(),
                         result.liquido(), result.pago(), result.pendente(), result.composicao(), result.evento(),
-                        result.perda(), result.renegociacao(), java.util.Arrays.asList(baixas));
+                        result.perda(), result.renegociacao(), java.util.Arrays.asList(baixas), result.contaId(), result.conta());
             }
-            validarRateios(result);
+            // Classification defects are retained in the source and reviewed by the plan.
+            // They must not prevent capture of financially valid payments.
             return new Consulta(result,raw);
         } catch (RestClientResponseException erro) {
             int status = erro.getStatusCode().value();
@@ -85,17 +86,4 @@ public class ContaAzulParcelDetailClient {
         }
     } 
 
-    private void validarRateios(ContaAzulParcelDetail detalhe) {
-        if (detalhe.evento() == null || detalhe.evento().rateio() == null) {
-            return;
-        }
-        for (var rateio : detalhe.evento().rateio()) {
-            if (rateio == null) {
-                throw new IllegalArgumentException();
-            }
-            if (rateio.centros() != null && rateio.centros().stream().anyMatch(java.util.Objects::isNull)) {
-                throw new IllegalArgumentException();
-            }
-        }
-    }
 }
