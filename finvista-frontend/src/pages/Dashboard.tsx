@@ -1,3 +1,4 @@
+import { viewRange } from "../services/financialViewService";
 import { useContext } from "react";
 import {
   FinancialViewContext,
@@ -34,9 +35,11 @@ import "../styles/dashboard-polish.css";
 
 function Dashboard() {
   const viewFilter = useContext(FinancialViewContext);
+  const positionRange = viewFilter ? viewRange(viewFilter) : null;
   const updateView = useContext(FinancialViewUpdateContext);
   const { periodo, atualizarPeriodo } = useAnalysisPeriod();
   const [periodoInicial] = useState(() => ({ ...periodo }));
+  const [analysisFilter, setAnalysisFilter] = useState(viewFilter);
   const [analise, setAnalise] = useState<DashboardAnalysis | null>(null);
   const [inicio, setInicio] = useState(periodoInicial.inicio ?? "");
   const [fim, setFim] = useState(periodoInicial.fim ?? "");
@@ -77,6 +80,7 @@ function Dashboard() {
         ]);
         if (!controller.signal.aborted) {
           setAnalise(resultado);
+          setAnalysisFilter(viewFilter);
           setInicio(resultado.inicio);
           setFim(resultado.fim);
           setCategoria(resultado.categoria ?? "");
@@ -204,6 +208,19 @@ function Dashboard() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
+
+  if (
+    viewFilter &&
+    JSON.stringify(analysisFilter) !== JSON.stringify(viewFilter)
+  ) {
+    return (
+      <div className="dashboard-state" role={erro ? "alert" : "status"}>
+        {erro
+          ? `Não foi possível aplicar o período selecionado: ${erro}`
+          : "Atualizando indicadores para o período selecionado…"}
+      </div>
+    );
+  }
 
   if (carregando && !analise) {
     return (
@@ -385,10 +402,13 @@ function Dashboard() {
         <strong>Cobertura dos dados:</strong> os gráficos seguem a fonte, o
         critério e o período selecionados. Concluir uma varredura não certifica
         a cobertura integral. Revise pendências e a conferência individual em
-        Importar dados. A posição financeira abaixo usa sua referência atual
-        própria, com todos os vencimentos.
+        Importar dados. As contas em aberto abaixo usam o intervalo de
+        vencimento selecionado e o saldo ainda aberto hoje. Os saldos bancários
+        têm posição atual própria.
       </aside>
       <FinancialPositionPanel
+        inicio={viewFilter ? positionRange?.inicio : analise.inicio}
+        fim={viewFilter ? positionRange?.fim : analise.fim}
         key={analise.clienteId}
         clienteId={analise.clienteId}
       />

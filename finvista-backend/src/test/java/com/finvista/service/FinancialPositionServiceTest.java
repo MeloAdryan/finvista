@@ -11,130 +11,170 @@ import static org.mockito.Mockito.*;
 
 class FinancialPositionServiceTest {
 
-    private final LocalDate hoje = LocalDate.of(2026, 10, 19);
+    
 
-    private FinancialTransaction item(String tipo, LocalDate dia, String aberto) {
-        var t = new FinancialTransaction();
-        t.setTipo(tipo);
-        t.setDataVencimento(dia);
-        if (aberto != null) {
-            t.setValorAberto(new BigDecimal(aberto));
-            t.setValorTotalAberto(new BigDecimal(aberto));
+          private final LocalDate hoje = LocalDate.of(2026, 10, 19);
+
+        private FinancialTransaction item(String tipo, LocalDate dia, String aberto) {
+            var t = new FinancialTransaction();
+            t.setTipo(tipo);
+            t.setDataVencimento(dia);
+            if (aberto != null) {
+                t.setValorAberto(new BigDecimal(aberto));
+                t.setValorTotalAberto(new BigDecimal(aberto));
+            }
+            t.setValor(new BigDecimal("9999"));
+            return t;
         }
-        t.setValor(new BigDecimal("9999"));
-        return t;
-    }
 
-    @Test
-    void separaSaldoAbertoPorVencimentoIncluindoDiaAtualSemUsarValorContabilizado() {
-        var repo = mock(FinancialTransactionRepository.class);
-        var ctx = mock(ClienteContextService.class);
-        when(ctx.getClienteAtualId()).thenReturn(7L);
-        var parcial = item("DESPESA", hoje.minusDays(1), "20");
-        parcial.setValorTotalAberto(new BigDecimal("22"));
-        when(repo.findByClienteId(7L)).thenReturn(List.of(item("RECEITA", hoje.minusDays(1), "10"),
-                item("RECEITA", hoje, "30"), item("RECEITA", hoje.plusDays(1), "40"), parcial,
-                item("DESPESA", hoje, "5"), item("DESPESA", hoje, "0")));
-        var r = new FinancialPositionService(repo, ctx).consultar(hoje);
-        assertEquals(7L, r.clienteId());
-        assertEquals(hoje, r.referencia());
-        assertEquals(0, new BigDecimal("10").compareTo(r.receber().vencidos()));
-        assertEquals(0, new BigDecimal("70").compareTo(r.receber().aVencer()));
-        assertEquals(0, new BigDecimal("22").compareTo(r.pagar().vencidos()));
-        assertEquals(0, new BigDecimal("5").compareTo(r.pagar().aVencer()));
-        assertEquals(0, new BigDecimal("30").compareTo(r.receber().venceHoje()));
-        assertEquals(0, new BigDecimal("40").compareTo(r.receber().aVencerAposHoje()));
-        assertEquals(0, new BigDecimal("5").compareTo(r.pagar().venceHoje()));
-        assertEquals(0, r.pagar().aVencerAposHoje().signum());
-        verify(repo).findByClienteId(7L);
-    }
+        @Test
+        void separaSaldoAbertoPorVencimentoIncluindoDiaAtualSemUsarValorContabilizado() {
+            var repo = mock(FinancialTransactionRepository.class);
+            var ctx = mock(ClienteContextService.class);
+            when(ctx.getClienteAtualId()).thenReturn(7L);
+            var parcial = item("DESPESA", hoje.minusDays(1), "20");
+            parcial.setValorTotalAberto(new BigDecimal("22"));
+            when(repo.findByClienteId(7L)).thenReturn(List.of(item("RECEITA", hoje.minusDays(1), "10"),
+                    item("RECEITA", hoje, "30"), item("RECEITA", hoje.plusDays(1), "40"), parcial,
+                    item("DESPESA", hoje, "5"), item("DESPESA", hoje, "0")));
+            var r = new FinancialPositionService(repo, ctx).consultar(hoje);
+            assertEquals(7L, r.clienteId());
+            assertEquals(hoje, r.referencia());
+            assertEquals(0, new BigDecimal("10").compareTo(r.receber().vencidos()));
+            assertEquals(0, new BigDecimal("70").compareTo(r.receber().aVencer()));
+            assertEquals(0, new BigDecimal("22").compareTo(r.pagar().vencidos()));
+            assertEquals(0, new BigDecimal("5").compareTo(r.pagar().aVencer()));
+            assertEquals(0, new BigDecimal("30").compareTo(r.receber().venceHoje()));
+            assertEquals(0, new BigDecimal("40").compareTo(r.receber().aVencerAposHoje()));
+            assertEquals(0, new BigDecimal("5").compareTo(r.pagar().venceHoje()));
+            assertEquals(0, r.pagar().aVencerAposHoje().signum());
+            verify(repo).findByClienteId(7L);
+        }
 
-    @Test
-    void evidenciaDadosAusentesSemInventarSaldoNemVencimento() {
-        var repo = mock(FinancialTransactionRepository.class);
-        var ctx = mock(ClienteContextService.class);
-        when(ctx.getClienteAtualId()).thenReturn(8L);
-        var cancelado = item("DESPESA", hoje, "50");
-        cancelado.setSituacao("Cancelado");
-        when(repo.findByClienteId(8L)).thenReturn(List.of(item("RECEITA", hoje, null),
-                item("DESPESA", null, "10"), item("DESPESA", hoje, "-5"), cancelado));
-        var r = new FinancialPositionService(repo, ctx).consultar(hoje);
-        assertEquals(2, r.semValorAberto());
-        assertEquals(1, r.semVencimento());
-        assertEquals(0, r.pagar().aVencer().signum());
-        assertEquals(0, r.receber().aVencer().signum());
-    }
+        @Test
+        void evidenciaDadosAusentesSemInventarSaldoNemVencimento() {
+            var repo = mock(FinancialTransactionRepository.class);
+            var ctx = mock(ClienteContextService.class);
+            when(ctx.getClienteAtualId()).thenReturn(8L);
+            var cancelado = item("DESPESA", hoje, "50");
+            cancelado.setSituacao("Cancelado");
+            when(repo.findByClienteId(8L)).thenReturn(List.of(item("RECEITA", hoje, null),
+                    item("DESPESA", null, "10"), item("DESPESA", hoje, "-5"), cancelado));
+            var r = new FinancialPositionService(repo, ctx).consultar(hoje);
+            assertEquals(2, r.semValorAberto());
+            assertEquals(1, r.semVencimento());
+            assertEquals(0, r.pagar().aVencer().signum());
+            assertEquals(0, r.receber().aVencer().signum());
+        }
 
-    @Test
-    void agrupaAusenciasPorOrigemSemInferirQuitacaoDeRegistroHistorico() {
-        var repo = mock(FinancialTransactionRepository.class);
-        var ctx = mock(ClienteContextService.class);
-        when(ctx.getClienteAtualId()).thenReturn(7L);
-        var excel = item("DESPESA", hoje.minusDays(50), null);
-        excel.setOrigem("EXCEL");
-        excel.setData(hoje.minusYears(1));
-        excel.setSituacao("Pago");
-        var csv = item("RECEITA", hoje.minusDays(20), null);
-        csv.setOrigem("CSV");
-        csv.setData(hoje);
-        var api = item("DESPESA", null, "15");
-        api.setOrigem("CONTA_AZUL_API");
-        api.setData(hoje);
-        when(repo.findByClienteId(7L)).thenReturn(List.of(excel, csv, api));
-        var r = new FinancialPositionService(repo, ctx).consultar(hoje);
-        assertEquals(2, r.semValorAberto());
-        assertEquals(1, r.semVencimento());
-        assertEquals(3, r.cobertura().size());
-        assertEquals(hoje.minusYears(1), r.cobertura().stream().filter(c -> c.origem().equals("EXCEL")).findFirst().orElseThrow().primeiraDataAnalise());
-        assertEquals(0, r.pagar().vencidos().signum());
-        assertEquals(0, r.receber().vencidos().signum());
-        assertNull(excel.getValorAberto());
-        verify(repo, never()).save(any());
-    }
+        @Test
+        void agrupaAusenciasPorOrigemSemInferirQuitacaoDeRegistroHistorico() {
+            var repo = mock(FinancialTransactionRepository.class);
+            var ctx = mock(ClienteContextService.class);
+            when(ctx.getClienteAtualId()).thenReturn(7L);
+            var excel = item("DESPESA", hoje.minusDays(50), null);
+            excel.setOrigem("EXCEL");
+            excel.setData(hoje.minusYears(1));
+            excel.setSituacao("Pago");
+            var csv = item("RECEITA", hoje.minusDays(20), null);
+            csv.setOrigem("CSV");
+            csv.setData(hoje);
+            var api = item("DESPESA", null, "15");
+            api.setOrigem("CONTA_AZUL_API");
+            api.setData(hoje);
+            when(repo.findByClienteId(7L)).thenReturn(List.of(excel, csv, api));
+            var r = new FinancialPositionService(repo, ctx).consultar(hoje);
+            assertEquals(2, r.semValorAberto());
+            assertEquals(1, r.semVencimento());
+            assertEquals(3, r.cobertura().size());
+            assertEquals(hoje.minusYears(1), r.cobertura().stream().filter(c -> c.origem().equals("EXCEL")).findFirst().orElseThrow().primeiraDataAnalise());
+            assertEquals(0, r.pagar().vencidos().signum());
+            assertEquals(0, r.receber().vencidos().signum());
+            assertNull(excel.getValorAberto());
+            verify(repo, never()).save(any());
+        }
 
-    @Test
-    void campoDeOrigemAusenteNaoImpedeDiagnostico() {
-        var repo = mock(FinancialTransactionRepository.class);
-        var ctx = mock(ClienteContextService.class);
-        when(ctx.getClienteAtualId()).thenReturn(9L);
-        when(repo.findByClienteId(9L)).thenReturn(List.of(item("DESPESA", hoje, null)));
-        var r = new FinancialPositionService(repo, ctx).consultar(hoje);
-        assertEquals("NAO_INFORMADA", r.cobertura().get(0).origem());
-        assertNull(r.cobertura().get(0).primeiraDataAnalise());
-    }
+        @Test
+        void campoDeOrigemAusenteNaoImpedeDiagnostico() {
+            var repo = mock(FinancialTransactionRepository.class);
+            var ctx = mock(ClienteContextService.class);
+            when(ctx.getClienteAtualId()).thenReturn(9L);
+            when(repo.findByClienteId(9L)).thenReturn(List.of(item("DESPESA", hoje, null)));
+            var r = new FinancialPositionService(repo, ctx).consultar(hoje);
+            assertEquals("NAO_INFORMADA", r.cobertura().get(0).origem());
+            assertNull(r.cobertura().get(0).primeiraDataAnalise());
+        }
 
-    @Test
-    void principalNaoSubstituiLiquidoAusente() {
-        var repo = mock(FinancialTransactionRepository.class);
-        var ctx = mock(ClienteContextService.class);
-        when(ctx.getClienteAtualId()).thenReturn(7L);
-        var t = item("DESPESA", hoje, "100");
-        t.setValorTotalAberto(null);
-        when(repo.findByClienteId(7L)).thenReturn(List.of(t));
-        var r = new FinancialPositionService(repo, ctx).consultar(hoje);
-        assertEquals(1, r.semValorAberto());
-        assertEquals(0, r.pagar().aVencer().signum());
-        verify(repo, never()).save(any());
-    }
+        @Test
+        void principalNaoSubstituiLiquidoAusente() {
+            var repo = mock(FinancialTransactionRepository.class);
+            var ctx = mock(ClienteContextService.class);
+            when(ctx.getClienteAtualId()).thenReturn(7L);
+            var t = item("DESPESA", hoje, "100");
+            t.setValorTotalAberto(null);
+            when(repo.findByClienteId(7L)).thenReturn(List.of(t));
+            var r = new FinancialPositionService(repo, ctx).consultar(hoje);
+            assertEquals(1, r.semValorAberto());
+            assertEquals(0, r.pagar().aVencer().signum());
+            verify(repo, never()).save(any());
+        }
 
-    @Test
-    void valorInvalidoOuVencimentoForaDaFaixaPermanecemParaRevisao() {
-        var repo = mock(FinancialTransactionRepository.class);
-        var ctx = mock(ClienteContextService.class);
-        when(ctx.getClienteAtualId()).thenReturn(7L);
-        when(repo.findByClienteId(7L)).thenReturn(List.of(item("RECEITA", hoje, "1.001"), item("DESPESA", LocalDate.of(2300, 1, 1), "20")));
-        var r = new FinancialPositionService(repo, ctx).consultar(hoje);
-        assertEquals(1, r.semValorAberto());
-        assertEquals(1, r.semVencimento());
-        assertEquals(0, r.pagar().aVencer().signum());
-    }
+        @Test
+        void valorInvalidoOuVencimentoForaDaFaixaPermanecemParaRevisao() {
+            var repo = mock(FinancialTransactionRepository.class);
+            var ctx = mock(ClienteContextService.class);
+            when(ctx.getClienteAtualId()).thenReturn(7L);
+            when(repo.findByClienteId(7L)).thenReturn(List.of(item("RECEITA", hoje, "1.001"), item("DESPESA", LocalDate.of(2300, 1, 1), "20")));
+            var r = new FinancialPositionService(repo, ctx).consultar(hoje);
+            assertEquals(1, r.semValorAberto());
+            assertEquals(1, r.semVencimento());
+            assertEquals(0, r.pagar().aVencer().signum());
+        }
 
-    @Test
-    void trocaDeEmpresaNaoEntregaPosicaoAnterior() {
-        var repo = mock(FinancialTransactionRepository.class);
-        var ctx = mock(ClienteContextService.class);
-        when(ctx.getClienteAtualId()).thenReturn(7L, 8L);
-        when(repo.findByClienteId(7L)).thenReturn(List.of());
-        assertThrows(IllegalArgumentException.class, () -> new FinancialPositionService(repo, ctx).consultar(hoje));
+        @Test
+        void trocaDeEmpresaNaoEntregaPosicaoAnterior() {
+            var repo = mock(FinancialTransactionRepository.class);
+            var ctx = mock(ClienteContextService.class);
+            when(ctx.getClienteAtualId()).thenReturn(7L, 8L);
+            when(repo.findByClienteId(7L)).thenReturn(List.of());
+            assertThrows(IllegalArgumentException.class, () -> new FinancialPositionService(repo, ctx).consultar(hoje));
+        }
+
+        @Test
+        void intervaloDeVencimentoRestringeAsTresFaixas() {
+            var repo = mock(FinancialTransactionRepository.class);
+            var ctx = mock(ClienteContextService.class);
+            when(ctx.getClienteAtualId()).thenReturn(7L);
+            var inicio = hoje.minusDays(3);
+            var fim = hoje.plusDays(3);
+            when(repo.findByClienteId(7L)).thenReturn(List.of(item("DESPESA", inicio.minusDays(1), "1000"), item("DESPESA", inicio, "10"), item("DESPESA", hoje, "20"), item("DESPESA", fim, "30"), item("DESPESA", fim.plusDays(1), "2000"), item("RECEITA", hoje, "40")));
+            var r = new FinancialPositionService(repo, ctx).consultar(hoje, inicio, fim);
+            assertEquals(0, new BigDecimal("10").compareTo(r.pagar().vencidos()));
+            assertEquals(0, new BigDecimal("20").compareTo(r.pagar().venceHoje()));
+            assertEquals(0, new BigDecimal("30").compareTo(r.pagar().aVencerAposHoje()));
+            assertEquals(0, new BigDecimal("40").compareTo(r.receber().venceHoje()));
+            assertEquals(inicio, r.vencimentoInicio());
+            assertEquals(fim, r.vencimentoFim());
+        }
+
+        @Test
+        void hojeForaDoIntervaloNaoEntraNaFaixaHoje() {
+            var repo = mock(FinancialTransactionRepository.class);
+            var ctx = mock(ClienteContextService.class);
+            when(ctx.getClienteAtualId()).thenReturn(7L);
+            when(repo.findByClienteId(7L)).thenReturn(List.of(item("DESPESA", hoje, "50"), item("DESPESA", hoje.minusDays(2), "10")));
+            var r = new FinancialPositionService(repo, ctx).consultar(hoje, hoje.minusDays(4), hoje.minusDays(1));
+            assertEquals(0, r.pagar().venceHoje().signum());
+            assertEquals(0, new BigDecimal("10").compareTo(r.pagar().vencidos()));
+        }
+
+        @Test
+        void intervaloInvalidoNaoConsultaRepositorio() {
+            var repo = mock(FinancialTransactionRepository.class);
+            var s = new FinancialPositionService(repo, mock(ClienteContextService.class));
+            assertThrows(IllegalArgumentException.class, () -> s.consultar(hoje, hoje, null));
+            assertThrows(IllegalArgumentException.class, () -> s.consultar(hoje, hoje, hoje.minusDays(1)));
+            verifyNoInteractions(repo);
+        }
     }
-}
+      

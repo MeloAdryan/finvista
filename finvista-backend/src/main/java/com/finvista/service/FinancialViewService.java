@@ -262,20 +262,12 @@ public class FinancialViewService {
         Map<String, Integer> exclusions = new TreeMap<>();
         for (var saved : statements.findByClienteIdOrderByIdAsc(cliente)) {
             var l = statementImport.decode(saved);
-            if (l.movimento().isAfter(hoje)) {
-                contar(exclusions, "Movimentos com data futura, fora das baixas realizadas");
-                continue;
-            }
-            if (!ContaAzulStatementService.normalize(l.origem()).equals("lancamento financeiro")) {
-                contar(exclusions, "Transferências e outras origens, preservadas fora dos indicadores");
+            String exclusion = StatementCashPolicy.exclusion(l, hoje);
+            if (exclusion != null) {
+                contar(exclusions, exclusion);
                 continue;
             }
             String tipo = ContaAzulStatementService.normalize(l.tipo()).toUpperCase(Locale.ROOT);
-            if (!Set.of("RECEITA", "DESPESA").contains(tipo) || !Set.of("conciliado", "quitado", "pago", "recebido")
-                    .contains(ContaAzulStatementService.normalize(l.situacao()))) {
-                contar(exclusions, "Movimentações sem tipo financeiro ou situação de pagamento reconhecida");
-                continue;
-            }
             var parts = l.rateios();
             boolean usable = parts != null && !parts.isEmpty() && parts.stream().allMatch(p -> p.valor() != null);
             if (usable) {

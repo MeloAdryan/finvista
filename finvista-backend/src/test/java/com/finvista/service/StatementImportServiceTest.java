@@ -146,6 +146,39 @@ class StatementImportServiceTest {
     }
 
     @Test
+    void historicalReviewPreservesMovementAndCanBeRevisedWithoutDuplicates() throws Exception {
+        var input = file("historico.xls", "-189,20");
+        var user = new Usuario("Contador", "contador@example.test", "hash", "ADMIN");
+        ReflectionTestUtils.setField(user, "id", 99L);
+        when(context.getUsuarioAutenticado()).thenReturn(user);
+        importer.apply(input, importer.plan(input));
+        var plan = importer.plan(input, LocalDate.of(2026, 10, 1));
+        assertEquals(0, plan.novas());
+        assertEquals(1, plan.revisadas());
+        assertFalse(plan.avisos().isEmpty());
+        importer.apply(input, plan);
+        assertEquals(1, saved.size());
+        var reviewed = importer.decode(saved.get(0));
+        assertEquals(LocalDate.of(2026, 9, 10), reviewed.movimento());
+        assertNotNull(StatementCashPolicy.exclusion(reviewed, LocalDate.of(2026, 10, 22)));
+        assertEquals("99", reviewed.campos().get("finvista:revisao historica por"));
+        // Reimport without an explicit decision preserves the stored review.
+        importer.apply(input, importer.plan(input));
+        assertNotNull(StatementCashPolicy.exclusion(importer.decode(saved.get(0)), LocalDate.of(2026, 10, 22)));
+        importer.apply(input, importer.plan(input, LocalDate.of(2016, 1, 1)));
+        assertNull(StatementCashPolicy.exclusion(importer.decode(saved.get(0)), LocalDate.of(2026, 10, 22)));
+        assertEquals(1, saved.size());
+    }
+
+    @Test
+    void historicalStartCannotBeInFutureOrOutsideSupportedDates() throws Exception {
+        var input = file("historico.xls", "-189,20");
+        assertThrows(IllegalArgumentException.class, () -> importer.plan(input, LocalDate.of(2027, 1, 1)));
+        assertThrows(IllegalArgumentException.class, () -> importer.plan(input, LocalDate.of(1899, 1, 1)));
+        verify(repo, never()).saveAllAndFlush(anyList());
+    }
+
+    @Test
     void ledgerReadRejectsCompanyChangedInAnotherTab() {
         when(context.getClienteAtualId()).thenReturn(8L);
         assertThrows(IllegalArgumentException.class, () -> importer.stored(7L));

@@ -32,6 +32,7 @@ public class StatementMovement {
     public Long getId() { return id; }
     public String getChave() { return chave; }
     public int getOcorrencia() { return ocorrencia; }
+    public void registrarRevisaoHistorica(String conteudo) { this.conteudo = conteudo; }
     public String getConteudo() { return conteudo; }
     public String getArquivo() { return arquivo; }
 }

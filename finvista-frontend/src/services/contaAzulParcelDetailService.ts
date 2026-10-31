@@ -1,6 +1,5 @@
 import { API_URL } from "../config/api";
 
-// Interfaces descrevem o contrato JSON; não fazem consultas por conta própria.
 export interface CentroDetalhe {
   id_centro_custo: string | null;
   nome_centro_custo: string | null;
@@ -49,6 +48,14 @@ export interface RespostaDetalhe {
   parcela: ParcelaDetalhe;
 }
 
+export class ParcelDetailError extends Error {
+  readonly status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 // Esta função é a única parte do frontend que conhece a URL de detalhe.
 export async function consultarDetalheParcela(
   clienteId: number,
@@ -67,7 +74,7 @@ export async function consultarDetalheParcela(
     } catch {
       /* resposta sem JSON */
     }
-    throw new Error(message);
+    throw new ParcelDetailError(message, response.status);
   }
   const data = (await response.json()) as RespostaDetalhe;
   if (

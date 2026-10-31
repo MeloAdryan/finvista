@@ -1,7 +1,9 @@
+import ContaAzulOriginReview from "./ContaAzulOriginReview";
 import ContaAzulApiPlanPanel from "./ContaAzulApiPlanPanel";
 import { useEffect, useState } from "react";
 import {
   consultarDetalheParcela,
+  ParcelDetailError,
   type RespostaDetalhe,
 } from "../services/contaAzulParcelDetailService";
 import "../styles/conta-azul-parcel-detail.css";
@@ -26,6 +28,7 @@ export default function ContaAzulParcelDetailPanel({
   fechar,
 }: Props) {
   const [resposta, setResposta] = useState<RespostaDetalhe | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(true);
   // O efeito acompanha a consulta externa. Ao desmontar, cancela a requisição.
@@ -36,6 +39,8 @@ export default function ContaAzulParcelDetailPanel({
         if (!controller.signal.aborted) setResposta(value);
       })
       .catch((e: unknown) => {
+        if (!controller.signal.aborted)
+          setNotFound(e instanceof ParcelDetailError && e.status === 404);
         if (!controller.signal.aborted)
           setErro(e instanceof Error ? e.message : "Falha na consulta.");
       })
@@ -64,6 +69,13 @@ export default function ContaAzulParcelDetailPanel({
         <p role="alert" className="ca-parcel-detail-error">
           {erro}
         </p>
+      )}
+      {notFound && (
+        <ContaAzulOriginReview
+          key={`${clienteId}:${parcelaId}`}
+          clienteId={clienteId}
+          parcelaId={parcelaId}
+        />
       )}
       {p && (
         <>

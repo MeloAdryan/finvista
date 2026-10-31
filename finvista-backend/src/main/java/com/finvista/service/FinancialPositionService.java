@@ -25,10 +25,22 @@ public class FinancialPositionService {
 
     @Transactional(readOnly = true, isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
     public FinancialPositionResponse consultar() {
-        return consultar(LocalDate.now(ZoneId.of("America/Sao_Paulo")));
+        return consultar((LocalDate) null, (LocalDate) null);
+    }
+
+    @Transactional(readOnly = true, isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
+    public FinancialPositionResponse consultar(LocalDate inicio, LocalDate fim) {
+        return consultar(LocalDate.now(ZoneId.of("America/Sao_Paulo")), inicio, fim);
     }
 
     FinancialPositionResponse consultar(LocalDate hoje) {
+        return consultar(hoje, null, null);
+    }
+
+    FinancialPositionResponse consultar(LocalDate hoje, LocalDate inicio, LocalDate fim) {
+        if ((inicio == null) != (fim == null) || inicio != null && (inicio.isAfter(fim) || inicio.getYear() < 1900 || fim.getYear() > 2200)) {
+            throw new IllegalArgumentException("Informe as duas datas de vencimento, em ordem, entre 1900 e 2200.");
+        }
         Long clienteId = contexto.getClienteAtualId();
         BigDecimal[] receber = {BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
         BigDecimal[] pagar = {BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
@@ -41,6 +53,9 @@ public class FinancialPositionService {
                 continue;
             }
             var open = rows.get(0);
+            if (inicio != null && open.vencimento() != null && (open.vencimento().isBefore(inicio) || open.vencimento().isAfter(fim))) {
+                continue;
+            }
             String tipo = open.tipo();
             BigDecimal aberto = open.aberto();
             if (aberto == null) {
@@ -66,7 +81,7 @@ public class FinancialPositionService {
         return new FinancialPositionResponse(clienteId, hoje,
                 new FinancialPositionResponse.Grupo(receber[0], receber[1], receber[2], receber[1].subtract(receber[2])),
                 new FinancialPositionResponse.Grupo(pagar[0], pagar[1], pagar[2], pagar[1].subtract(pagar[2])), semValor, semVencimento, cobertura.entrySet().stream().map(e -> new FinancialPositionResponse.Cobertura(
-                        e.getKey(), e.getValue().semValor, e.getValue().semVencimento, e.getValue().primeira, e.getValue().ultima)).toList());
+                        e.getKey(), e.getValue().semValor, e.getValue().semVencimento, e.getValue().primeira, e.getValue().ultima)).toList(), inicio, fim);
     }
 
     private static class Resumo {

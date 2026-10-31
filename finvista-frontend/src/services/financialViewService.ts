@@ -146,10 +146,23 @@ export async function getFinancialView(
     throw new Error("A empresa selecionada mudou. Atualize a página.");
   if (
     !Array.isArray(d.linhas) ||
+    !d.filtro ||
     d.filtro.criterio !== f.criterio ||
-    d.filtro.periodo !== f.periodo
+    d.filtro.periodo !== f.periodo ||
+    d.filtro.situacao !== f.situacao ||
+    (d.filtro.categoria || "") !== (f.categoria || "") ||
+    (d.filtro.centro || "") !== (f.centro || "")
   )
     throw new Error("Resposta incompatível com o filtro aplicado.");
+  const expected = viewRange(f);
+  if (
+    expected &&
+    (d.intervalo?.inicio !== expected.inicio ||
+      d.intervalo?.fim !== expected.fim)
+  )
+    throw new Error(
+      "O servidor retornou outro período. Os valores anteriores não serão usados neste recorte.",
+    );
   return d;
 }
 export function financialViewCSV(data: FinancialView, lines: ViewLine[]) {

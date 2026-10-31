@@ -5,7 +5,11 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record FinancialPositionResponse(Long clienteId, LocalDate referencia,
-        Grupo receber, Grupo pagar, int semValorAberto, int semVencimento, List<Cobertura> cobertura) {
+        Grupo receber, Grupo pagar, int semValorAberto, int semVencimento, List<Cobertura> cobertura, LocalDate vencimentoInicio, LocalDate vencimentoFim) {
+
+    public FinancialPositionResponse(Long clienteId, LocalDate referencia, Grupo receber, Grupo pagar, int semValorAberto, int semVencimento, List<Cobertura> cobertura) {
+        this(clienteId, referencia, receber, pagar, semValorAberto, semVencimento, cobertura, null, null);
+    }
 
     public FinancialPositionResponse(Long clienteId, LocalDate referencia, Grupo receber, Grupo pagar, int semValorAberto, int semVencimento) {
         this(clienteId, referencia, receber, pagar, semValorAberto, semVencimento, List.of());

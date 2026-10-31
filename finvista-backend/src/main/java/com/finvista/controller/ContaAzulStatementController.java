@@ -22,7 +22,7 @@ public class ContaAzulStatementController {
     private static final String SESSION_KEY = "FINVISTA_EXTRATO_PREVIA";
     private record Pending(String token, Instant expires, StatementImportService.Preview preview) {}
     public record Plan(String token, Instant validade, Long clienteId, String clienteNome, String arquivo,
-            int total, int novas, int existentes, java.util.List<String> conflitos) {}
+            int total, int novas, int existentes, java.util.List<String> conflitos, LocalDate inicioHistorico, int revisadas, java.util.List<String> avisos) {}
     public ContaAzulStatementController(ContaAzulStatementService service, ClienteContextService context,
             StatementImportService importer, Clock clock) {
         this.service = service;
@@ -48,16 +48,16 @@ public class ContaAzulStatementController {
         }
     }
     @PostMapping("/planejar")
-    public Plan plan(@RequestParam("arquivo") MultipartFile file, @RequestParam Long clienteId, HttpSession session) {
+    public Plan plan(@RequestParam("arquivo") MultipartFile file, @RequestParam Long clienteId, @RequestParam(required=false) @org.springframework.format.annotation.DateTimeFormat(iso=org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate inicioHistorico, HttpSession session) {
         session.removeAttribute(SESSION_KEY);
         try {
             if (!clienteId.equals(context.getClienteAtualId())) throw new IllegalArgumentException("A empresa mudou. Atualize a página.");
-            var p = importer.plan(file);
+            var p = inicioHistorico==null?importer.plan(file):importer.plan(file,inicioHistorico);
             if (!clienteId.equals(p.clienteId())) throw new IllegalArgumentException("A empresa mudou. Gere outra prévia.");
             var pending = new Pending(UUID.randomUUID().toString(), clock.instant().plusSeconds(600), p);
             session.setAttribute(SESSION_KEY, pending);
             return new Plan(pending.token(), pending.expires(), p.clienteId(), p.clienteNome(), p.arquivo(),
-                    p.total(), p.novas(), p.existentes(), p.conflitos());
+                    p.total(), p.novas(), p.existentes(), p.conflitos(),p.inicioHistorico(),p.revisadas(),p.avisos());
         } catch (IOException | IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }

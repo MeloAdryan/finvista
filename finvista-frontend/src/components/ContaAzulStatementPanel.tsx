@@ -1,6 +1,9 @@
 import { useState } from "react";
 import {
   summarizeStatement,
+  summarizeRealizedStatement,
+  statementCashExclusion,
+  statementToday,
   planStatement,
   importStatement,
   type Statement,
@@ -23,6 +26,8 @@ export default function ContaAzulStatementPanel({
   file?: File;
   cliente: Cliente | null;
 }) {
+  const [historicalStart, setHistoricalStart] = useState("");
+  const today = statement.hoje ?? statementToday();
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [page, setPage] = useState(0);
@@ -39,7 +44,7 @@ export default function ContaAzulStatementPanel({
     setPlan(null);
     setSaved(null);
     try {
-      const next = await planStatement(file, cliente.id);
+      const next = await planStatement(file, cliente.id, historicalStart);
       if (next.clienteId !== cliente.id)
         throw new Error("A empresa mudou. Atualize a página.");
       setPlan(next);
@@ -87,11 +92,12 @@ export default function ContaAzulStatementPanel({
             (!end || line.movimento <= end)),
       );
   const totals = summarizeStatement(lines);
+  const realized = summarizeRealizedStatement(lines, today, historicalStart);
   const pages = Math.max(1, Math.ceil(lines.length / 20));
   const currentPage = Math.min(page, pages - 1);
   const cards: [string, number][] = [
-    ["Entradas financeiras", totals.entradasFinanceiras],
-    ["Saídas financeiras", totals.saidasFinanceiras],
+    ["Receitas realizadas nos indicadores", realized.receita],
+    ["Despesas realizadas nos indicadores", realized.despesa],
     ["Entradas de transferências", totals.entradasTransferencias],
     ["Saídas de transferências", totals.saidasTransferencias],
     ["Entradas de outras origens", totals.entradasOutras],
@@ -164,6 +170,27 @@ export default function ContaAzulStatementPanel({
           erros.
         </p>
       )}
+      <p role="status">
+        {realized.movimentos} movimentos elegíveis para os indicadores;{" "}
+        {realized.excluidos} fora do realizado neste recorte. Transferências e
+        saldos permanecem separados. Valores brutos do arquivo não são despesas
+        ou receitas realizadas.
+      </p>
+      {statement.linhas.some((l) => l.movimento && l.movimento > today) && (
+        <p role="status">
+          Há movimentos futuros: serão preservados, sem entrar no realizado
+          antes da data e da situação de pagamento permitirem.
+        </p>
+      )}
+      {statement.linhas.some(
+        (l) => l.movimento && l.movimento.slice(0, 4) < today.slice(0, 4),
+      ) && (
+        <p role="status">
+          Há movimentos de anos anteriores. Confira as datas: um movimento
+          antigo pode ser legítimo. Use o início histórico somente após conferir
+          o documento original.
+        </p>
+      )}
       <div className="ca-statement-summary">
         {cards.map(([label, value]) => (
           <div key={label}>
@@ -173,7 +200,8 @@ export default function ContaAzulStatementPanel({
         ))}
       </div>
       <p>
-        Saídas totais:{" "}
+        Saídas brutas do arquivo (inclui origens separadas e movimentos não
+        realizados):{" "}
         <strong>
           {money(
             totals.saidasFinanceiras +
@@ -181,7 +209,7 @@ export default function ContaAzulStatementPanel({
               totals.saidasOutras,
           )}
         </strong>{" "}
-        · Saldo líquido das movimentações:{" "}
+        · Saldo líquido bruto do arquivo:{" "}
         <strong>
           {money(
             totals.entradasFinanceiras +
@@ -222,6 +250,34 @@ export default function ContaAzulStatementPanel({
             comprovam identidade; confira antes de confirmar. Possíveis
             correções de valores ou rateios bloqueiam a inclusão para revisão.
           </p>
+          <label>
+            Início histórico conferido (opcional)
+            <input
+              type="date"
+              value={historicalStart}
+              max={today}
+              min="1900-01-01"
+              disabled={busy}
+              onChange={(e) => {
+                setHistoricalStart(e.target.value);
+                setPlan(null);
+                setSaved(null);
+                setConfirmed(false);
+              }}
+            />
+          </label>
+          <p>
+            Se informado, movimentos anteriores ficarão preservados, fora dos
+            indicadores de baixa pelo extrato. A confirmação revisa apenas as
+            linhas deste arquivo, inclusive as já importadas. Para voltar a
+            incluir uma data, confira novamente o arquivo com um início
+            anterior.
+          </p>
+          <p>
+            Os cartões acima conferem o arquivo selecionado. Regras históricas
+            já gravadas são preservadas quando este campo fica vazio; confira a
+            prévia antes de confirmar.
+          </p>
           <button
             type="button"
             disabled={
@@ -242,6 +298,15 @@ export default function ContaAzulStatementPanel({
                 existentes. Prévia válida até{" "}
                 {new Date(plan.validade).toLocaleTimeString("pt-BR")}.
               </p>
+              {(plan.avisos ?? []).map((notice, i) => (
+                <p key={i}>{notice}</p>
+              ))}
+              {!!plan.revisadas && (
+                <p>
+                  {plan.revisadas} movimentos existentes terão sua regra de
+                  início histórico revisada.
+                </p>
+              )}
               {plan.conflitos.length > 0 && (
                 <ul>
                   {plan.conflitos.map((c, i) => (
@@ -249,39 +314,43 @@ export default function ContaAzulStatementPanel({
                   ))}
                 </ul>
               )}
-              {plan.conflitos.length === 0 && plan.novas > 0 && (
-                <>
-                  <label className="ca-statement-confirm">
-                    <input
-                      type="checkbox"
-                      checked={confirmed}
-                      disabled={busy}
-                      onChange={(e) => setConfirmed(e.target.checked)}
-                    />
-                    Conferi a empresa, as correspondências e autorizo incluir as{" "}
-                    {plan.novas} movimentações novas de todo o arquivo.
-                  </label>
-                  <button
-                    type="button"
-                    disabled={!confirmed || busy}
-                    onClick={() => void apply()}
-                  >
-                    Confirmar inclusão do extrato
-                  </button>
-                </>
-              )}
-              {plan.novas === 0 && plan.conflitos.length === 0 && (
-                <p>
-                  Todo o arquivo já está incluído. Nenhuma movimentação será
-                  duplicada.
-                </p>
-              )}
+              {plan.conflitos.length === 0 &&
+                (plan.novas > 0 || !!plan.revisadas) && (
+                  <>
+                    <label className="ca-statement-confirm">
+                      <input
+                        type="checkbox"
+                        checked={confirmed}
+                        disabled={busy}
+                        onChange={(e) => setConfirmed(e.target.checked)}
+                      />
+                      Conferi a empresa, as correspondências e autorizo incluir
+                      as {plan.novas} movimentações novas de todo o arquivo e a
+                      revisão histórica de {plan.revisadas ?? 0} existentes.
+                    </label>
+                    <button
+                      type="button"
+                      disabled={!confirmed || busy}
+                      onClick={() => void apply()}
+                    >
+                      Confirmar inclusão do extrato
+                    </button>
+                  </>
+                )}
+              {plan.novas === 0 &&
+                !plan.revisadas &&
+                plan.conflitos.length === 0 && (
+                  <p>
+                    Todo o arquivo já está incluído. Nenhuma movimentação será
+                    duplicada.
+                  </p>
+                )}
             </div>
           )}
           {saved && (
             <p role="status">
-              <strong>Inclusão concluída:</strong> {saved.incluidas} novas e{" "}
-              {saved.existentes} já existentes. Abra o Painel executivo,
+              <strong>Inclusão e revisão concluídas:</strong> {saved.incluidas}{" "}
+              novas e {saved.existentes} já existentes. Abra o Painel executivo,
               selecione “Baixa — extrato importado”, escolha o período importado
               e aplique o filtro para conferir seus gráficos e cartões.
             </p>
@@ -314,6 +383,12 @@ export default function ContaAzulStatementPanel({
                   <td>{date(line.movimento)}</td>
                   <td>
                     {line.descricao}
+                    {statementCashExclusion(line, today, historicalStart) && (
+                      <small>
+                        {statementCashExclusion(line, today, historicalStart)}.
+                        Original preservado.
+                      </small>
+                    )}
                     <small>
                       {line.tipo} ·{" "}
                       {line.categorias.join("; ") || "Sem categoria"}

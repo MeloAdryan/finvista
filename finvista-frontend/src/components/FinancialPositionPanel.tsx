@@ -13,6 +13,8 @@ type Grupo = {
 type Posicao = {
   clienteId: number;
   referencia: string;
+  vencimentoInicio?: string | null;
+  vencimentoFim?: string | null;
   receber: Grupo;
   pagar: Grupo;
   semValorAberto: number;
@@ -27,46 +29,34 @@ type Posicao = {
 };
 
 export default function FinancialPositionPanel({
-  clienteId,
+  clienteId, inicio, fim,
 }: {
   clienteId: number;
+  inicio?: string;
+  fim?: string;
 }) {
   const [expandida, setExpandida] = useState(false);
-  const [dados, setDados] = useState<Posicao | null>(null);
-  const [erro, setErro] = useState("");
-  const [versao, setVersao] = useState(0);
-  const [carregando, setCarregando] = useState(true);
-  useEffect(() => {
-    const controller = new AbortController();
-    void (async () => {
-      try {
-        const resposta = await fetch(
-          `${API_URL}/api/dashboard/posicao-financeira`,
-          {
-            credentials: "include",
-            cache: "no-store",
-            signal: controller.signal,
-          },
-        );
-        if (!resposta.ok)
-          throw new Error(
-            resposta.status === 401
-              ? "Entre novamente no FinVista."
-              : "Não foi possível consultar os valores em aberto.",
-          );
-        const resultado: Posicao = await resposta.json();
-        if (resultado.clienteId !== clienteId)
-          throw new Error("O cliente selecionado mudou. Atualize o painel.");
-        if (!controller.signal.aborted) setDados(resultado);
-      } catch (e) {
-        if (!controller.signal.aborted)
-          setErro(e instanceof Error ? e.message : "Falha na consulta.");
-      } finally {
-        if (!controller.signal.aborted) setCarregando(false);
-      }
-    })();
-    return () => controller.abort();
-  }, [clienteId, versao]);
+  const [resultado,setResultado]=useState<{chave:string;valor:Posicao}|null>(null);
+  const [falha,setFalha]=useState<{chave:string;mensagem:string}|null>(null);
+  const [versao,setVersao]=useState(0);
+  const chave=JSON.stringify([clienteId,inicio??null,fim??null,versao]);
+  const dados=resultado?.chave===chave?resultado.valor:null;
+  const erro=falha?.chave===chave?falha.mensagem:"";
+  const carregando=!dados&&!erro;
+  useEffect(()=>{
+    const controller=new AbortController();
+    void (async()=>{try{
+      if(Boolean(inicio)!==Boolean(fim))throw new Error("Informe as duas datas do intervalo de vencimento.");
+      const params=new URLSearchParams();if(inicio&&fim){params.set("inicio",inicio);params.set("fim",fim);}
+      const resposta=await fetch(`${API_URL}/api/dashboard/posicao-financeira?${params}`,{credentials:"include",cache:"no-store",signal:controller.signal});
+      if(!resposta.ok)throw new Error(resposta.status===401?"Entre novamente no FinVista.":"Não foi possível consultar os valores em aberto.");
+      const next:Posicao=await resposta.json();
+      if(next.clienteId!==clienteId)throw new Error("A empresa mudou. Atualize o painel.");
+      if((next.vencimentoInicio??null)!==(inicio??null)||(next.vencimentoFim??null)!==(fim??null))throw new Error("O intervalo retornado não corresponde ao filtro. Confira a publicação do backend.");
+      if(!controller.signal.aborted)setResultado({chave,valor:next});
+    }catch(e){if(!controller.signal.aborted)setFalha({chave,mensagem:e instanceof Error?e.message:"Falha na consulta."});}})();
+    return ()=>controller.abort();
+  },[clienteId,inicio,fim,chave]);
   return (
     <section
       className="fp-panel"
@@ -75,13 +65,14 @@ export default function FinancialPositionPanel({
     >
       <div className="fp-heading">
         <div>
-          <h2>Posição financeira hoje</h2>
+          <h2>Contas em aberto</h2>
           <p>
             {dados
               ? `Referência: ${dataBR(dados.referencia)}`
               : "Consultando posição"}{" "}
-            · Todos os vencimentos
+            · {inicio && fim ? `Vencimentos: ${dataBR(inicio)} a ${dataBR(fim)}` : "Todos os vencimentos"}
           </p>
+          <p>Saldos bancários: posição atual, independente do intervalo de vencimento.</p>
         </div>
         {dados && (
           <div className="exec-position-chips">
@@ -109,9 +100,8 @@ export default function FinancialPositionPanel({
             type="button"
             disabled={carregando}
             onClick={() => {
-              setCarregando(true);
-              setErro("");
-              setDados(null);
+              setFalha(null);
+              setResultado(null);
               setVersao((v) => v + 1);
             }}
           >
@@ -189,11 +179,10 @@ export default function FinancialPositionPanel({
         <details className="fp-method">
           <summary>Como interpretar estes valores</summary>
           <p className="fp-note">
-            Valores em aberto registrados no FinVista, considerando todos os
-            vencimentos e categorias do cliente. Vence hoje separa o saldo com
-            vencimento na data de referência; a vencer mostra datas posteriores
-            quando esse detalhamento está disponível. Os filtros dos gráficos
-            não alteram esta posição.
+            Saldos ainda em aberto, limitados ao intervalo de vencimento exibido.
+            Vencidos são anteriores à data atual; vence hoje usa a data atual;
+            a vencer contém datas posteriores. Se hoje estiver fora do intervalo,
+            vence hoje fica zerado. O intervalo não reconstrói uma posição histórica.
           </p>
         </details>
         {dados && (dados.semValorAberto > 0 || dados.semVencimento > 0) && (
@@ -204,9 +193,7 @@ export default function FinancialPositionPanel({
             </summary>
             <p className="fp-note">
               Sem saldo em aberto informado: {dados.semValorAberto}. Com saldo
-              positivo, mas sem vencimento: {dados.semVencimento}. O
-              levantamento considera todo o histórico do cliente; não significa
-              que esses registros estejam em aberto ou pagos.
+              positivo, mas sem vencimento: {dados.semVencimento}. Os registros sem vencimento suficiente não podem ser atribuídos ao intervalo; os demais diagnósticos respeitam os vencimentos conhecidos do recorte.
             </p>
             {!!dados.cobertura?.length && (
               <ul>

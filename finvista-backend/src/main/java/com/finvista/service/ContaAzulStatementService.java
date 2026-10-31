@@ -29,7 +29,12 @@ public class ContaAzulStatementService {
             BigDecimal valor, List<String> categorias, List<String> centros, List<String> erros,
             List<Allocation> rateios, Map<String, String> campos) {}
 
-    public record Result(boolean reconhecido, String arquivo, List<Line> linhas) {}
+    public record Result(boolean reconhecido, String arquivo, List<Line> linhas, LocalDate hoje) {
+
+        public Result(boolean reconhecido, String arquivo, List<Line> linhas) {
+            this(reconhecido, arquivo, linhas, LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo")));
+        }
+    }
 
     public static String normalize(String value) {
         return Normalizer.normalize(value == null ? "" : value.trim(), Normalizer.Form.NFD)
