@@ -132,6 +132,7 @@ export default function FinancialControlCenter({
           <ContaAzulReconciliationPanel
             clienteId={clienteId}
             endpoint="/api/gestao-financeira/conferencia"
+            canReview={admin}
             initiallyOpen
           />
         ) : tab === "Atrasos" ? (

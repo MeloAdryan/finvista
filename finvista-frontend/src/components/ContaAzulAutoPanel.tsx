@@ -263,7 +263,8 @@ export default function ContaAzulAutoPanel({
       )}
       {cliente && status?.configuracao.sincronizacaoCompleta && (
         <ContaAzulReconciliationPanel
-          key={`conferencia-${cliente.id}`}
+          canReview
+            key={`conferencia-${cliente.id}`}
           clienteId={cliente.id}
         />
       )}

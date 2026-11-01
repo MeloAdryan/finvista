@@ -3,9 +3,10 @@ export function uniqueReconciliationRows(
 ): (string | number)[][] {
   if (!rows.length) return [];
   const rank = (status: string | number) =>
-    status === "DIVERGENCIA_POR_ID"
+    status === "DIVERGENCIA_POR_ID" || status === "DIVERGENCIA_DE_VINCULO"
       ? 6
-      : status === "ID_BAIXA_DATA_TIPO_VALOR"
+      : status === "ID_BAIXA_DATA_TIPO_VALOR" ||
+          status === "VINCULO_CONFIRMADO_PELO_CONTADOR"
         ? 5
         : String(status).startsWith("SUGESTAO")
           ? 4

@@ -105,6 +105,17 @@ public class FinancialAccountsService {
         }
     }
 
+    public Map<String,String> nomesEmCache(Long clienteId) {
+        if (!Objects.equals(clienteId, contexto.getClienteAtualId())) throw new IllegalArgumentException("A empresa mudou.");
+        synchronized (cache) {
+            var saved=cache.get(clienteId);
+            if(saved==null) return Map.of();
+            Map<String,String> names=new HashMap<>();
+            for(var account:saved.resposta().contas()) names.put(account.id(),account.nome());
+            return Map.copyOf(names);
+        }
+    }
+
     private static FinancialAccountsResponse.Diagnostico diagnosticar(Exception e, String etapa) {
         if (e instanceof ContaAzulAccountsException f) {
             return new FinancialAccountsResponse.Diagnostico(f.codigo(), f.etapa(), f.httpStatus());

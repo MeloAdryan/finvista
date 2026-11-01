@@ -160,4 +160,72 @@ class ContaAzulReconciliationServiceTest {
             assertEquals(org.springframework.transaction.annotation.Isolation.REPEATABLE_READ, annotation.isolation());
         }
     }
+
+    class Links {
+        final com.fasterxml.jackson.databind.ObjectMapper mapper=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        final com.finvista.repository.StatementMovementRepository repo=mock(com.finvista.repository.StatementMovementRepository.class);
+        final StatementImportService importer=mock(StatementImportService.class);
+        final ContaAzulReconciliationService service=new ContaAzulReconciliationService(ctx,view);
+        final com.finvista.model.Cliente company=new com.finvista.model.Cliente("Teste");
+        final com.finvista.model.StatementMovement row;
+        final java.util.List<com.finvista.model.StatementMovement> saved=new java.util.ArrayList<>();
+        final String fileKey="2:EXTRATO:h:1:null:2026-09-01:RECEITA";
+        final String apiKey="1:p:b:2026-09-01:RECEITA";
+        FinancialViewService.Resposta currentApi=detailed(List.of(line(1,"p","b","100","conta-1",inicio)),"100");
+        Links()throws Exception{
+            var original=new ContaAzulStatementService.Line(2,inicio,inicio,inicio,"Pagamento","Receita","Lançamento Financeiro","Banco Teste","Pago",new BigDecimal("100"),List.of(),List.of(),List.of(),List.of(),Map.of("conta bancaria","Banco Teste"));
+            row=new com.finvista.model.StatementMovement(company,"h",1,mapper.writeValueAsString(original),"teste.xls",java.time.Instant.EPOCH);
+            org.springframework.test.util.ReflectionTestUtils.setField(row,"id",2L);org.springframework.test.util.ReflectionTestUtils.setField(company,"id",7L);saved.add(row);
+            when(repo.findByClienteIdOrderByIdAsc(7L)).thenAnswer(i->List.copyOf(saved));
+            when(importer.decode(any())).thenAnswer(i->mapper.readValue(((com.finvista.model.StatementMovement)i.getArgument(0)).getConteudo(),ContaAzulStatementService.Line.class));
+            when(ctx.getClienteAtualId()).thenReturn(7L);when(ctx.getClienteAtual()).thenReturn(company);
+            var user=new com.finvista.model.Usuario("Contador Teste","contador@example.test","hash","ADMIN");org.springframework.test.util.ReflectionTestUtils.setField(user,"id",9L);when(ctx.getUsuarioAutenticado()).thenReturn(user);
+            when(view.consultar(any())).thenAnswer(i->((FinancialViewService.Filtro)i.getArgument(0)).criterio()==FinancialViewService.Criterio.BAIXA?currentApi:detailed(List.of(line(2,"EXTRATO:h:1",null,"100",null,inicio)),"100"));
+            org.springframework.test.util.ReflectionTestUtils.setField(service,"statements",repo);org.springframework.test.util.ReflectionTestUtils.setField(service,"statementImport",importer);
+            org.springframework.test.util.ReflectionTestUtils.setField(service,"json",mapper);org.springframework.test.util.ReflectionTestUtils.setField(service,"clock",java.time.Clock.fixed(java.time.Instant.parse("2026-10-31T12:00:00Z"),java.time.ZoneOffset.UTC));
+        }
+        ContaAzulReconciliationService.LinkRequest request(String action){return new ContaAzulReconciliationService.LinkRequest(7L,inicio,fim,fileKey,apiKey,action,"Recibo original e conta bancária conferidos.");}
+    }
+    @Test void previaNaoGravaENomeDeContaNaoCriaId()throws Exception{
+        var f=new Links();var before=f.row.getConteudo();var r=f.service.conferir(7L,inicio,fim);
+        assertNull(r.detalhes().correspondencias().get(0).extrato().contaId());assertEquals(2,r.contas().size());
+        f.service.planejarVinculo(f.request("VINCULAR"));assertEquals(before,f.row.getConteudo());verify(f.repo,never()).saveAndFlush(any());
+    }
+    @Test void confirmaUmParaUmSemAlterarValoresOuCamposOriginais()throws Exception{
+        var f=new Links();var before=f.importer.decode(f.row);f.service.confirmarVinculo(f.service.planejarVinculo(f.request("VINCULAR")));
+        var r=f.service.conferir(7L,inicio,fim);assertEquals(1,r.resumo().porConferencia());assertEquals(0,r.resumo().porId());assertEquals(0,r.resumo().contasNaoComparaveis());assertEquals(1,r.contas().size());
+        assertEquals(new BigDecimal("100"),r.contas().get(0).receitaExtrato());assertEquals(r.contas().get(0).receitaApi(),r.contas().get(0).receitaExtrato());
+        var after=f.importer.decode(f.row);assertEquals(before.movimento(),after.movimento());assertEquals(before.valor(),after.valor());assertEquals(before.conta(),after.conta());
+        assertFalse(after.campos().containsKey("id da baixa"));assertEquals("b",after.campos().get("finvista:conciliacao baixa"));assertTrue(after.campos().get("finvista:conciliacao historico").contains("Contador Teste"));
+    }
+    @Test void alteracaoNaApiInvalidaConferenciaSemEsconderDiferenca()throws Exception{
+        var f=new Links();f.service.confirmarVinculo(f.service.planejarVinculo(f.request("VINCULAR")));
+        f.currentApi=detailed(List.of(line(1,"p","b","110","conta-1",inicio)),"110");var r=f.service.conferir(7L,inicio,fim);
+        assertEquals(0,r.resumo().porConferencia());assertFalse(r.detalhes().divergencias().isEmpty());assertEquals(new BigDecimal("10"),r.diferencaReceita());assertFalse(r.detalhes().divergencias().get(0).extrato().revisao().atual());
+    }
+    @Test void mudancaEntrePreviaEConfirmacaoNaoGrava()throws Exception{
+        var f=new Links();var plan=f.service.planejarVinculo(f.request("VINCULAR"));f.currentApi=detailed(List.of(line(1,"p","b","110","conta-1",inicio)),"110");
+        assertThrows(IllegalArgumentException.class,()->f.service.confirmarVinculo(plan));verify(f.repo,never()).saveAndFlush(any());
+    }
+    @Test void mesmaBaixaNaoPodeSerVinculadaADoisMovimentos()throws Exception{
+        var f=new Links();var original=f.importer.decode(f.row);var fields=new java.util.LinkedHashMap<>(original.campos());fields.put("id da baixa","b");
+        var other=new ContaAzulStatementService.Line(3,inicio,inicio,inicio,"Outro","Receita","Lançamento Financeiro","Banco","Pago",new BigDecimal("100"),List.of(),List.of(),List.of(),List.of(),fields);
+        var row=new com.finvista.model.StatementMovement(f.company,"outro",1,f.mapper.writeValueAsString(other),"teste.xls",java.time.Instant.EPOCH);org.springframework.test.util.ReflectionTestUtils.setField(row,"id",3L);f.saved.add(row);
+        assertThrows(IllegalArgumentException.class,()->f.service.planejarVinculo(f.request("VINCULAR")));verify(f.repo,never()).saveAndFlush(any());
+    }
+    @Test void desfazerPreservaHistoricoEDoisTotaisIndependentes()throws Exception{
+        var f=new Links();f.service.confirmarVinculo(f.service.planejarVinculo(f.request("VINCULAR")));f.service.confirmarVinculo(f.service.planejarVinculo(f.request("DESVINCULAR")));
+        var r=f.service.conferir(7L,inicio,fim);assertEquals(0,r.resumo().porConferencia());assertEquals(1,r.resumo().sugestoes());assertEquals(new BigDecimal("100"),r.extrato().receita());assertEquals(r.api().receita(),r.extrato().receita());
+        assertTrue(f.importer.decode(f.row).campos().get("finvista:conciliacao historico").contains("DESVINCULAR"));
+    }
+    @Test void perfilSemPermissaoNaoPreparaVinculo()throws Exception{
+        var f=new Links();doThrow(new IllegalStateException("Apenas administradores")).when(ctx).validarAdministrador();assertThrows(IllegalStateException.class,()->f.service.planejarVinculo(f.request("VINCULAR")));verify(f.repo,never()).saveAndFlush(any());
+    }
+    @Test void outraEmpresaNaoReaproveitaConferencia()throws Exception{
+        var f=new Links();var p=f.service.planejarVinculo(f.request("VINCULAR"));when(ctx.getClienteAtualId()).thenReturn(8L);assertThrows(IllegalArgumentException.class,()->f.service.confirmarVinculo(p));verify(f.repo,never()).saveAndFlush(any());
+    }
+    @Test void semContaNaApiNaoInventaIdentificacao()throws Exception{
+        var f=new Links();f.currentApi=detailed(List.of(line(1,"p","b","100",null,inicio)),"100");assertThrows(IllegalArgumentException.class,()->f.service.planejarVinculo(f.request("VINCULAR")));verify(f.repo,never()).saveAndFlush(any());
+    }
+
 }

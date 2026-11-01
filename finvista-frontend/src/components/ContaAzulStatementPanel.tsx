@@ -402,16 +402,29 @@ export default function ContaAzulStatementPanel({
                     {line.erros.length > 0 && (
                       <strong role="alert">{line.erros.join(" ")}</strong>
                     )}
+                    {line.campos?.["finvista:conciliacao historico"] && (
+                      <details>
+                        <summary>Histórico de conferências registradas</summary>
+                        <p style={{ whiteSpace: "pre-wrap" }}>
+                          {line.campos["finvista:conciliacao historico"]}
+                        </p>
+                      </details>
+                    )}
                     {line.campos && (
                       <details>
                         <summary>Ver dados originais</summary>
                         <dl>
-                          {Object.entries(line.campos).map(([key, value]) => (
-                            <div key={key}>
-                              <dt>{key}</dt>
-                              <dd>{value || "Não informado"}</dd>
-                            </div>
-                          ))}
+                          {Object.entries(line.campos)
+                            .filter(
+                              ([key]) =>
+                                !key.startsWith("finvista:conciliacao "),
+                            )
+                            .map(([key, value]) => (
+                              <div key={key}>
+                                <dt>{key}</dt>
+                                <dd>{value || "Não informado"}</dd>
+                              </div>
+                            ))}
                         </dl>
                       </details>
                     )}

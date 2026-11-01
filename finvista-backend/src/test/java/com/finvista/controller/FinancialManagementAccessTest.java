@@ -30,8 +30,15 @@ class FinancialManagementAccessTest {
         @Configuration
         @EnableWebMvc
         @EnableWebSecurity
-        @Import({SecurityConfig.class, FinancialManagementController.class, ManagerialDreMappingController.class})
+        @Import({SecurityConfig.class, FinancialManagementController.class, ManagerialDreMappingController.class, ContaAzulAutoController.class, CsrfReader.class})
         static class Config {
+
+            @Bean com.finvista.integration.contaazul.ContaAzulAutoState autoState(){return mock(com.finvista.integration.contaazul.ContaAzulAutoState.class);}
+            @Bean com.finvista.repository.ContaAzulSourceCaptureRepository captures(){return mock(com.finvista.repository.ContaAzulSourceCaptureRepository.class);}
+            @Bean com.finvista.repository.ContaAzulApiOperationRepository operations(){return mock(com.finvista.repository.ContaAzulApiOperationRepository.class);}
+            @Bean com.fasterxml.jackson.databind.ObjectMapper mapper(){return new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();}
+            @Bean java.time.Clock clock(){return java.time.Clock.systemUTC();}
+            @Bean FinancialAccountsService accounts(){return mock(FinancialAccountsService.class);}
 
             @Bean
             com.finvista.repository.StatementMovementRepository statements() {
@@ -146,4 +153,24 @@ class FinancialManagementAccessTest {
             mvc.perform(get("/api/gestao-financeira/posicao").param("clienteId", "999").session(session("USUARIO"))).andExpect(status().isOk());
             verify(context.getBean(FinancialManagementService.class)).openPosition();
         }
-    }
+    
+        @org.springframework.web.bind.annotation.RestController
+        static class CsrfReader {
+            @org.springframework.web.bind.annotation.GetMapping("/api/auth/csrf")
+            public java.util.Map<String,String> csrf(org.springframework.security.web.csrf.CsrfToken token){return java.util.Map.of("token",token.getToken());}
+        }
+        String csrf(MockHttpSession s)throws Exception{
+            var json=new com.fasterxml.jackson.databind.ObjectMapper();
+            return json.readTree(mvc.perform(get("/api/auth/csrf").session(s)).andReturn().getResponse().getContentAsString()).get("token").asText();
+        }
+        @Test void clienteNaoPodeRegistrarVinculosMesmoComCsrfValido()throws Exception{
+            var s=session("CLIENTE");String token=csrf(s);
+            mvc.perform(post("/api/integracoes/conta-azul/automatica/conferencia/planejar-vinculo").session(s).header("X-CSRF-TOKEN",token).contentType("application/json").content("{}")).andExpect(status().isForbidden());
+            verifyNoInteractions(context.getBean(ContaAzulReconciliationService.class));
+        }
+        @Test void adminSemCsrfNaoPodeRegistrarVinculo()throws Exception{
+            mvc.perform(post("/api/integracoes/conta-azul/automatica/conferencia/planejar-vinculo").session(session("ADMIN")).contentType("application/json").content("{}")).andExpect(status().isForbidden());
+            verifyNoInteractions(context.getBean(ContaAzulReconciliationService.class));
+        }
+
+}

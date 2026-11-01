@@ -2,6 +2,7 @@ import { FinancialChartPaint } from "../components/FinancialChartPaint";
 import { useChartAppearance } from "../services/chartAppearance";
 import { useId, useState } from "react";
 import {
+  Area,
   Bar,
   Cell,
   ComposedChart,
@@ -40,16 +41,26 @@ function escala(dados: DashboardAnalysis["meses"], recebimentos = false) {
 }
 export default function DashboardMonthlyChart({
   analise,
+  caixa = false,
+  onSeisMeses,
+  carregando = false,
 }: {
   analise: DashboardAnalysis;
+  caixa?: boolean;
+  onSeisMeses?: () => void;
+  carregando?: boolean;
 }) {
   const appearance = useChartAppearance();
+  const semRegistros =
+    analise.registros?.receitasAtual === 0 &&
+    analise.registros?.despesasAtual === 0;
   const [tabela, setTabela] = useState(false);
-  const [modo, setModo] = useState<"RECEBIMENTOS" | "RESULTADO">(
-    "RECEBIMENTOS",
+  const [modo, setModo] = useState<"RECEBIMENTOS" | "RESULTADO" | "EVOLUCAO">(
+    "EVOLUCAO",
   );
   const padrao = `receipt-${useId().replace(/:/g, "")}`;
   const detalhar = modo === "RECEBIMENTOS";
+  const evolucao = modo === "EVOLUCAO" && analise.meses.length > 1;
   const dados = analise.meses.map((m) => {
     const r = m.recebimentos;
     const valido =
@@ -66,6 +77,20 @@ export default function DashboardMonthlyChart({
       Math.abs(r.recebido + r.emAberto + r.semDetalhamento - m.receita) < 0.005;
     return {
       ...m,
+      receitaEvolucao:
+        !Array.isArray(analise.itens) ||
+        analise.itens.some(
+          (i) => i.tipo === "RECEITA" && i.data.slice(0, 7) === m.periodo,
+        )
+          ? m.receita
+          : null,
+      despesaEvolucao:
+        !Array.isArray(analise.itens) ||
+        analise.itens.some(
+          (i) => i.tipo === "DESPESA" && i.data.slice(0, 7) === m.periodo,
+        )
+          ? m.despesa
+          : null,
       recebido: valido ? r.recebido : 0,
       emAberto: valido ? r.emAberto : 0,
       semDetalhamento: valido ? r.semDetalhamento : m.receita,
@@ -77,7 +102,7 @@ export default function DashboardMonthlyChart({
     (m) => !m.detalheValido || (m.incompletos ?? 0) > 0,
   );
 
-  const axis = escala(analise.meses, detalhar);
+  const axis = escala(analise.meses, detalhar || evolucao);
   const csv = () =>
     exportarCSV("painel-mensal.csv", [
       [
@@ -114,28 +139,41 @@ export default function DashboardMonthlyChart({
           <h2>
             {detalhar
               ? "Receita recebida e em aberto × despesa"
-              : "Receita, despesa e resultado"}
+              : caixa
+                ? "Recebimentos × pagamentos"
+                : "Receitas × despesas"}
           </h2>
         </div>
-        <div>
-          <button
-            type="button"
-            onClick={() => setModo(detalhar ? "RESULTADO" : "RECEBIMENTOS")}
-          >
-            {detalhar ? "Ver resultado" : "Ver recebimentos"}
-          </button>
-          <button type="button" onClick={() => setTabela((v) => !v)}>
-            {tabela ? "Ver gráfico" : "Ver como tabela"}
-          </button>
-          <button type="button" onClick={csv}>
-            CSV
-          </button>
-        </div>
+        <details className="ev-chart-options">
+          <summary aria-label="Opções do gráfico mensal">⋯</summary>
+          <div>
+            <button type="button" onClick={() => setModo("EVOLUCAO")}>
+              Evolução em linhas
+            </button>
+            <button type="button" onClick={() => setModo("RESULTADO")}>
+              Colunas e resultado
+            </button>
+            <button
+              type="button"
+              onClick={() => setModo(detalhar ? "RESULTADO" : "RECEBIMENTOS")}
+            >
+              {detalhar ? "Ver resultado" : "Ver recebimentos"}
+            </button>
+            <button type="button" onClick={() => setTabela((v) => !v)}>
+              {tabela ? "Ver gráfico" : "Ver como tabela"}
+            </button>
+            <button type="button" onClick={csv}>
+              CSV
+            </button>
+          </div>
+        </details>
       </header>
-      <p>
+      <p className="ev-caption">
         {detalhar
-          ? "Recebido e em aberto conforme o critério e período selecionados, ao lado da despesa. Valores em R$."
-          : "Receita e despesa em colunas; resultado em linha. Todos os valores em R$."}
+          ? "Composição dos recebimentos disponíveis no recorte."
+          : evolucao
+            ? "Evolução mensal dos valores do recorte aplicado."
+            : "Valores mensais do recorte; resultado em linha."}
       </p>
       {detalhar && parcial && (
         <p className="mr-warning" role="status">
@@ -145,7 +183,9 @@ export default function DashboardMonthlyChart({
       )}
       {analise.indicadores.receita === 0 && (
         <p className="df-note">
-          Sem receita lançada no período e categoria selecionados.
+          {analise.registros?.receitasAtual === 0
+            ? "Sem registros de receita no recorte."
+            : "Receita líquida disponível zerada no recorte; consulte os lançamentos."}
         </p>
       )}
       {tabela ? (
@@ -197,6 +237,14 @@ export default function DashboardMonthlyChart({
             </tbody>
           </table>
         </div>
+      ) : semRegistros ? (
+        <div className="ev-chart-empty">
+          <strong>Sem registros neste recorte</strong>
+          <p>
+            Confira o período, a empresa e os critérios aplicados. Ausência de
+            registros não confirma valores financeiros zerados.
+          </p>
+        </div>
       ) : (
         <div className="df-chart">
           <ResponsiveContainer width="100%" height="100%" minWidth={0}>
@@ -242,145 +290,209 @@ export default function DashboardMonthlyChart({
               />
               <ReferenceLine y={0} stroke="#96a6bc" />
               <Tooltip formatter={(value) => brl(Number(value))} />
-              {detalhar ? (
+              {evolucao ? (
                 <>
-                  <Bar
-                    dataKey="recebido"
-                    stackId="receita"
-                    name="Recebido (valor conhecido)"
-                    fill={appearance.fill("#2e75d3")}
-                    maxBarSize={44}
-                    isAnimationActive={false}
-                  ></Bar>
-                  <Bar
-                    dataKey="emAberto"
-                    stackId="receita"
-                    name="Em aberto (valor conhecido)"
-                    fill={`url(#${padrao})`}
-                    stroke="#2e75d3"
-                    maxBarSize={44}
+                  <Area
+                    type="linear"
+                    dataKey="receitaEvolucao"
+                    connectNulls={false}
+                    name={caixa ? "Recebimentos" : "Receitas"}
+                    stroke="var(--fv-chart-blue)"
+                    fill="var(--fv-chart-blue)"
+                    fillOpacity={0.13}
+                    strokeWidth={2.5}
+                    dot={{ r: 3 }}
                     isAnimationActive={false}
                   />
-                  <Bar
-                    dataKey="semDetalhamento"
-                    stackId="receita"
-                    name="Receita sem detalhamento"
-                    fill={appearance.fill("#9aa8b7")}
-                    maxBarSize={44}
+                  <Area
+                    type="linear"
+                    dataKey="despesaEvolucao"
+                    connectNulls={false}
+                    name={caixa ? "Pagamentos" : "Despesas"}
+                    stroke="var(--fv-chart-orange)"
+                    fill="var(--fv-chart-orange)"
+                    fillOpacity={0.1}
+                    strokeWidth={2.5}
+                    dot={{ r: 3 }}
                     isAnimationActive={false}
                   />
                 </>
               ) : (
-                <Bar
-                  isAnimationActive={false}
-                  dataKey="receita"
-                  name="Receita"
-                  fill={appearance.fill("#2e75d3")}
-                  maxBarSize={44}
-                >
-                  {analise.meses.map((m) => (
-                    <Cell
-                      key={m.periodo}
-                      fillOpacity={m.emAndamento ? 0.55 : 1}
+                <>
+                  {detalhar ? (
+                    <>
+                      <Bar
+                        dataKey="recebido"
+                        stackId="receita"
+                        name="Recebido (valor conhecido)"
+                        fill={appearance.fill("#2e75d3")}
+                        maxBarSize={44}
+                        isAnimationActive={false}
+                      ></Bar>
+                      <Bar
+                        dataKey="emAberto"
+                        stackId="receita"
+                        name="Em aberto (valor conhecido)"
+                        fill={`url(#${padrao})`}
+                        stroke="#2e75d3"
+                        maxBarSize={44}
+                        isAnimationActive={false}
+                      />
+                      <Bar
+                        dataKey="semDetalhamento"
+                        stackId="receita"
+                        name="Receita sem detalhamento"
+                        fill={appearance.fill("#9aa8b7")}
+                        maxBarSize={44}
+                        isAnimationActive={false}
+                      />
+                    </>
+                  ) : (
+                    <Bar
+                      isAnimationActive={false}
+                      dataKey="receita"
+                      name={caixa ? "Recebimentos" : "Receitas"}
+                      fill={appearance.fill("#2e75d3")}
+                      maxBarSize={44}
+                    >
+                      {analise.meses.map((m) => (
+                        <Cell
+                          key={m.periodo}
+                          fillOpacity={m.emAndamento ? 0.55 : 1}
+                        />
+                      ))}
+                    </Bar>
+                  )}
+                  <Bar
+                    isAnimationActive={false}
+                    dataKey="despesa"
+                    name={caixa ? "Pagamentos" : "Despesas"}
+                    fill={appearance.fill("#c47c32")}
+                    maxBarSize={44}
+                  >
+                    {analise.meses.map((m) => (
+                      <Cell
+                        key={m.periodo}
+                        fillOpacity={m.emAndamento ? 0.55 : 1}
+                      />
+                    ))}
+                  </Bar>
+                  {!detalhar && (
+                    <Line
+                      type="linear"
+                      dataKey="resultado"
+                      name="Resultado"
+                      stroke="var(--fv-chart-success)"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                      isAnimationActive={false}
                     />
-                  ))}
-                </Bar>
-              )}
-              <Bar
-                isAnimationActive={false}
-                dataKey="despesa"
-                name="Despesa"
-                fill={appearance.fill("#c47c32")}
-                maxBarSize={44}
-              >
-                {analise.meses.map((m) => (
-                  <Cell
-                    key={m.periodo}
-                    fillOpacity={m.emAndamento ? 0.55 : 1}
-                  />
-                ))}
-              </Bar>
-              {!detalhar && (
-                <Line
-                  type="linear"
-                  dataKey="resultado"
-                  name="Resultado"
-                  stroke="var(--fv-chart-success)"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  isAnimationActive={false}
-                />
+                  )}
+                </>
               )}
             </ComposedChart>
           </ResponsiveContainer>
         </div>
       )}
-      {detalhar ? (
-        <>
-          <div className="mr-legend">
-            <span>
-              <i className="mr-paid" />
-              Recebido
-            </span>
-            <span>
-              <i className="mr-open" />
-              Em aberto
-            </span>
-            <span>
-              <i className="mr-unknown" />
-              Sem detalhamento
-            </span>
-            <span>
-              <i className="mr-expense" />
-              Despesa registrada
-            </span>
-          </div>
-          {dados.some(
-            (m) => m.detalheValido && m.recebido === 0 && m.receita > 0,
-          ) && (
-            <p className="mr-zero">
-              {dados
-                .filter(
-                  (m) => m.detalheValido && m.recebido === 0 && m.receita > 0,
-                )
-                .map(
-                  (m) =>
-                    `${m.periodo}: R$ 0 de valor recebido conhecido; ${brl(m.emAberto)} de valor em aberto conhecido.`,
-                )
-                .join(" ")}
-            </p>
-          )}
-          <p className="df-note">
-            Com cobertura parcial, os valores conhecidos não representam toda a
-            receita. A legenda permanece visível mesmo com séries zeradas.
+      {evolucao &&
+        dados.some(
+          (m) => m.receitaEvolucao === null || m.despesaEvolucao === null,
+        ) && (
+          <p className="ev-caption">
+            Meses sem registros da série não são ligados na evolução. Consulte
+            os valores disponíveis na tabela.
           </p>
-          <details className="mr-method">
-            <summary>Como interpretar este gráfico</summary>
-            <p>
-              Competência usa o principal na data do evento. Vencimento usa o
-              líquido pago e aberto na data de vencimento. Baixa usa os
-              pagamentos/recebimentos efetivos da fonte selecionada. No regime
-              de competência ou vencimento, a divisão entre recebido e em aberto
-              é a posição atual disponível, não uma reconstrução histórica do
-              fechamento de cada mês. Valores sem detalhamento permanecem
-              sinalizados.
+        )}
+      <footer className="ev-monthly-footer">
+        <span>
+          <i className="ev-dot ev-blue" />
+          {caixa ? "Recebimentos" : "Receitas"}{" "}
+          <i className="ev-dot ev-orange" />
+          {caixa ? "Pagamentos" : "Despesas"}
+        </span>
+        <strong
+          className={
+            analise.indicadores.resultado < 0 ? "ev-negative" : "ev-positive"
+          }
+        >
+          Resultado: {brl(analise.indicadores.resultado)}
+        </strong>
+        {onSeisMeses && (
+          <button type="button" disabled={carregando} onClick={onSeisMeses}>
+            Ver seis meses
+          </button>
+        )}
+      </footer>
+      <details className="ev-chart-method">
+        <summary>Legenda, critérios e limitações</summary>
+        {detalhar ? (
+          <>
+            <div className="mr-legend">
+              <span>
+                <i className="mr-paid" />
+                Recebido
+              </span>
+              <span>
+                <i className="mr-open" />
+                Em aberto
+              </span>
+              <span>
+                <i className="mr-unknown" />
+                Sem detalhamento
+              </span>
+              <span>
+                <i className="mr-expense" />
+                Despesa registrada
+              </span>
+            </div>
+            {dados.some(
+              (m) => m.detalheValido && m.recebido === 0 && m.receita > 0,
+            ) && (
+              <p className="mr-zero">
+                {dados
+                  .filter(
+                    (m) => m.detalheValido && m.recebido === 0 && m.receita > 0,
+                  )
+                  .map(
+                    (m) =>
+                      `${m.periodo}: R$ 0 de valor recebido conhecido; ${brl(m.emAberto)} de valor em aberto conhecido.`,
+                  )
+                  .join(" ")}
+              </p>
+            )}
+            <p className="df-note">
+              Com cobertura parcial, os valores conhecidos não representam toda
+              a receita. A legenda permanece visível mesmo com séries zeradas.
             </p>
-            <p>
-              Se os campos não forem informados, não fecharem com a receita ou o
-              filtro selecionar só parte do rateio, o valor selecionado fica em
-              “Sem detalhamento”. Não distribuímos recebimentos por categoria
-              usando estimativas. O período é limitado ao filtro aplicado; use
-              “Ver seis meses” para ampliar.
-            </p>
-          </details>
-        </>
-      ) : (
-        <p className="df-note">
-          Azul: receita · Laranja: despesa · Verde: resultado. Colunas claras
-          indicam mês em andamento, não dados completos. Use o atalho de seis
-          meses para ampliar o intervalo.
-        </p>
-      )}
+            <details className="mr-method">
+              <summary>Como interpretar este gráfico</summary>
+              <p>
+                Competência usa o principal na data do evento. Vencimento usa o
+                líquido pago e aberto na data de vencimento. Baixa usa os
+                pagamentos/recebimentos efetivos da fonte selecionada. No regime
+                de competência ou vencimento, a divisão entre recebido e em
+                aberto é a posição atual disponível, não uma reconstrução
+                histórica do fechamento de cada mês. Valores sem detalhamento
+                permanecem sinalizados.
+              </p>
+              <p>
+                Se os campos não forem informados, não fecharem com a receita ou
+                o filtro selecionar só parte do rateio, o valor selecionado fica
+                em “Sem detalhamento”. Não distribuímos recebimentos por
+                categoria usando estimativas. O período é limitado ao filtro
+                aplicado; use “Ver seis meses” para ampliar.
+              </p>
+            </details>
+          </>
+        ) : (
+          <p className="df-note">
+            Azul: {caixa ? "recebimentos" : "receitas"} · Laranja:{" "}
+            {caixa ? "pagamentos" : "despesas"} · Verde: resultado. Colunas
+            claras indicam mês em andamento, não dados completos. Use o atalho
+            de seis meses para ampliar o intervalo.
+          </p>
+        )}
+      </details>
     </article>
   );
 }

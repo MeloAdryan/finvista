@@ -60,4 +60,27 @@ public class ContaAzulAutoController {
         estado.solicitar(pedido.clienteId());
         return status(pedido.clienteId(), 1);
     }
+
+    private static final String LINK_SESSION="FINVISTA_CONFERENCIA_VINCULO";
+    private record LinkPending(String token,java.time.Instant expires,com.finvista.service.ContaAzulReconciliationService.LinkPlan plan) {}
+    public record LinkPreview(String token,java.time.Instant validade,com.finvista.service.FinancialMovementMatcher.Movement api,
+            com.finvista.service.FinancialMovementMatcher.Movement extrato,String acao,String motivo,Long clienteId) {}
+    public record LinkConfirmation(String token,Long clienteId,boolean confirmado) {}
+    @PostMapping("/conferencia/planejar-vinculo")
+    public ResponseEntity<LinkPreview> planejarVinculo(@RequestBody com.finvista.service.ContaAzulReconciliationService.LinkRequest request,jakarta.servlet.http.HttpSession session){
+        session.removeAttribute(LINK_SESSION);
+        var p=reconciliacao.planejarVinculo(request);var pending=new LinkPending(java.util.UUID.randomUUID().toString(),java.time.Instant.now().plusSeconds(600),p);
+        session.setAttribute(LINK_SESSION,pending);
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(new LinkPreview(pending.token(),pending.expires(),p.api(),p.extrato(),p.pedido().acao(),p.pedido().motivo(),p.pedido().clienteId()));
+    }
+    @PostMapping("/conferencia/confirmar-vinculo")
+    public ResponseEntity<java.util.Map<String,String>> confirmarVinculo(@RequestBody LinkConfirmation request,jakarta.servlet.http.HttpSession session){
+        var saved=session.getAttribute(LINK_SESSION);session.removeAttribute(LINK_SESSION);
+        if(!(saved instanceof LinkPending p)||!request.confirmado()||!java.util.Objects.equals(request.token(),p.token())
+                ||!p.expires().isAfter(java.time.Instant.now())||!java.util.Objects.equals(request.clienteId(),p.plan().pedido().clienteId()))
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT,"Conferência expirada ou confirmação ausente. Prepare outra prévia.");
+        reconciliacao.confirmarVinculo(p.plan());
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(java.util.Map.of("mensagem","Conferência registrada. Valores e fontes preservados. Consulte o recorte novamente."));
+    }
+
 }

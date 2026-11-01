@@ -111,4 +111,16 @@ class FinancialMovementMatcherTest {
         assertEquals(1, r.divergencias().size());
         assertEquals(0, new BigDecimal("200").compareTo(r.divergencias().get(0).diferencaValor()));
     }
+
+    @Test void vinculoManualNaoSePassaPorIdDaOrigem(){
+        var a=m("a","b1","100");var raw=m("f","b1","100");
+        var f=new FinancialMovementMatcher.Movement(raw.chave(),raw.parcelaId(),raw.baixaId(),raw.descricao(),raw.tipo(),raw.data(),raw.valor(),null,"Banco",new FinancialMovementMatcher.Review(true,"Comprovante conferido","Contador","2026-10-31T12:00:00Z"));
+        assertEquals("VINCULO_CONFIRMADO_PELO_CONTADOR",FinancialMovementMatcher.compare(List.of(a),List.of(f)).correspondencias().get(0).criterio());
+    }
+    @Test void vinculoDesatualizadoNaoViraSugestaoOuCorrespondencia(){
+        var a=m("a","b1","100");var raw=m("f","b1","100");
+        var f=new FinancialMovementMatcher.Movement(raw.chave(),raw.parcelaId(),raw.baixaId(),raw.descricao(),raw.tipo(),raw.data(),raw.valor(),null,"Banco",new FinancialMovementMatcher.Review(false,"Comprovante conferido","Contador","2026-10-31T12:00:00Z"));
+        var result=FinancialMovementMatcher.compare(List.of(a),List.of(f));assertTrue(result.correspondencias().isEmpty());assertTrue(result.divergencias().get(0).campos().contains("Vínculo alterado; revisão necessária"));
+    }
+
 }

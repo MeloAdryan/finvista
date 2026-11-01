@@ -36,9 +36,12 @@ export default function FinancialWaterfall({
   const percentual = anterior > 0 ? (diferenca / anterior) * 100 : null;
   const numero = (n: number) =>
     Math.abs(n).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
-  const semBase = analise.registros?.despesasAnterior === 0;
+  const semBaseAtual = analise.registros?.despesasAtual === 0;
+  const semBaseAnterior = analise.registros?.despesasAnterior === 0;
+  const semBase = semBaseAtual || semBaseAnterior;
+  const motivoSemBase = semBaseAtual && semBaseAnterior ? "sem registros nos dois períodos" : semBaseAtual ? "sem registros no período atual" : "sem registros no período anterior";
   const titulo = semBase
-    ? "Comparação indisponível: sem registros no período anterior"
+    ? `Comparação indisponível: ${motivoSemBase}`
     : diferenca === 0
       ? "O que mudou: despesas sem variação"
       : `O que mudou: despesas ${diferenca < 0 ? "caíram" : "aumentaram"} ${moedaFinanceira(Math.abs(diferenca))}${percentual === null ? "" : ` (${diferenca < 0 ? "−" : "+"}${numero(percentual)}%)`}`;
@@ -143,8 +146,8 @@ export default function FinancialWaterfall({
       {semBase && (
         <div className="wf-missing-base" role="status">
           <p>
-            Não há registros no período anterior. A cascata usa somente os
-            registros disponíveis e não comprova aumento real das despesas.
+            Comparação indisponível: {motivoSemBase}. A cascata usa somente os
+            registros disponíveis e não comprova aumento ou redução real das despesas.
           </p>
           <button
             type="button"
@@ -264,9 +267,7 @@ export default function FinancialWaterfall({
                     }
                   }}
                 >
-                  <title>
-                    {nome}: {texto}
-                  </title>
+                  <title>{`${nome}: ${texto}`}</title>
                   <rect
                     className="wf-hit"
                     x={x(i) - faixa / 2 + 2}

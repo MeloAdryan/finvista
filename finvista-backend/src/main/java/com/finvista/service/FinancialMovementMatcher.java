@@ -9,8 +9,15 @@ public final class FinancialMovementMatcher {
     private FinancialMovementMatcher() {
     }
 
+    public record Review(boolean atual, String motivo, String usuario, String horario) {}
+
     public record Movement(String chave, String parcelaId, String baixaId, String descricao, String tipo,
-            LocalDate data, BigDecimal valor, String contaId) {
+            LocalDate data, BigDecimal valor, String contaId, String contaNome, Review revisao) {
+
+        public Movement(String chave, String parcelaId, String baixaId, String descricao, String tipo,
+                LocalDate data, BigDecimal valor, String contaId) {
+            this(chave, parcelaId, baixaId, descricao, tipo, data, valor, contaId, null, null);
+        }
 
         public Movement(String chave, String parcelaId, String baixaId, String descricao, String tipo, LocalDate data, BigDecimal valor) {
             this(chave, parcelaId, baixaId, descricao, tipo, data, valor, null);
@@ -50,6 +57,7 @@ public final class FinancialMovementMatcher {
 
     private static List<String> differences(Movement a, Movement b) {
         var fields = new ArrayList<String>();
+        if (b.revisao() != null && !b.revisao().atual()) fields.add("Vínculo alterado; revisão necessária");
         if (!normalized(a.tipo()).equals(normalized(b.tipo()))) {
             fields.add("Tipo");
         }
@@ -114,7 +122,7 @@ public final class FinancialMovementMatcher {
                 var a = candidates.get(0);
                 var fields = differences(a, f);
                 if (fields.isEmpty()) {
-                    matches.add(new Match("ID_BAIXA_DATA_TIPO_VALOR", a, f, equalId(a.contaId(), f.contaId()))); 
+                    matches.add(new Match(f.revisao() == null ? "ID_BAIXA_DATA_TIPO_VALOR" : "VINCULO_CONFIRMADO_PELO_CONTADOR", a, f, equalId(a.contaId(), f.contaId()))); 
                 }else {
                     conflicts.add(new Difference(a, f, fields, a.valor().subtract(f.valor())));
                 }
@@ -126,7 +134,7 @@ public final class FinancialMovementMatcher {
         }
         // No explicit-ID conflict can be consumed again as a suggestion for another row.
         for (var f : file) {
-            if (known(f.baixaId()) || usedF.contains(f.chave())) {
+            if (known(f.baixaId()) || f.revisao() != null || usedF.contains(f.chave())) {
                 continue;
             }
             var candidates = api.stream().filter(a -> !usedA.contains(a.chave()) && !reservedA.contains(a.chave()) && suggestion(a, f)).toList();
