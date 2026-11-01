@@ -1,19 +1,18 @@
-import { FinancialChartPaint } from "../components/FinancialChartPaint";
-import { useChartAppearance } from "../services/chartAppearance";
 import { useState } from "react";
 import {
   Bar,
-  Cell,
-  ComposedChart,
+  Brush,
   CartesianGrid,
+  ComposedChart,
   Line,
-  LineChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import { FinancialChartPaint } from "../components/FinancialChartPaint";
+import { useChartAppearance } from "../services/chartAppearance";
 import type {
   CashFlowData,
   PeriodoFluxoCaixa,
@@ -28,6 +27,7 @@ import {
   prepararEvolucao,
 } from "../services/financialVisualization";
 import "../styles/financial-evolution.css";
+
 interface Props {
   filtroAplicado?: boolean;
   criterioLabel?: string;
@@ -37,6 +37,7 @@ interface Props {
   carregando: boolean;
   onPeriodoChange: (periodo: PeriodoFluxoCaixa) => void;
 }
+
 export default function CashFlowChart({
   filtroAplicado = false,
   criterioLabel,
@@ -46,38 +47,44 @@ export default function CashFlowChart({
   carregando,
   onPeriodoChange,
 }: Props) {
-  const appearance = useChartAppearance();
-  const rotuloReceita = realizado
-    ? "Recebimentos líquidos conferidos"
-    : "Receita registrada";
-  const rotuloDespesa = realizado
-    ? "Pagamentos líquidos conferidos"
-    : "Despesa registrada";
+  const paint = useChartAppearance();
   const [historico, setHistorico] = useState(false);
-  const [tabela, setTabela] = useState(false);
-  const meses = prepararEvolucao(dados);
-  const entradas = dados.reduce((s, m) => s + m.entradas, 0),
-    saidas = dados.reduce((s, m) => s + m.saidas, 0);
-  const base = dados[0]?.saldoInicial ?? 0,
-    ultimo = meses.at(-1);
-  const eixoMensal = eixoFinanceiro(
-    meses.flatMap((m) => [m.entradas, m.saidas, m.resultado]),
+  const [linhaMensal, setLinhaMensal] = useState(false);
+  const [pagina, setPagina] = useState(0);
+  const meses = prepararEvolucao(dados).map((m) => ({
+    ...m,
+    pagamentoVisual: -m.saidas,
+  }));
+  const entradas = dados.reduce((s, m) => s + m.entradas, 0);
+  const saidas = dados.reduce((s, m) => s + m.saidas, 0);
+  const base = dados[0]?.saldoInicial ?? 0;
+  const ultimo = meses.at(-1);
+  const lineKey = linhaMensal
+    ? "resultado"
+    : historico
+      ? "acumuladoHistorico"
+      : "acumuladoPeriodo";
+  const lineName = linhaMensal
+    ? "Resultado mensal"
+    : historico
+      ? "Acumulado com histórico"
+      : "Movimento líquido acumulado no recorte";
+  const eixo = eixoFinanceiro(
+    meses.flatMap((m) => [m.entradas, m.pagamentoVisual, m[lineKey]]),
   );
-  const eixoAcumulado = eixoFinanceiro(
-    meses.map((m) => (historico ? m.acumuladoHistorico : m.acumuladoPeriodo)),
-  );
-  const atual = mesAtualSaoPaulo();
-  const mesAtual = dados.find((m) => periodoISO(m.mes) === atual)?.mes;
+  const recebimentos = realizado ? "Recebimentos" : "Receitas registradas";
+  const pagamentos = realizado ? "Pagamentos" : "Despesas registradas";
+  const page = Math.min(pagina, Math.max(0, Math.ceil(meses.length / 24) - 1));
   const exportar = () =>
-    exportarFinanceiro("evolucao-financeira.csv", [
+    exportarFinanceiro("fluxo-financeiro-mensal.csv", [
       [
         "Mês",
-        rotuloReceita,
-        rotuloDespesa,
+        recebimentos,
+        pagamentos,
         "Resultado mensal",
-        "Resultado acumulado no período",
+        "Acumulado no recorte",
         "Acumulado com histórico",
-        "Base inicial do mês",
+        "Base anterior do mês",
       ],
       ...meses.map((m) => [
         m.mes,
@@ -89,35 +96,43 @@ export default function CashFlowChart({
         m.saldoInicial,
       ]),
     ]);
+  const atual = mesAtualSaoPaulo();
   return (
-    <section className="fe-card" aria-labelledby="fe-cash-title">
-      <FinancialChartPaint id={appearance.id} />
+    <section
+      className="fe-card cf-overview"
+      aria-labelledby="cf-title"
+      aria-busy={carregando}
+    >
+      <FinancialChartPaint id={paint.id} />
       <div className="fe-heading">
         <div>
-          <span className="fe-eyebrow">Evolução financeira</span>
-          <h1 id="fe-cash-title">
-            {criterioLabel
-              ? `Fluxo de caixa — ${criterioLabel}`
-              : realizado
-                ? "Caixa realizado por data de pagamento"
-                : "Evolução por competência"}
+          <span className="fe-eyebrow">Fluxo de caixa</span>
+          <h1 id="cf-title">
+            {realizado ? "Recebimentos e pagamentos" : "Evolução financeira"}
           </h1>
           <p>
-            {criterioLabel
-              ? "Valores pelo critério e período selecionados, agrupados por mês. O recorte pode abranger parte de um mês."
-              : realizado
-                ? "Somente baixas conferidas, agrupadas pela data de pagamento, com juros, multas e descontos. Valores sem detalhamento não são estimados."
-                : "Valores registrados por competência, incluindo lançamentos em aberto. Não representa somente pagamentos e recebimentos."}
+            {criterioLabel ??
+              (realizado
+                ? "Baixas financeiras conferidas"
+                : "Competência")}{" "}
+            · Agrupamento mensal · Valores em R$
           </p>
         </div>
-        <div className="fe-actions">
+        <div
+          className="fe-actions"
+          role="group"
+          aria-label="Atalhos de período"
+        >
           {([6, 12, "todos"] as const).map((p) => (
             <button
-              type="button"
               key={p}
-              aria-pressed={!filtroAplicado && periodo === p}
+              type="button"
               disabled={carregando}
-              onClick={() => onPeriodoChange(p)}
+              aria-pressed={!filtroAplicado && periodo === p}
+              onClick={() => {
+                setPagina(0);
+                onPeriodoChange(p);
+              }}
             >
               {p === "todos" ? "Todo o período" : `${p} meses`}
             </button>
@@ -125,211 +140,242 @@ export default function CashFlowChart({
         </div>
       </div>
       {carregando ? (
-        <p role="status">Atualizando evolução…</p>
+        <p role="status">Atualizando fluxo…</p>
       ) : !dados.length ? (
-        <p>Nenhum lançamento encontrado no período.</p>
+        <p role="status">Nenhum registro disponível neste recorte.</p>
       ) : (
         <>
-          <p className="fe-note">
-            Período exibido: {dados[0].mes} — {dados.at(-1)?.mes}.
-          </p>
           <div className="fe-summary">
             <div>
-              {rotuloReceita}
+              {recebimentos}
               <strong>{moedaFinanceira(entradas)}</strong>
             </div>
             <div>
-              {rotuloDespesa}
+              {pagamentos}
               <strong>{moedaFinanceira(saidas)}</strong>
             </div>
             <div>
               {realizado
-                ? "Movimento líquido conferido no período"
-                : "Resultado no período"}
-              <strong>{moedaFinanceira(entradas - saidas)}</strong>
-            </div>
-          </div>
-          <div className="fe-actions">
-            <button type="button" onClick={() => setTabela(!tabela)}>
-              {tabela ? "Ver gráficos" : "Ver como tabela"}
-            </button>
-            <button type="button" onClick={exportar}>
-              Exportar CSV
-            </button>
-          </div>
-          {tabela ? (
-            <div className="fe-table">
-              <table>
-                <caption>
-                  Resultados registrados; acumulados com bases distintas
-                </caption>
-                <thead>
-                  <tr>
-                    <th>Mês</th>
-                    <th>{rotuloReceita}</th>
-                    <th>{rotuloDespesa}</th>
-                    <th>Resultado mensal</th>
-                    <th>Acumulado no período</th>
-                    <th>Acumulado com histórico</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {meses.map((m) => (
-                    <tr key={m.mes}>
-                      <td>{m.mes}</td>
-                      <td>{moedaFinanceira(m.entradas)}</td>
-                      <td>{moedaFinanceira(m.saidas)}</td>
-                      <td>{moedaFinanceira(m.resultado)}</td>
-                      <td>{moedaFinanceira(m.acumuladoPeriodo)}</td>
-                      <td>{moedaFinanceira(m.acumuladoHistorico)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <>
-              <h2>Resultado mensal</h2>
-              <div className="fe-chart">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart
-                    data={meses}
-                    margin={{ top: 20, right: 15, left: 4, bottom: 5 }}
-                  >
-                    <CartesianGrid stroke="#e4eaf1" />
-                    <XAxis dataKey="mes" minTickGap={35} />
-                    <YAxis
-                      width={65}
-                      domain={eixoMensal.domain}
-                      ticks={eixoMensal.ticks}
-                      tickFormatter={compactoFinanceiro}
-                    />
-                    <Tooltip formatter={(v) => moedaFinanceira(Number(v))} />
-                    <ReferenceLine y={0} stroke="#94a3b8" />
-                    <Bar
-                      isAnimationActive={false}
-                      dataKey="entradas"
-                      name={rotuloReceita}
-                      fill={appearance.fill("#3f806d")}
-                      maxBarSize={34}
-                    >
-                      {meses.map((m) => (
-                        <Cell
-                          key={m.mes}
-                          fillOpacity={periodoISO(m.mes) >= atual ? 0.5 : 1}
-                        />
-                      ))}
-                    </Bar>
-                    <Bar
-                      isAnimationActive={false}
-                      dataKey="saidas"
-                      name={rotuloDespesa}
-                      fill={appearance.fill("#c77d31")}
-                      maxBarSize={34}
-                    >
-                      {meses.map((m) => (
-                        <Cell
-                          key={m.mes}
-                          fillOpacity={periodoISO(m.mes) >= atual ? 0.5 : 1}
-                        />
-                      ))}
-                    </Bar>
-                    <Line
-                      isAnimationActive={false}
-                      type="linear"
-                      dataKey="resultado"
-                      name="Resultado mensal"
-                      stroke="#2563eb"
-                      dot={false}
-                      strokeWidth={2}
-                    />
-                    {mesAtual && (
-                      <ReferenceLine
-                        x={mesAtual}
-                        stroke="#94a3b8"
-                        label="Mês atual"
-                      />
-                    )}
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="fe-legend">
-                <span>Verde: {rotuloReceita.toLowerCase()}</span>
-                <span>Laranja: {rotuloDespesa.toLowerCase()}</span>
-                <span>Azul: resultado mensal</span>
-              </div>
-              <div className="fe-heading">
-                <h2>
-                  {historico
-                    ? "Acumulado incluindo o histórico anterior"
-                    : "Resultado acumulado no período"}
-                </h2>
-                <label className="fe-check">
-                  <input
-                    type="checkbox"
-                    checked={historico}
-                    onChange={(e) => setHistorico(e.target.checked)}
-                  />
-                  Incluir histórico anterior
-                </label>
-              </div>
-              <div className="fe-chart">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={meses}
-                    margin={{ top: 15, right: 15, left: 4, bottom: 5 }}
-                  >
-                    <CartesianGrid stroke="#e4eaf1" />
-                    <XAxis dataKey="mes" minTickGap={35} />
-                    <YAxis
-                      width={65}
-                      domain={eixoAcumulado.domain}
-                      ticks={eixoAcumulado.ticks}
-                      tickFormatter={compactoFinanceiro}
-                    />
-                    <Tooltip formatter={(v) => moedaFinanceira(Number(v))} />
-                    <ReferenceLine y={0} stroke="#94a3b8" />
-                    <Line
-                      isAnimationActive={false}
-                      type="linear"
-                      dataKey={
-                        historico ? "acumuladoHistorico" : "acumuladoPeriodo"
-                      }
-                      name={
-                        historico
-                          ? "Acumulado com histórico"
-                          : "Acumulado no período"
-                      }
-                      stroke="#153856"
-                      dot={false}
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </>
-          )}
-          <div className="fe-bases">
-            <div>
-              Resultado registrado antes do intervalo
-              <strong>{moedaFinanceira(base)}</strong>
-            </div>
-            <div>
-              Resultado acumulado no intervalo
-              <strong>{moedaFinanceira(ultimo?.acumuladoPeriodo ?? 0)}</strong>
-            </div>
-            <div>
-              Acumulado incluindo o histórico
-              <strong>
-                {moedaFinanceira(ultimo?.acumuladoHistorico ?? 0)}
+                ? "Movimento líquido no recorte"
+                : "Resultado no recorte"}
+              <strong className={entradas - saidas < 0 ? "cf-negative" : ""}>
+                {moedaFinanceira(entradas - saidas)}
               </strong>
             </div>
           </div>
+          <div className="cf-toolbar">
+            <p className="fe-note">
+              {dados[0].mes} — {dados.at(-1)?.mes}. Os meses das extremidades
+              podem estar parciais.
+            </p>
+            <div className="fe-actions">
+              <label className="fe-check">
+                <input
+                  type="checkbox"
+                  checked={linhaMensal}
+                  onChange={(e) => setLinhaMensal(e.target.checked)}
+                />
+                Linha de resultado mensal
+              </label>
+              <label className="fe-check">
+                <input
+                  type="checkbox"
+                  checked={historico}
+                  disabled={linhaMensal}
+                  onChange={(e) => setHistorico(e.target.checked)}
+                />
+                Incluir histórico na linha
+              </label>
+              <button type="button" onClick={exportar}>
+                CSV completo
+              </button>
+            </div>
+          </div>
+          <div
+            className="cf-chart"
+            role="img"
+            aria-label={`${recebimentos} em colunas positivas, ${pagamentos.toLowerCase()} em colunas negativas e ${lineName.toLowerCase()} em linha. Valores disponíveis na tabela abaixo.`}
+          >
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <ComposedChart
+                data={meses}
+                margin={{ top: 20, right: 12, left: 0, bottom: 4 }}
+                accessibilityLayer
+              >
+                <CartesianGrid
+                  stroke="var(--fv-dark-border, #dbe4ef)"
+                  vertical={false}
+                  strokeDasharray="3 4"
+                />
+                <XAxis
+                  dataKey="mes"
+                  minTickGap={25}
+                  tick={{ fill: "var(--fv-dark-muted, #64748b)", fontSize: 11 }}
+                />
+                <YAxis
+                  width={62}
+                  domain={eixo.domain}
+                  ticks={eixo.ticks}
+                  tickFormatter={compactoFinanceiro}
+                  tick={{ fill: "var(--fv-dark-muted, #64748b)", fontSize: 11 }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--fv-dark-surface, #fff)",
+                    borderColor: "var(--fv-dark-border, #dbe4ef)",
+                    borderRadius: 10,
+                    color: "var(--fv-dark-text, #153856)",
+                  }}
+                  formatter={(value, name) => [
+                    moedaFinanceira(
+                      name === pagamentos ? -Number(value) : Number(value),
+                    ),
+                    name,
+                  ]}
+                />
+                <ReferenceLine y={0} stroke="var(--fv-dark-muted, #64748b)" />
+                <Bar
+                  dataKey="entradas"
+                  name={recebimentos}
+                  fill={paint.fill("#22b987")}
+                  radius={[3, 3, 0, 0]}
+                  maxBarSize={32}
+                  isAnimationActive={false}
+                />
+                <Bar
+                  dataKey="pagamentoVisual"
+                  name={pagamentos}
+                  fill={paint.fill("#f04467")}
+                  maxBarSize={32}
+                  isAnimationActive={false}
+                />
+                <Line
+                  type="linear"
+                  dataKey={lineKey}
+                  name={lineName}
+                  stroke="#60a5fa"
+                  strokeWidth={2.5}
+                  dot={meses.length <= 18 ? { r: 3 } : false}
+                  activeDot={{ r: 5 }}
+                  isAnimationActive={false}
+                />
+                {meses.length > 18 && (
+                  <Brush
+                    dataKey="mes"
+                    startIndex={Math.max(0, meses.length - 18)}
+                    endIndex={meses.length - 1}
+                    height={24}
+                    stroke="#60a5fa"
+                    fill="var(--fv-dark-surface, #fff)"
+                  />
+                )}
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+          {meses.length > 18 && (
+            <p className="fe-note">
+              O gráfico abre nos últimos 18 meses. Amplie o zoom pelas alças na
+              base; a tabela e o CSV mantêm todo o recorte.
+            </p>
+          )}
+          <div className="cf-legend">
+            <span>
+              <i style={{ background: "#22b987" }} />
+              {recebimentos}
+            </span>
+            <span>
+              <i style={{ background: "#f04467" }} />
+              {pagamentos}
+            </span>
+            <span>
+              <i style={{ background: "#60a5fa" }} />
+              {lineName}
+            </span>
+          </div>
           <p className="fe-note">
+            Colunas abaixo do zero indicam saídas; a tabela preserva o valor dos
+            pagamentos. A linha não é saldo bancário: não inclui transferências
+            nem abertura de conta.{" "}
             {realizado
-              ? "O acumulado soma apenas as baixas conferidas e não inclui saldo bancário inicial. O mês atual considera somente pagamentos até hoje. Registros sem detalhamento podem alterar estes totais; não são tratados como zero recebido ou pago."
-              : "O acumulado no intervalo parte de zero. O acumulado com histórico inclui o resultado registrado antes do intervalo; nenhum dos dois é um saldo bancário confirmado. Colunas claras identificam o mês em andamento ou meses futuros cadastrados e incluem o mês completo. Todo o período pode incluir lançamentos futuros."}
+              ? "Os valores seguem a fonte de baixas selecionada, sem somar API e extrato."
+              : "Competência e vencimento podem incluir compromissos em aberto; não são pagamentos efetivos."}{" "}
+            {meses.some((m) => periodoISO(m.mes) >= atual) &&
+              "O mês atual ou futuro pode estar incompleto; não representa previsão automática."}
           </p>
+          <div
+            className="fe-table cf-table"
+            tabIndex={0}
+            role="region"
+            aria-label="Tabela mensal do fluxo, role para ver todas as colunas"
+          >
+            <table>
+              <caption>
+                Valores do mesmo recorte do gráfico · {meses.length} meses
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Mês</th>
+                  <th scope="col">{recebimentos}</th>
+                  <th scope="col">{pagamentos}</th>
+                  <th scope="col">Resultado mensal</th>
+                  <th scope="col">Acumulado no recorte</th>
+                  <th scope="col">Com histórico</th>
+                </tr>
+              </thead>
+              <tbody>
+                {meses.slice(page * 24, (page + 1) * 24).map((m) => (
+                  <tr key={m.mes}>
+                    <th scope="row">{m.mes}</th>
+                    <td>{moedaFinanceira(m.entradas)}</td>
+                    <td>{moedaFinanceira(m.saidas)}</td>
+                    <td>{moedaFinanceira(m.resultado)}</td>
+                    <td>{moedaFinanceira(m.acumuladoPeriodo)}</td>
+                    <td>{moedaFinanceira(m.acumuladoHistorico)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row">Total do recorte</th>
+                  <td>{moedaFinanceira(entradas)}</td>
+                  <td>{moedaFinanceira(saidas)}</td>
+                  <td>{moedaFinanceira(entradas - saidas)}</td>
+                  <td>{moedaFinanceira(ultimo?.acumuladoPeriodo ?? 0)}</td>
+                  <td>{moedaFinanceira(ultimo?.acumuladoHistorico ?? 0)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          {meses.length > 24 && (
+            <div className="cf-pagination">
+              <button
+                type="button"
+                disabled={page === 0}
+                onClick={() => setPagina(page - 1)}
+              >
+                Anterior
+              </button>
+              <span>
+                Página {page + 1} de {Math.ceil(meses.length / 24)}
+              </span>
+              <button
+                type="button"
+                disabled={(page + 1) * 24 >= meses.length}
+                onClick={() => setPagina(page + 1)}
+              >
+                Próxima
+              </button>
+            </div>
+          )}
+          <details className="cf-details">
+            <summary>Entender as bases do acumulado</summary>
+            <p>
+              O acumulado no recorte parte de zero. Com histórico inclui o
+              resultado anterior retornado para os mesmos filtros:{" "}
+              {moedaFinanceira(base)}. Nenhum deles certifica saldo bancário.
+              Ausência de registros não comprova ausência de movimento.
+            </p>
+          </details>
         </>
       )}
     </section>

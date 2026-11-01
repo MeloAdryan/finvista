@@ -102,7 +102,7 @@ export default function CashFlow() {
     };
   }, [periodo, tentativa, modo, realized, viewFilter]);
   return (
-    <div className="dashboard fe-page">
+    <div className="dashboard fe-page cash-flow-page">
       <div
         className="fe-actions cash-flow-basis"
         role="group"
@@ -135,17 +135,18 @@ export default function CashFlow() {
         </button>
       </div>
       {cobertura && !carregando && !erro && (
-        <aside className="fe-card" role="status">
+        <details className="fe-card cf-coverage">
+          <summary>Critério e cobertura dos dados</summary>
           <strong>
             {cobertura.parcial
               ? "Caixa com detalhamento parcial"
               : "Movimentos financeiros no critério selecionado"}
           </strong>
           <p>
-            Na base local: {cobertura.lancamentosConferidos} lançamentos com
-            composição conferida; {cobertura.lancamentosSemDetalhamento} sem
-            detalhamento utilizável. No período selecionado:{" "}
-            {cobertura.baixasNoPeriodo} baixas.
+            Nos dados armazenados no FinVista: {cobertura.lancamentosConferidos}{" "}
+            lançamentos com composição conferida;{" "}
+            {cobertura.lancamentosSemDetalhamento} sem detalhamento utilizável.
+            No período selecionado: {cobertura.baixasNoPeriodo} baixas.
           </p>
           <p>
             O gráfico usa a fonte e o critério selecionados e não inclui saldo
@@ -153,7 +154,7 @@ export default function CashFlow() {
             parcelas do Conta Azul foram importadas. Registros sem detalhamento
             e cancelamentos com pagamentos precisam de revisão.
           </p>
-        </aside>
+        </details>
       )}
       {erro ? (
         <div className="fe-card" role="alert">
