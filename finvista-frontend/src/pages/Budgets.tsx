@@ -510,34 +510,11 @@ function Budgets() {
           </p>
         )}
       </section>
-      <section
-        className="ba-summary"
-        aria-label="Resumo dos orçamentos exibidos"
-      >
-        <div>
-          <span>Planejado somado</span>
-          <strong>{moedaOrcamento(totalPlanejado)}</strong>
-        </div>
-        <div>
-          <span>Consumo somado dos orçamentos</span>
-          <strong>{moedaOrcamento(totalUtilizado)}</strong>
-        </div>
-        <div>
-          <span>Disponível somado</span>
-          <strong>{moedaOrcamento(totalDisponivel)}</strong>
-        </div>
-        <div>
-          <span>Orçamentos com excedente</span>
-          <strong>
-            {comExcedente} de {visiveis.length}
-          </strong>
-        </div>
-      </section>
       {sobreposicoes.length > 0 && (
         <aside className="ba-overlap">
           <strong>Os critérios de alguns orçamentos se sobrepõem.</strong>
           <p>
-            Uma mesma despesa pode entrar em mais de um orçamento. A soma acima
+            Uma mesma despesa pode entrar em mais de um orçamento. A soma dos indicadores
             não representa despesas únicas da empresa.
           </p>
           <details>
@@ -554,6 +531,29 @@ function Budgets() {
           </details>
         </aside>
       )}
+      <section
+        className="ba-summary"
+        aria-label="Resumo dos orçamentos exibidos"
+      >
+        <div>
+          <span>Limites somados</span>
+          <strong>{moedaOrcamento(totalPlanejado)}</strong>
+        </div>
+        <div>
+          <span>Utilizado nos orçamentos</span>
+          <strong>{moedaOrcamento(totalUtilizado)}</strong>
+        </div>
+        <div>
+          <span>Disponível nos orçamentos</span>
+          <strong>{moedaOrcamento(totalDisponivel)}</strong>
+        </div>
+        <div>
+          <span>Orçamentos com excedente</span>
+          <strong>
+            {comExcedente} de {visiveis.length}
+          </strong>
+        </div>
+      </section>
       {filtro.modo === "TODOS" && periodos.length > 1 && (
         <p className="ba-note">
           Você está somando limites de períodos diferentes. Confira a utilização

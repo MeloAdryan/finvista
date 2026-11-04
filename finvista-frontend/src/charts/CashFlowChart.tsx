@@ -237,7 +237,7 @@ export default function CashFlowChart({
                 <Bar
                   dataKey="entradas"
                   name={recebimentos}
-                  fill={paint.fill("#22b987")}
+                  fill={paint.fill("#3786dc")}
                   radius={[3, 3, 0, 0]}
                   maxBarSize={32}
                   isAnimationActive={false}
@@ -245,7 +245,7 @@ export default function CashFlowChart({
                 <Bar
                   dataKey="pagamentoVisual"
                   name={pagamentos}
-                  fill={paint.fill("#f04467")}
+                  fill={paint.fill("#e58a2f")}
                   maxBarSize={32}
                   isAnimationActive={false}
                 />
@@ -253,7 +253,7 @@ export default function CashFlowChart({
                   type="linear"
                   dataKey={lineKey}
                   name={lineName}
-                  stroke="#60a5fa"
+                  stroke="var(--fv-chart-blue, #3786dc)"
                   strokeWidth={2.5}
                   dot={meses.length <= 18 ? { r: 3 } : false}
                   activeDot={{ r: 5 }}
@@ -265,7 +265,7 @@ export default function CashFlowChart({
                     startIndex={Math.max(0, meses.length - 18)}
                     endIndex={meses.length - 1}
                     height={24}
-                    stroke="#60a5fa"
+                    stroke="var(--fv-chart-blue, #3786dc)"
                     fill="var(--fv-dark-surface, #fff)"
                   />
                 )}
@@ -280,15 +280,21 @@ export default function CashFlowChart({
           )}
           <div className="cf-legend">
             <span>
-              <i style={{ background: "#22b987" }} />
+              <i className="cf-key incoming" aria-hidden="true">
+                ▲
+              </i>
               {recebimentos}
             </span>
             <span>
-              <i style={{ background: "#f04467" }} />
+              <i className="cf-key outgoing" aria-hidden="true">
+                ▼
+              </i>
               {pagamentos}
             </span>
             <span>
-              <i style={{ background: "#60a5fa" }} />
+              <i className="cf-key result-line" aria-hidden="true">
+                ━
+              </i>
               {lineName}
             </span>
           </div>
@@ -301,6 +307,10 @@ export default function CashFlowChart({
               : "Competência e vencimento podem incluir compromissos em aberto; não são pagamentos efetivos."}{" "}
             {meses.some((m) => periodoISO(m.mes) >= atual) &&
               "O mês atual ou futuro pode estar incompleto; não representa previsão automática."}
+          </p>
+          <p className="fe-note cf-scroll-hint">
+            Tabela completa abaixo. Em telas menores, role horizontalmente para
+            consultar todas as colunas.
           </p>
           <div
             className="fe-table cf-table"

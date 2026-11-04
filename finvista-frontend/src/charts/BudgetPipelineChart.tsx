@@ -96,7 +96,7 @@ function NomeOrcamento({
   return (
     <g transform={`translate(${x},${y})`}>
       <title>{nome}</title>
-      <text textAnchor="middle" fill="#536c86" fontSize={11}>
+      <text textAnchor="middle" fill="var(--fv-muted, #596660)" fontSize={11}>
         {exibidas.map((linha, indice) => (
           <tspan key={indice} x={0} dy={indice === 0 ? 18 : 15}>
             {linha}
@@ -163,14 +163,6 @@ export default function BudgetPipelineChart({
   const utilizadoId = `budget-utilizado-${id}`;
   const sombraId = `budget-sombra-${id}`;
   const eixo = valoresEixo(dados);
-  const totalPlanejado = dados.reduce(
-    (soma, item) => soma + Number(item.valorPlanejado),
-    0,
-  );
-  const totalUtilizado = dados.reduce(
-    (soma, item) => soma + Number(item.valorUtilizado),
-    0,
-  );
   const maior = dados.reduce<BudgetPipelineData | null>(
     (atual, item) =>
       atual === null ||
@@ -191,8 +183,8 @@ export default function BudgetPipelineChart({
           <span className="ba-eyebrow">Controle orçamentário</span>
           <h2 id={`bc-title-${id}`}>Planejado × utilizado</h2>
           <p>
-            Compare cada orçamento no seu período completo. Alterne entre
-            percentual do planejado e valores em reais.
+            Compare os limites cadastrados com o utilizado no recorte de
+            análise. Alterne entre percentual do planejado e valores em reais.
           </p>
         </div>
         <div className="ba-actions">
@@ -226,23 +218,13 @@ export default function BudgetPipelineChart({
         </p>
       ) : (
         <>
-          <div className="bc-summary">
-            <div>
-              <span>Total planejado</span>
-              <strong>{moedaOrcamento(totalPlanejado)}</strong>
-            </div>
-            <div>
-              <span>Total utilizado</span>
-              <strong>{moedaOrcamento(totalUtilizado)}</strong>
-            </div>
-            <div>
-              <span>Disponível somado</span>
-              <strong>{moedaOrcamento(totalPlanejado - totalUtilizado)}</strong>
-            </div>
-          </div>
-
           {tabela ? (
-            <div className="ba-table-scroll">
+            <div
+              className="ba-table-scroll"
+              tabIndex={0}
+              role="region"
+              aria-label="Orçamentos, role horizontalmente para ver todas as colunas"
+            >
               <table className="ba-table">
                 <caption>Valores exatos dos orçamentos exibidos</caption>
                 <thead>
@@ -386,28 +368,37 @@ export default function BudgetPipelineChart({
                           />
                         </filter>
                       </defs>
-                      <CartesianGrid vertical={false} stroke="#e1e8f0" />
+                      <CartesianGrid
+                        vertical={false}
+                        stroke="var(--fv-chart-grid, #E5E2DC)"
+                      />
                       <XAxis
                         dataKey="nome"
                         interval={0}
                         height={70}
                         tick={<NomeOrcamento />}
                         tickLine={false}
-                        axisLine={{ stroke: "#b7c6d5" }}
+                        axisLine={{ stroke: "var(--fv-border, #E5E2DC)" }}
                       />
                       <YAxis
                         width={65}
                         domain={eixo.domain}
                         ticks={eixo.ticks}
                         tickFormatter={compacto}
-                        tick={{ fill: "#536c86", fontSize: 11 }}
+                        tick={{
+                          fill: "var(--fv-muted, #596660)",
+                          fontSize: 11,
+                        }}
                         tickLine={false}
                         axisLine={false}
                       />
-                      <ReferenceLine y={0} stroke="#a5b6c8" />
+                      <ReferenceLine y={0} stroke="var(--fv-muted, #596660)" />
                       <Tooltip
                         content={<DetalheOrcamento />}
-                        cursor={{ fill: "#e8eff7", fillOpacity: 0.6 }}
+                        cursor={{
+                          fill: "var(--fv-surface2, #F3F1ED)",
+                          fillOpacity: 0.6,
+                        }}
                         wrapperStyle={{ zIndex: 20 }}
                         allowEscapeViewBox={{ x: true, y: true }}
                       />
@@ -424,7 +415,7 @@ export default function BudgetPipelineChart({
                           dataKey="valorPlanejado"
                           position="top"
                           formatter={rotuloValor}
-                          fill="#153856"
+                          fill="var(--fv-text, #172327)"
                           fontSize={11}
                           offset={10}
                         />
@@ -442,7 +433,7 @@ export default function BudgetPipelineChart({
                           dataKey="valorUtilizado"
                           position="top"
                           formatter={rotuloValor}
-                          fill="#995820"
+                          fill="var(--fv-dark-warning, #86501B)"
                           fontSize={11}
                           offset={10}
                         />
@@ -500,10 +491,11 @@ export default function BudgetPipelineChart({
             </div>
           )}
           <p className="ba-note">
-            Valores contabilizados pela data de análise, incluindo lançamentos
-            em aberto.{" "}
+            Valores seguem o critério e o período de análise selecionados.
+            Competência e vencimento podem incluir registros em aberto; baixa
+            representa os movimentos da fonte selecionada.{" "}
             {percentual
-              ? "Azul indica consumo até o limite; vermelho indica excedente."
+              ? "Barra cheia indica utilização até o limite; hachura identifica o excedente."
               : "Cores identificam planejado e utilizado; o sombreamento é igual para todas as colunas."}{" "}
             Consulte a utilização individual quando os orçamentos tiverem
             critérios ou períodos diferentes.

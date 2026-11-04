@@ -155,3 +155,35 @@
   color: var(--fv-dark-text, #2c465f);
   white-space: nowrap;
 }
+
+/* Referencias visuais sem alterar os limites cadastrados. */
+.budget-analysis-page .bp-reference {
+  position: absolute;
+  left: 0;
+  top: -5px;
+  height: 40px;
+  border-left: 2px dashed var(--fv-muted, #596660);
+}
+html[data-fv-theme] .budget-analysis-page .bp-excess {
+  background:
+    repeating-linear-gradient(135deg, transparent 0 5px, #ffffff55 5px 8px),
+    var(--fv-chart-danger, #d33f50);
+}
+.budget-analysis-page .bp-row-name .bp-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--fv-border, #e5e2dc);
+  font-size: 12px;
+  font-weight: 650;
+}
+.budget-analysis-page .bp-badge.within {
+  color: var(--fv-dark-success, #21664f);
+  background: var(--fv-dark-success-soft, #edf5ef);
+}
+.budget-analysis-page .bp-badge.exceeded {
+  color: var(--fv-dark-danger, #ad3040);
+  background: var(--fv-dark-danger-soft, #fbeff0);
+}

@@ -733,3 +733,157 @@ html[data-fv-theme="dark"] .finvista-workspace,
 html[data-fv-theme="dark"] .finvista-main {
   background-color: #0b1421;
 }
+
+/* Modo claro: papel, areia e verde. Escopo exclusivo; login conserva seu estilo. */
+html[data-fv-theme="light"] {
+  --fv-canvas: #faf8f5;
+  --fv-surface: #ffffff;
+  --fv-surface2: #f3f1ed;
+  --fv-border: #e5e2dc;
+  --fv-text: #172327;
+  --fv-muted: #596660;
+  --fv-brand: #184e43;
+  --fv-focus: #184e43;
+  --fv-chart-grid: #e5e2dc;
+  --fv-shadow: 0 2px 8px #17232706;
+  /* Compatibilidade com os componentes existentes que usam estes nomes. */
+  --fv-dark-canvas: var(--fv-canvas);
+  --fv-dark-surface: var(--fv-surface);
+  --fv-dark-surface2: var(--fv-surface2);
+  --fv-dark-text: var(--fv-text);
+  --fv-dark-muted: var(--fv-muted);
+  --fv-dark-border: var(--fv-border);
+  --fv-dark-primary: var(--fv-brand);
+  --fv-dark-on-solid: #ffffff;
+  --fv-dark-info: #245f74;
+  --fv-dark-info-fill: #245f74;
+  --fv-dark-info-soft: #edf4f5;
+  --fv-dark-success: #21664f;
+  --fv-dark-success-fill: #21664f;
+  --fv-dark-success-soft: #edf5ef;
+  --fv-dark-danger: #ad3040;
+  --fv-dark-danger-fill: #ad3040;
+  --fv-dark-danger-soft: #fbeff0;
+  --fv-dark-warning: #86501b;
+  --fv-dark-warning-fill: #86501b;
+  --fv-dark-warning-soft: #fff5e6;
+  --fv-dark-purple: #7050a0;
+  --fv-dark-purple-fill: #7050a0;
+  --fv-dark-purple-soft: #f2eef7;
+  --fv-dark-translucent: #fffffff2;
+}
+html[data-fv-theme="light"]
+  :is(.finvista-app, .finvista-workspace, .finvista-content, .finvista-main) {
+  background-color: var(--fv-canvas);
+  color: var(--fv-text);
+}
+html[data-fv-theme="light"] #dashboard.executive-dashboard {
+  background: transparent;
+  --ev-surface: #ffffff;
+  --ev-text: #172327;
+  --ev-muted: #596660;
+  --ev-line: #e5e2dc;
+}
+html[data-fv-theme="light"] .finvista-topbar {
+  background: var(--fv-surface);
+  color: var(--fv-text);
+  border-color: var(--fv-border);
+}
+html[data-fv-theme="light"] .finvista-sidebar {
+  background: #184e43;
+  color: #ffffff;
+  border-right-color: #184e43;
+}
+html[data-fv-theme="light"]
+  .finvista-sidebar
+  :is(.finvista-nav-item, .finvista-brand, .finvista-navigation-label) {
+  color: #ffffff;
+}
+html[data-fv-theme="light"] .finvista-sidebar .finvista-navigation-label {
+  opacity: 0.8;
+}
+html[data-fv-theme="light"] .finvista-sidebar .finvista-nav-item:hover {
+  background: #ffffff14;
+}
+html[data-fv-theme="light"] .finvista-sidebar .finvista-nav-item-active {
+  background: #ffffff24;
+  color: #ffffff;
+  border-left-color: #e58a2f;
+}
+html[data-fv-theme="light"] .finvista-sidebar-divider {
+  background: #ffffff26;
+}
+html[data-fv-theme="light"]
+  .finvista-main
+  :is(
+    .executive-panel,
+    .executive-kpi,
+    .fe-card,
+    .fp-card,
+    .ax-panel,
+    .ba-comparison,
+    .fv-history-panel,
+    .fv-management-panel,
+    .fv-management-cards > article,
+    .metas-resumo article,
+    .ba-summary article,
+    .fv-history-kpis article
+  ) {
+  background: #ffffff;
+  border-color: #e5e2dc;
+  box-shadow: var(--fv-shadow);
+  color: var(--fv-text);
+}
+html[data-fv-theme="light"]
+  .finvista-main
+  :is(.fvf-page-filters, .ba-filter, .df-filter-panel) {
+  background: #f3f1ed;
+  border-color: #e5e2dc;
+  color: var(--fv-text);
+}
+html[data-fv-theme="light"] .finvista-main :is(h1, h2, h3, h4) {
+  color: #172327;
+}
+html[data-fv-theme="light"]
+  #dashboard.executive-dashboard
+  .executive-kpi
+  > strong {
+  color: #172327;
+}
+html[data-fv-theme="light"]
+  .finvista-main
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    select,
+    textarea
+  ) {
+  background-color: #ffffff;
+  color: #172327;
+  border-color: #e5e2dc;
+  color-scheme: light;
+}
+html[data-fv-theme="light"] .finvista-main ::placeholder {
+  color: #65716b;
+  opacity: 1;
+}
+html[data-fv-theme="light"] .finvista-main thead th {
+  background: #f3f1ed;
+  color: #172327;
+  border-color: #e5e2dc;
+}
+html[data-fv-theme="light"] .finvista-main tbody :is(td, th) {
+  border-color: #e5e2dc;
+}
+html[data-fv-theme="light"]
+  .finvista-main
+  :is(.executive-eyebrow, .exec-eyebrow, .ba-eyebrow) {
+  color: #184e43;
+}
+html[data-fv-theme="light"] .finvista-main .recharts-default-tooltip {
+  background-color: #ffffff !important;
+  border-color: #e5e2dc !important;
+  color: #172327 !important;
+}
+html[data-fv-theme="light"] .finvista-main .recharts-cartesian-axis-tick text {
+  fill: #596660;
+}

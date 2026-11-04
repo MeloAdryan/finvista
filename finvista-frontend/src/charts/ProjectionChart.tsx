@@ -7,7 +7,6 @@ import {
   CartesianGrid,
   ComposedChart,
   Line,
-  ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -29,6 +28,7 @@ export default function ProjectionChart({
 }) {
   const appearance = useChartAppearance();
   const [tabela, setTabela] = useState(false);
+  const [visual, setVisual] = useState<"cenarios" | "mensal">("cenarios");
   const ultimo = dados.meses.at(-1);
   const mensal = eixoFinanceiro(
     dados.meses.flatMap((m) => [
@@ -51,6 +51,8 @@ export default function ProjectionChart({
     {
       periodo: "Início",
       saldoBase: dados.saldoInicial,
+      saldoConservador: dados.saldoInicial,
+      saldoOtimista: dados.saldoInicial,
       faixa: [dados.saldoInicial, dados.saldoInicial],
     },
     ...dados.meses.map((m) => ({
@@ -95,15 +97,15 @@ export default function ProjectionChart({
       ]),
     ]);
   return (
-    <section className="fe-card">
+    <section className="fe-card projection-results">
       <FinancialChartPaint id={appearance.id} />
       <div className="fe-heading">
         <div>
           <h2>Resultados da simulação</h2>
           <p>
             {dados.inicio.split("-").reverse().join("/")} —{" "}
-            {dados.fim.split("-").reverse().join("/")} · meses completos,
-            incluindo o mês atual.
+            {dados.fim.split("-").reverse().join("/")} · meses da simulação no
+            recorte selecionado.
           </p>
         </div>
         <div className="fe-actions">
@@ -136,8 +138,39 @@ export default function ProjectionChart({
           : "Sem receita complementar projetada: os resultados consideram somente receitas e despesas cadastradas."}{" "}
         Despesas ainda não cadastradas não entram nesta simulação.
       </p>
+      <div
+        className="fe-actions projection-view"
+        role="group"
+        aria-label="Visualização da simulação"
+      >
+        <button
+          type="button"
+          aria-pressed={!tabela && visual === "cenarios"}
+          onClick={() => {
+            setVisual("cenarios");
+            setTabela(false);
+          }}
+        >
+          Cenários de saldo
+        </button>
+        <button
+          type="button"
+          aria-pressed={!tabela && visual === "mensal"}
+          onClick={() => {
+            setVisual("mensal");
+            setTabela(false);
+          }}
+        >
+          Composição mensal
+        </button>
+      </div>
       {tabela ? (
-        <div className="fe-table">
+        <div
+          className="fe-table"
+          tabIndex={0}
+          role="region"
+          aria-label="Simulação mensal, role horizontalmente para ver todas as colunas"
+        >
           <table>
             <caption>Simulação por mês e por cenário</caption>
             <thead>
@@ -172,121 +205,185 @@ export default function ProjectionChart({
         </div>
       ) : (
         <>
-          <h2>Resultado mensal simulado</h2>
-          <div className="fe-chart">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
-                data={dados.meses}
-                margin={{ top: 15, right: 15, left: 4, bottom: 5 }}
+          {visual === "mensal" && (
+            <>
+              <h2>Composição mensal simulada</h2>
+              <div className="fe-chart">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart
+                    data={dados.meses}
+                    margin={{ top: 15, right: 15, left: 4, bottom: 5 }}
+                  >
+                    <CartesianGrid
+                      stroke="var(--fv-chart-grid, #E5E2DC)"
+                      vertical={false}
+                      strokeDasharray="3 4"
+                    />
+                    <XAxis dataKey="periodo" minTickGap={30} />
+                    <YAxis
+                      width={65}
+                      domain={mensal.domain}
+                      ticks={mensal.ticks}
+                      tickFormatter={compactoFinanceiro}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: "var(--fv-surface, #fff)",
+                        borderColor: "var(--fv-border, #E5E2DC)",
+                        color: "var(--fv-text, #172327)",
+                      }}
+                      formatter={(v) => moedaFinanceira(Number(v))}
+                    />
+                    <ReferenceLine y={0} stroke="var(--fv-muted, #596660)" />
+                    <Bar
+                      isAnimationActive={false}
+                      dataKey="receitaRegistrada"
+                      name="Receita registrada"
+                      stackId="receita"
+                      fill={appearance.fill("#3f806d")}
+                      maxBarSize={32}
+                    />
+                    <Bar
+                      isAnimationActive={false}
+                      dataKey="receitaComplementar"
+                      name="Receita complementar simulada"
+                      stackId="receita"
+                      fill={appearance.fill("#b1d5c9")}
+                      maxBarSize={32}
+                    />
+                    <Bar
+                      isAnimationActive={false}
+                      dataKey="despesaRegistrada"
+                      name="Despesa registrada"
+                      fill={appearance.fill("#c77d31")}
+                      maxBarSize={32}
+                    />
+                    <Line
+                      isAnimationActive={false}
+                      type="linear"
+                      dataKey="resultadoMensal"
+                      name="Resultado mensal simulado"
+                      stroke="var(--fv-chart-blue, #3786dc)"
+                      strokeDasharray="5 4"
+                      dot={false}
+                      strokeWidth={2}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="fe-legend">
+                <span>▰ Receita registrada</span>
+                <span>▱ Complemento hipotético</span>
+                <span>▼ Despesa registrada</span>
+                <span>┄ Resultado mensal simulado</span>
+              </div>
+            </>
+          )}
+          {visual === "cenarios" && (
+            <>
+              <h2>Saldo simulado por cenário</h2>
+              <div className="fe-chart">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart
+                    data={faixa}
+                    margin={{ top: 20, right: 15, left: 4, bottom: 5 }}
+                  >
+                    <CartesianGrid
+                      stroke="var(--fv-chart-grid, #E5E2DC)"
+                      vertical={false}
+                      strokeDasharray="3 4"
+                    />
+                    <XAxis dataKey="periodo" minTickGap={30} />
+                    <YAxis
+                      width={65}
+                      domain={saldo.domain}
+                      ticks={saldo.ticks}
+                      tickFormatter={compactoFinanceiro}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: "var(--fv-surface, #fff)",
+                        borderColor: "var(--fv-border, #E5E2DC)",
+                        color: "var(--fv-text, #172327)",
+                      }}
+                      formatter={(v) =>
+                        Array.isArray(v)
+                          ? `${moedaFinanceira(Number(v[0]))} — ${moedaFinanceira(Number(v[1]))}`
+                          : moedaFinanceira(Number(v))
+                      }
+                    />
+                    <ReferenceLine y={0} stroke="var(--fv-muted, #596660)" />
+                    <Area
+                      isAnimationActive={false}
+                      type="linear"
+                      dataKey="faixa"
+                      name="Faixa conservador → otimista"
+                      stroke="none"
+                      fill={appearance.area("#bfd5f4")}
+                      fillOpacity={0.6}
+                    />
+                    <Line
+                      isAnimationActive={false}
+                      type="linear"
+                      dataKey="saldoBase"
+                      name="Saldo simulado base"
+                      stroke="var(--fv-chart-blue, #3786dc)"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      isAnimationActive={false}
+                      type="linear"
+                      dataKey="saldoConservador"
+                      name="Saldo conservador"
+                      stroke="var(--fv-chart-orange, #e58a2f)"
+                      strokeDasharray="8 5"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      isAnimationActive={false}
+                      type="linear"
+                      dataKey="saldoOtimista"
+                      name="Saldo otimista"
+                      stroke="var(--fv-chart-success, #2c9474)"
+                      strokeDasharray="2 5"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <ReferenceLine
+                      x="Início"
+                      stroke="var(--fv-muted, #596660)"
+                      label="Base informada"
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+              <div
+                className="fe-legend projection-legend"
+                aria-label="Legenda dos cenários"
               >
-                <CartesianGrid stroke="#e4eaf1" />
-                <XAxis dataKey="periodo" minTickGap={30} />
-                <YAxis
-                  width={65}
-                  domain={mensal.domain}
-                  ticks={mensal.ticks}
-                  tickFormatter={compactoFinanceiro}
-                />
-                <Tooltip formatter={(v) => moedaFinanceira(Number(v))} />
-                <ReferenceLine y={0} stroke="#94a3b8" />
-                <Bar
-                  isAnimationActive={false}
-                  dataKey="receitaRegistrada"
-                  name="Receita registrada"
-                  stackId="receita"
-                  fill={appearance.fill("#3f806d")}
-                  maxBarSize={32}
-                />
-                <Bar
-                  isAnimationActive={false}
-                  dataKey="receitaComplementar"
-                  name="Receita complementar simulada"
-                  stackId="receita"
-                  fill={appearance.fill("#b1d5c9")}
-                  maxBarSize={32}
-                />
-                <Bar
-                  isAnimationActive={false}
-                  dataKey="despesaRegistrada"
-                  name="Despesa registrada"
-                  fill={appearance.fill("#c77d31")}
-                  maxBarSize={32}
-                />
-                <Line
-                  isAnimationActive={false}
-                  type="linear"
-                  dataKey="resultadoMensal"
-                  name="Resultado mensal simulado"
-                  stroke="#2563eb"
-                  strokeDasharray="5 4"
-                  dot={false}
-                  strokeWidth={2}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="fe-legend">
-            <span>Verde: receita registrada</span>
-            <span>Verde claro: complemento hipotético</span>
-            <span>Laranja: despesa registrada</span>
-            <span>Azul tracejado: resultado simulado</span>
-          </div>
-          <h2>Saldo simulado e faixa dos cenários</h2>
-          <div className="fe-chart">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
-                data={faixa}
-                margin={{ top: 20, right: 15, left: 4, bottom: 5 }}
-              >
-                <CartesianGrid stroke="#e4eaf1" />
-                <XAxis dataKey="periodo" minTickGap={30} />
-                <YAxis
-                  width={65}
-                  domain={saldo.domain}
-                  ticks={saldo.ticks}
-                  tickFormatter={compactoFinanceiro}
-                />
-                <Tooltip
-                  formatter={(v) =>
-                    Array.isArray(v)
-                      ? `${moedaFinanceira(Number(v[0]))} — ${moedaFinanceira(Number(v[1]))}`
-                      : moedaFinanceira(Number(v))
-                  }
-                />
-                <ReferenceArea
-                  x1={dados.meses[0]?.periodo}
-                  x2={ultimo?.periodo}
-                  fill="#f1f5fb"
-                  fillOpacity={0.5}
-                />
-                <ReferenceLine y={0} stroke="#94a3b8" />
-                <Area
-                  isAnimationActive={false}
-                  type="linear"
-                  dataKey="faixa"
-                  name="Faixa conservador → otimista"
-                  stroke="none"
-                  fill={appearance.area("#bfd5f4")}
-                  fillOpacity={0.6}
-                />
-                <Line
-                  isAnimationActive={false}
-                  type="linear"
-                  dataKey="saldoBase"
-                  name="Saldo simulado base"
-                  stroke="#153856"
-                  strokeDasharray="5 4"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <ReferenceLine
-                  x="Início"
-                  stroke="#94a3b8"
-                  label="Base informada"
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
+                <span>
+                  <i className="projection-line base" aria-hidden="true" />
+                  Base · linha contínua
+                </span>
+                <span>
+                  <i
+                    className="projection-line conservative"
+                    aria-hidden="true"
+                  />
+                  Conservador · tracejada
+                </span>
+                <span>
+                  <i
+                    className="projection-line optimistic"
+                    aria-hidden="true"
+                  />
+                  Otimista · pontilhada
+                </span>
+              </div>
+            </>
+          )}
         </>
       )}
       <div className="fe-bases">
@@ -307,15 +404,6 @@ export default function ProjectionChart({
           </strong>
         </div>
       </div>
-      <p className="fe-note">
-        Saldo simulado = saldo inicial informado + resultado acumulado simulado.
-        O histórico anterior não é acrescentado automaticamente. A faixa varia
-        apenas o alvo de receita em ±{dados.variacaoPercentual}%; despesas
-        registradas permanecem iguais. É uma análise de sensibilidade, sem
-        probabilidade associada. Receita já registrada nunca é reduzida pelo
-        cenário. Os registros são pela data de análise; não há separação
-        confirmada entre valores pagos e em aberto.
-      </p>
     </section>
   );
 }

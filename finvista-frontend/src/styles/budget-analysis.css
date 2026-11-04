@@ -302,3 +302,40 @@
     font-size: 23px;
   }
 }
+
+/* Orcamentos: um resumo, avisos antes dos indicadores e controles acessiveis. */
+.budget-analysis-page .ba-overlap {
+  margin: 0 0 18px;
+}
+.budget-analysis-page :is(button, input, select) {
+  min-height: 44px;
+}
+.budget-analysis-page .ba-table-scroll:focus-visible {
+  outline: 3px solid var(--fv-focus, #184e43);
+  outline-offset: 3px;
+}
+.budget-analysis-page .ba-summary {
+  margin-block: 18px;
+}
+.budget-analysis-page .bc-chart {
+  height: clamp(320px, 38vw, 430px);
+}
+.budget-analysis-page .ba-filter-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+@media (max-width: 600px) {
+  .budget-analysis-page .ba-page-heading,
+  .budget-analysis-page .ba-heading {
+    flex-direction: column;
+  }
+  .budget-analysis-page .ba-actions {
+    width: 100%;
+  }
+  .finvista-main .budget-analysis-page .ba-summary {
+    grid-template-columns: 1fr;
+  }
+  .budget-analysis-page .ba-filter input,
+  .budget-analysis-page .ba-filter select {
+    font-size: 16px;
+  }
+}

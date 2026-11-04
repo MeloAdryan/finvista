@@ -26,7 +26,6 @@ import {
 } from "../services/spendingGoalService";
 
 import { descreverRegistros } from "../services/comparisonCoverage";
-import KpiComparison from "../components/KpiComparison";
 
 import SpendingGoalGauge from "../components/SpendingGoalGauge";
 
@@ -310,6 +309,10 @@ function Dashboard() {
         )
       : "Sem base de receita comparável",
   ];
+  const percentualValido =
+    dados.receita > 0 &&
+    Number.isFinite(dados.margem) &&
+    analise.registros?.receitasAtual !== 0;
   return (
     <div id="dashboard" className="dashboard executive-dashboard">
       <p className="df-applied" aria-live="polite">
@@ -347,7 +350,7 @@ function Dashboard() {
       )}
       {carregando && <p role="status">Atualizando os dados do recorte…</p>}
 
-      <section className="executive-kpi-grid">
+      <section className="executive-kpi-grid ev-kpi-compact ev-kpi-four">
         <article className="executive-kpi">
           <span className="ev-kpi-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="currentColor">
@@ -370,17 +373,11 @@ function Dashboard() {
                 : "Receitas do recorte"}
           </p>
 
-          <details className="ev-kpi-more">
-            <summary>{resumosComparacao[0]}</summary>
-            <KpiComparison
-              rotulo="período anterior"
-              registrosAtual={analise.registros?.receitasAtual}
-              registrosAnterior={analise.registros?.receitasAnterior}
-              atual={dados.receita}
-              anterior={dados.receitaMesAnterior}
-              variacao={dados.variacaoReceita}
-            />
-          </details>
+          <div
+            className={`ev-kpi-static ${resumosComparacao[0].startsWith("↑") ? "ev-positive" : resumosComparacao[0].startsWith("↓") ? "ev-negative" : "ev-neutral"}`}
+          >
+            <span>{resumosComparacao[0]}</span>
+          </div>
           <button
             type="button"
             className="financial-detail-trigger"
@@ -422,18 +419,11 @@ function Dashboard() {
                 : "Despesas do recorte"}
           </p>
 
-          <details className="ev-kpi-more">
-            <summary>{resumosComparacao[1]}</summary>
-            <KpiComparison
-              rotulo="período anterior"
-              registrosAtual={analise.registros?.despesasAtual}
-              registrosAnterior={analise.registros?.despesasAnterior}
-              atual={dados.despesa}
-              anterior={dados.despesaMesAnterior}
-              variacao={dados.variacaoDespesa}
-              despesa
-            />
-          </details>
+          <div
+            className={`ev-kpi-static ${resumosComparacao[1].startsWith("↓") ? "ev-positive" : resumosComparacao[1].startsWith("↑") ? "ev-negative" : "ev-neutral"}`}
+          >
+            <span>{resumosComparacao[1]}</span>
+          </div>
           <button
             type="button"
             className="financial-detail-trigger"
@@ -445,7 +435,7 @@ function Dashboard() {
           </button>
         </article>
 
-        <article className="executive-kpi">
+        <article className="executive-kpi ev-result-kpi">
           <span className="ev-kpi-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path
@@ -474,84 +464,49 @@ function Dashboard() {
               : "Receitas menos despesas"}
           </p>
 
-          <details className="ev-kpi-more">
-            <summary>{resumosComparacao[2]}</summary>
-            <KpiComparison
-              rotulo="período anterior"
-              registrosAtual={
-                analise.registros
-                  ? analise.registros.receitasAtual +
-                    analise.registros.despesasAtual
-                  : undefined
-              }
-              registrosAnterior={
-                analise.registros
-                  ? analise.registros.receitasAnterior +
-                    analise.registros.despesasAnterior
-                  : undefined
-              }
-              atual={dados.resultado}
-              anterior={dados.resultadoMesAnterior}
-              variacao={dados.variacaoResultado}
-            />
-          </details>
+          <div
+            className={`ev-kpi-static ${resumosComparacao[2].startsWith("↑") ? "ev-positive" : resumosComparacao[2].startsWith("↓") ? "ev-negative" : "ev-neutral"}`}
+          >
+            <span>{resumosComparacao[2]}</span>
+          </div>
         </article>
 
-        <article className="executive-kpi">
+        <article className="executive-kpi ev-margin-kpi">
           <span className="ev-kpi-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="m5 20 14-16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
-              <circle
-                cx="6"
-                cy="6"
-                r="3"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
-              <circle
-                cx="18"
-                cy="18"
-                r="3"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M5 20 19 4" />
+              <circle cx="6" cy="6" r="3" />
+              <circle cx="18" cy="18" r="3" />
             </svg>
           </span>
           <div className="executive-kpi-top">
-            <span>{nomes.margem} (%)</span>
+            <span>Margem (%)</span>
             <FinancialHelp termo="margem" />
           </div>
-
-          <strong>
-            {dados.receita <= 0 ? "—" : `${formatarPercentual(dados.margem)}%`}
+          <strong
+            className={
+              percentualValido
+                ? dados.margem < 0
+                  ? "ev-negative"
+                  : "ev-positive"
+                : "ev-rate-neutral"
+            }
+          >
+            {percentualValido ? `${formatarPercentual(dados.margem)}%` : "—"}
           </strong>
           <p>
-            {dados.receita <= 0
-              ? "Sem base positiva de receita"
-              : "Resultado dividido pela receita do recorte"}
+            {percentualValido ? nomes.margem : "Sem base positiva de receita"}
           </p>
-
-          <details className="ev-kpi-more">
-            <summary>{resumosComparacao[3]}</summary>
-            <KpiComparison
-              rotulo="período anterior"
-              registrosAtual={analise.registros?.receitasAtual}
-              registrosAnterior={analise.registros?.receitasAnterior}
-              atual={dados.margem}
-              anterior={dados.margemMesAnterior}
-              margem
-              margemComparavel={
-                dados.receita > 0 && (dados.receitaMesAnterior ?? 0) > 0
-              }
-            />
-          </details>
+          <div
+            className={`ev-kpi-static ${percentualValido && resumosComparacao[3].startsWith("↑") ? "ev-positive" : percentualValido && resumosComparacao[3].startsWith("↓") ? "ev-negative" : "ev-neutral"}`}
+          >
+            <span>{resumosComparacao[3]}</span>
+          </div>
         </article>
       </section>
 
@@ -1324,7 +1279,7 @@ function resumoComparacao(
   )
     return "Comparação não confirmada";
   const delta = Math.round((atual - anterior) * 100) / 100;
-  if (delta === 0) return "Sem variação · ver comparação";
+  if (delta === 0) return "Sem variação";
   const direcao = delta > 0 ? "↑" : "↓";
   return pontos
     ? `${direcao} ${Math.abs(delta).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} p.p. · anterior`

@@ -6,28 +6,37 @@ export default function DistributionBars({
   selecionado,
   onSelecionar,
   destaques = 1,
+  ranking = false,
 }: {
   dados: ExpenseRow[];
   total: number;
   selecionado?: string;
   onSelecionar: (nome: string) => void;
   destaques?: number;
+  ranking?: boolean;
 }) {
   const minimo = Math.min(0, ...dados.flatMap((m) => [m.atual, m.anterior]));
   const maximo = Math.max(0, ...dados.flatMap((m) => [m.atual, m.anterior]));
   const escala = maximo - minimo || 1;
   return (
-    <div className="ax-bars">
+    <div className={`ax-bars ${ranking ? "ax-ranked" : ""}`}>
       {dados.map((m, i) => (
         <button
           type="button"
           key={m.nome}
-          className="ax-bar-row"
+          className={`ax-bar-row ${ranking && i < destaques ? "ax-top-ranked" : ""}`}
           aria-pressed={selecionado === m.nome}
           onClick={() => onSelecionar(m.nome)}
           title={`${m.nome}: ${moedaFinanceira(m.atual)}; anterior ${moedaFinanceira(m.anterior)}; diferença ${moedaFinanceira(m.diferenca)}`}
         >
-          <span className="ax-bar-name">{m.nome}</span>
+          <span className="ax-bar-name">
+            {ranking && (
+              <b className="ax-rank" aria-label={`Posição ${i + 1}`}>
+                {i + 1}
+              </b>
+            )}
+            {m.nome}
+          </span>
           <span className="ax-track">
             <span
               className={`ax-fill ${i < destaques ? "ax-emphasis" : ""}`}

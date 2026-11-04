@@ -1,7 +1,6 @@
 import { useId } from "react";
 import type { BudgetPipelineData } from "../services/budgetPipelineService";
 import {
-  detectarSobreposicoes,
   moedaOrcamento,
   percentualOrcamento,
   dataOrcamento,
@@ -34,22 +33,14 @@ export default function BudgetPercentageChart({
   );
   const maximo = Math.ceil(maior / 100) * 100;
   const limite = (100 / maximo) * 100;
-  const sobrepostos = detectarSobreposicoes(dados);
   return (
     <div className="bp-panel" aria-labelledby={`bp-title-${id}`}>
       <h3 id={`bp-title-${id}`}>Utilização de cada orçamento</h3>
       <p className="bp-description">
-        Azul: consumo até o limite · vermelho: excedente · cinza: faixa
-        planejada. A referência de 100% usa a mesma escala em todas as linhas.
+        Barra cheia: utilizado até o limite · hachura: excedente. As marcas de
+        80% e 100% são referências visuais na mesma escala; 80% não altera
+        alertas configurados.
       </p>
-      {sobrepostos.length > 0 && (
-        <p className="bp-warning" role="status">
-          Há {sobrepostos.length} par(es) de orçamentos com períodos e critérios
-          sobrepostos. Um lançamento pode participar de mais de um orçamento; os
-          totais somados não representam despesa única consolidada. Confira os
-          critérios de cada linha.
-        </p>
-      )}
       <div className="bp-axis" aria-hidden="true">
         <span>0%</span>
         <strong
@@ -73,6 +64,21 @@ export default function BudgetPercentageChart({
           return (
             <article className="bp-row" key={item.id}>
               <div className="bp-row-name">
+                {percentual !== null && (
+                  <span
+                    className={`bp-badge ${percentual > 100 ? "exceeded" : "within"}`}
+                  >
+                    {percentual > 100
+                      ? "▲ Limite excedido"
+                      : percentual === 100
+                        ? "◆ Limite atingido"
+                        : percentual < 0
+                          ? "↩ Ajuste negativo"
+                          : percentual === 0
+                            ? "— Sem utilização"
+                            : "✓ Dentro do limite"}
+                  </span>
+                )}
                 <strong>
                   {item.nome} <small>#{item.id}</small>
                 </strong>
@@ -118,6 +124,12 @@ export default function BudgetPercentageChart({
                         />
                       )}
                       <span
+                        className="bp-reference"
+                        style={{ left: `${(80 / maximo) * 100}%` }}
+                        aria-hidden="true"
+                        title="80%: referência visual"
+                      />
+                      <span
                         className="bp-limit"
                         style={{ left: `${limite}%` }}
                       />
@@ -149,12 +161,6 @@ export default function BudgetPercentageChart({
           );
         })}
       </div>
-      <p className="bp-footnote">
-        O limite de cada orçamento é 100%, indicado pelo traço escuro. Não
-        redistribuímos despesas entre orçamentos nem presumimos erro porque um
-        deles ficou zerado. Valores registrados podem incluir lançamentos em
-        aberto.
-      </p>
     </div>
   );
 }

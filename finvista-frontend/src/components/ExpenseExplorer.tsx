@@ -1,5 +1,8 @@
 import { useContext } from "react";
-import { FinancialViewContext, FinancialViewUpdateContext } from "../contexts/financialViewContext";
+import {
+  FinancialViewContext,
+  FinancialViewUpdateContext,
+} from "../contexts/financialViewContext";
 import { useEffect, useState, type FormEvent } from "react";
 import {
   getExpenseAnalysis,
@@ -22,8 +25,8 @@ export default function ExpenseExplorer({
   prioridade?: "centros" | "categorias";
   revision?: number;
 }) {
-  const viewFilter=useContext(FinancialViewContext);
-  const updateView=useContext(FinancialViewUpdateContext);
+  const viewFilter = useContext(FinancialViewContext);
+  const updateView = useContext(FinancialViewUpdateContext);
   const { periodo, atualizarPeriodo } = useAnalysisPeriod();
   const [filtros, setFiltros] = useState<ExpenseFilters>(() => ({
     ...periodo,
@@ -39,6 +42,7 @@ export default function ExpenseExplorer({
   const [tipoTabela, setTipoTabela] = useState<"categorias" | "centros">(
     prioridade,
   );
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const [hierarquia, setHierarquia] = useState(false);
   const [pagina, setPagina] = useState(0);
   useEffect(() => {
@@ -47,7 +51,11 @@ export default function ExpenseExplorer({
     async function carregar() {
       setLoading(true);
       try {
-        const d = await getExpenseAnalysis(filtros, c.signal, viewFilter ?? undefined);
+        const d = await getExpenseAnalysis(
+          filtros,
+          c.signal,
+          viewFilter ?? undefined,
+        );
         if (ativo) {
           setDados(d);
           atualizarPeriodo({
@@ -80,8 +88,17 @@ export default function ExpenseExplorer({
       setErro("Informe as duas datas em ordem válida.");
       return;
     }
-    if(viewFilter && updateView && (draft.inicio!==dados?.inicio || draft.fim!==dados?.fim))
-      updateView({...viewFilter,periodo:"PERSONALIZADO",inicio:draft.inicio,fim:draft.fim});
+    if (
+      viewFilter &&
+      updateView &&
+      (draft.inicio !== dados?.inicio || draft.fim !== dados?.fim)
+    )
+      updateView({
+        ...viewFilter,
+        periodo: "PERSONALIZADO",
+        inicio: draft.inicio,
+        fim: draft.fim,
+      });
     setFiltros({ ...draft });
   }
   function selecionar(tipo: "centroCusto" | "categoria", nome: string) {
@@ -130,6 +147,14 @@ export default function ExpenseExplorer({
         ]),
       ]);
   };
+  const comparavel =
+    !!dados &&
+    (dados.registros?.atual ?? 0) > 0 &&
+    (dados.registros?.anterior ?? 0) > 0 &&
+    dados.totalAnterior > 0;
+  const diferenca = dados ? dados.total - dados.totalAnterior : 0;
+  const percentualVariacao =
+    comparavel && dados ? (diferenca / dados.totalAnterior) * 100 : null;
   const painelCentros = dados && (
     <section className="ax-panel">
       <div className="ax-heading">
@@ -205,6 +230,13 @@ export default function ExpenseExplorer({
           )}
         </div>
       </div>
+      {prioridade === "categorias" && (
+        <div className="ax-shape-legend" aria-label="Legenda da comparação">
+          <span>▰ Barra: valor atual</span>
+          <span>◆ Losango: período anterior</span>
+          <span>1–3: maiores valores do ranking exibido</span>
+        </div>
+      )}
       {hierarquia ? (
         <div className="ax-groups">
           {agruparCategorias(categorias).map((g) => (
@@ -218,6 +250,7 @@ export default function ExpenseExplorer({
                 total={dados.total}
                 selecionado={dados.categoria ?? ""}
                 onSelecionar={(nome) => selecionar("categoria", nome)}
+                ranking={prioridade === "categorias"}
                 destaques={3}
               />
             </details>
@@ -229,6 +262,7 @@ export default function ExpenseExplorer({
           total={dados.total}
           selecionado={dados.categoria ?? ""}
           onSelecionar={(nome) => selecionar("categoria", nome)}
+          ranking={prioridade === "categorias"}
           destaques={3}
         />
       )}
@@ -242,12 +276,16 @@ export default function ExpenseExplorer({
           ? `${categorias.length} categorias`
           : `Top ${Math.min(10, categorias.length)} de ${categorias.length} categorias`}
         . Clique para filtrar todos os resultados. Os três maiores valores
-        recebem destaque; o traço marca o período anterior.
+        {prioridade === "categorias"
+          ? "recebem destaque; o losango marca o período anterior."
+          : "recebem destaque; o traço marca o período anterior."}
       </p>
     </section>
   );
   return (
-    <div className="ax-explorer">
+    <div
+      className={`ax-explorer ${prioridade === "categorias" ? "ax-expenses" : ""}`}
+    >
       <section className="ax-panel">
         <h1>
           {prioridade === "centros"
@@ -259,7 +297,60 @@ export default function ExpenseExplorer({
             ? "Compare os centros e selecione um para consultar suas categorias e lançamentos."
             : "Explore as categorias de despesas e os lançamentos que compõem cada valor."}
         </p>
-        <form onSubmit={aplicar} className="ax-filter-grid">
+        {prioridade === "categorias" && (
+          <>
+            <div className="ax-filter-toolbar">
+              <p className="ax-note">
+                Filtros da análise · os gráficos usam os critérios aplicados
+                abaixo.
+              </p>
+              <button
+                type="button"
+                aria-expanded={filtrosAbertos}
+                aria-controls="expense-local-filters"
+                onClick={() => setFiltrosAbertos(!filtrosAbertos)}
+              >
+                {filtrosAbertos
+                  ? "Fechar filtros da análise"
+                  : "Editar filtros da análise"}
+              </button>
+            </div>
+            {dados && (
+              <div
+                className="ax-applied-chips"
+                aria-label="Critérios aplicados à análise"
+              >
+                <span>Período: {datas(dados.inicio, dados.fim)}</span>
+                <span>Centro: {dados.centroCusto || "Todos"}</span>
+                <span>Categoria: {dados.categoria || "Todas"}</span>
+                {filtros.comportamento && (
+                  <span>
+                    Comportamento:{" "}
+                    {filtros.comportamento === "FIXO"
+                      ? "Fixo"
+                      : filtros.comportamento === "VARIAVEL"
+                        ? "Variável"
+                        : "Não classificado"}
+                  </span>
+                )}
+                {filtros.natureza && (
+                  <span>
+                    Natureza:{" "}
+                    {filtros.natureza
+                      .replaceAll("_", " ")
+                      .toLocaleLowerCase("pt-BR")}
+                  </span>
+                )}
+              </div>
+            )}
+          </>
+        )}
+        <form
+          id={prioridade === "categorias" ? "expense-local-filters" : undefined}
+          hidden={prioridade === "categorias" && !filtrosAbertos}
+          onSubmit={aplicar}
+          className="ax-filter-grid"
+        >
           <label>
             Data inicial
             <input
@@ -410,9 +501,28 @@ export default function ExpenseExplorer({
               </div>
               <div>
                 Diferença entre totais registrados
-                <strong>
-                  {moedaFinanceira(dados.total - dados.totalAnterior)}
+                <strong
+                  className={
+                    prioridade === "categorias" && comparavel
+                      ? diferenca > 0
+                        ? "ax-increase"
+                        : diferenca < 0
+                          ? "ax-decrease"
+                          : ""
+                      : ""
+                  }
+                >
+                  {prioridade === "categorias" && comparavel
+                    ? `${diferenca > 0 ? "+" : ""}${moedaFinanceira(diferenca)}`
+                    : moedaFinanceira(dados.total - dados.totalAnterior)}
                 </strong>
+                {prioridade === "categorias" && (
+                  <small className="ax-variation-note">
+                    {percentualVariacao === null
+                      ? "Sem base comparável para percentual"
+                      : `${percentualVariacao > 0 ? "↑ +" : percentualVariacao < 0 ? "↓ " : ""}${percentualVariacao.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% sobre o período anterior`}
+                  </small>
+                )}
               </div>
             </div>
             {(dados.centroCusto || dados.categoria) && (
@@ -508,7 +618,12 @@ export default function ExpenseExplorer({
                 </div>
               </div>
               {tabela && (
-                <div className="ax-table">
+                <div
+                  className="ax-table"
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Tabela financeira, role horizontalmente para ver todas as colunas"
+                >
                   <table>
                     <thead>
                       <tr>
@@ -569,7 +684,12 @@ export default function ExpenseExplorer({
                   CSV de lançamentos
                 </button>
               </div>
-              <div className="ax-table">
+              <div
+                className="ax-table"
+                tabIndex={0}
+                role="region"
+                aria-label="Tabela financeira, role horizontalmente para ver todas as colunas"
+              >
                 <table>
                   <thead>
                     <tr>

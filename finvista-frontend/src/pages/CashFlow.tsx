@@ -113,7 +113,7 @@ export default function CashFlow() {
           aria-pressed={realized}
           onClick={() => setBasis("realizado")}
         >
-          Baixas financeiras
+          Caixa realizado
         </button>
         <button
           type="button"
@@ -136,7 +136,10 @@ export default function CashFlow() {
       </div>
       {cobertura && !carregando && !erro && (
         <details className="fe-card cf-coverage">
-          <summary>Critério e cobertura dos dados</summary>
+          <summary>
+            Cobertura das baixas · {cobertura.baixasNoPeriodo} no período
+            {cobertura.parcial ? " · detalhamento parcial" : " · ver detalhes"}
+          </summary>
           <strong>
             {cobertura.parcial
               ? "Caixa com detalhamento parcial"

@@ -378,7 +378,7 @@ export default function FinancialLedgerPanel({
       <div className="fe-heading">
         <div>
           <span className="fe-eyebrow">Caixa por conta · API</span>
-          <h2 id="cf-ledger-title">Para onde foi cada valor?</h2>
+          <h2 id="cf-ledger-title">Evolução do saldo por conta</h2>
           <p>
             Inclui transferências e aberturas, separadas dos recebimentos e
             pagamentos.
@@ -543,14 +543,14 @@ export default function FinancialLedgerPanel({
                     <Bar
                       dataKey="recebido"
                       name="Recebimentos"
-                      fill={paint.fill("#22b987")}
+                      fill={paint.fill("#3786dc")}
                       maxBarSize={28}
                       isAnimationActive={false}
                     />
                     <Bar
                       dataKey="pagamentoVisual"
                       name="Pagamentos"
-                      fill={paint.fill("#f04467")}
+                      fill={paint.fill("#e58a2f")}
                       maxBarSize={28}
                       isAnimationActive={false}
                     />
@@ -580,7 +580,7 @@ export default function FinancialLedgerPanel({
                       dataKey="saldoVisual"
                       name={lineName}
                       connectNulls={false}
-                      stroke="#60a5fa"
+                      stroke="var(--fv-chart-blue, #3786dc)"
                       strokeWidth={2.5}
                       dot={rows.length <= 32 ? { r: 2.5 } : false}
                       isAnimationActive={false}
@@ -592,7 +592,7 @@ export default function FinancialLedgerPanel({
                         endIndex={rows.length - 1}
                         tickFormatter={dateLabel}
                         height={24}
-                        stroke="#60a5fa"
+                        stroke="var(--fv-chart-blue, #3786dc)"
                         fill="var(--fv-dark-surface, #fff)"
                       />
                     )}
@@ -601,15 +601,17 @@ export default function FinancialLedgerPanel({
               </div>
               <div className="cf-legend">
                 {[
-                  ["#22b987", "Recebimentos"],
-                  ["#f04467", "Pagamentos"],
-                  ["#9b71ef", "Transferências de entrada"],
-                  ["#b34f89", "Transferências de saída"],
-                  ["#f59e0b", "Aberturas"],
-                  ["#60a5fa", lineName],
-                ].map(([color, label]) => (
+                  ["var(--fv-chart-blue)", "Recebimentos", "▲"],
+                  ["var(--fv-chart-orange)", "Pagamentos", "▼"],
+                  ["var(--fv-chart-purple)", "Transferências de entrada", "↗"],
+                  ["#b34f89", "Transferências de saída", "↘"],
+                  ["var(--fv-chart-orange)", "Aberturas", "◆"],
+                  ["var(--fv-chart-blue)", lineName, "━"],
+                ].map(([color, label, shape]) => (
                   <span key={label}>
-                    <i style={{ background: color }} />
+                    <i className="cf-key" style={{ color }} aria-hidden="true">
+                      {shape}
+                    </i>
                     {label}
                   </span>
                 ))}

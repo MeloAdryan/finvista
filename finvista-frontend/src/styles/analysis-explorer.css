@@ -300,3 +300,92 @@
   background: var(--fv-dark-primary, #1b3350);
   color: var(--fv-dark-on-solid, #fff);
 }
+
+/* Despesas apenas: Centros de custo conserva seu layout nesta entrega. */
+.ax-expenses .ax-filter-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ax-expenses .ax-applied-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.ax-expenses .ax-applied-chips > span {
+  border: 1px solid var(--fv-border, #e5e2dc);
+  background: var(--fv-surface2, #f3f1ed);
+  color: var(--fv-text, #172327);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.ax-expenses :is(button, input, select) {
+  min-height: 44px;
+}
+.ax-expenses .ax-filter-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+}
+.ax-expenses .ax-shape-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin: 12px 0;
+  font-size: 12px;
+  color: var(--fv-muted, #596660);
+}
+.ax-expenses .ax-rank {
+  display: inline-flex;
+  width: 25px;
+  height: 25px;
+  justify-content: center;
+  align-items: center;
+  margin-right: 8px;
+  border: 1px solid var(--fv-border, #e5e2dc);
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.ax-expenses .ax-top-ranked .ax-bar-name {
+  font-weight: 700;
+}
+.ax-expenses .ax-previous {
+  width: 9px;
+  height: 9px;
+  top: 5px;
+  border: 2px solid var(--fv-text, #172327);
+  transform: translateX(-50%) rotate(45deg);
+  background: var(--fv-surface, #fff);
+}
+.ax-expenses .ax-summary .ax-increase {
+  color: var(--fv-dark-danger, #ad3040);
+}
+.ax-expenses .ax-summary .ax-decrease {
+  color: var(--fv-dark-success, #21664f);
+}
+.ax-expenses .ax-variation-note {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 8px;
+  color: var(--fv-muted, #596660);
+}
+.ax-expenses .ax-table:focus-visible {
+  outline: 3px solid var(--fv-focus, #184e43);
+  outline-offset: 3px;
+}
+@media (max-width: 600px) {
+  .ax-expenses .ax-heading {
+    flex-direction: column;
+  }
+  .ax-expenses .ax-filter-grid input,
+  .ax-expenses .ax-filter-grid select {
+    font-size: 16px;
+  }
+  .ax-expenses .ax-summary {
+    grid-template-columns: 1fr;
+  }
+}

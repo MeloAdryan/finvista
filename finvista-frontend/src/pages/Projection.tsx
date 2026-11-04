@@ -120,8 +120,8 @@ export default function Projection() {
       }
     : null;
   return (
-    <div className="dashboard fe-page">
-      <section className="fe-card">
+    <div className="dashboard fe-page projection-page">
+      <section className="fe-card projection-premises">
         <span className="fe-eyebrow">Premissas da simulação</span>
         <h1>Projeção financeira de seis meses</h1>
         <p className="fe-note">
@@ -176,7 +176,7 @@ export default function Projection() {
             Simular
           </button>
         </form>
-        <div className="fe-actions">
+        <div className="fe-actions projection-premise-actions">
           <button
             type="button"
             disabled={carregando}
@@ -226,7 +226,7 @@ export default function Projection() {
         dadosVisiveis &&
         (mesesVisiveis.length ? (
           <>
-            <p className="fe-note">
+            <p className="fe-note projection-range-note">
               Meses completos da simulação que cruzam o filtro. Os saldos
               preservam os meses anteriores da simulação. O filtro não altera a
               base por competência nem cria projeções fora do horizonte de seis
