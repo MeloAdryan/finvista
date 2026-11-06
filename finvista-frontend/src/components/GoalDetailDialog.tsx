@@ -43,7 +43,9 @@ export default function GoalDetailDialog({
       <header className="goal-detail-header">
         <div>
           <span>ACOMPANHAMENTO DA META · {periodoMeta(meta)}</span>
-          <h2 id={titulo}>Meta de gastos #{meta.id}</h2>
+          <h2 id={titulo}>
+            {meta.serie?.nome ?? `Meta de gastos #${meta.id}`}
+          </h2>
           <p>
             {meta.dataInicio.split("-").reverse().join("/")} —{" "}
             {meta.dataFim.split("-").reverse().join("/")}

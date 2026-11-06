@@ -40,6 +40,7 @@ import "../styles/goal-actions.css";
 import "../styles/phase3-goal-cards.css";
 import "../styles/goal-expanded.css";
 import GoalProgress from "../components/GoalProgress";
+import GoalDetailDialog from "../components/GoalDetailDialog";
 import { periodoMeta } from "../services/goalPresentation";
 
 const formatarMoeda = (valor: number) =>
@@ -60,6 +61,7 @@ function SpendingGoals() {
   const viewFilter = useContext(FinancialViewContext);
   const updateView = useContext(FinancialViewUpdateContext);
   const [sucessoCadastro, setSucessoCadastro] = useState("");
+  const [metaAberta, setMetaAberta] = useState<string | null>(null);
   const erroCadastroRef = useRef<HTMLDivElement>(null);
   const { hash } = useLocation();
   const [periodosSelecionados, setPeriodosSelecionados] = useState<
@@ -543,6 +545,49 @@ function SpendingGoals() {
     }
   }
 
+  const metaDetalhada = metasFiltradas.find(
+    (m) => String(m.serie?.id ?? `meta-${m.id}`) === metaAberta,
+  );
+  const seletorPeriodo = (meta: SpendingGoal) =>
+    meta.serie && (
+      <div className="meta-serie-periodo">
+        <p>
+          Vigência: {formatarData(meta.serie.inicio)} —{" "}
+          {formatarData(meta.serie.fim)} · Limite integral:{" "}
+          {formatarMoeda(meta.serie.limitePeriodo)}
+        </p>
+        <label>
+          Período em acompanhamento
+          <select
+            aria-label="Período em acompanhamento"
+            value={meta.id}
+            onChange={(event) =>
+              setPeriodosSelecionados((atuais) => ({
+                ...atuais,
+                [meta.serie!.id]: {
+                  id: Number(event.target.value),
+                  hash,
+                },
+              }))
+            }
+          >
+            {metas
+              .filter((m) => m.serie?.id === meta.serie!.id)
+              .sort((a, b) => a.dataInicio.localeCompare(b.dataInicio))
+              .map((m) => (
+                <option key={m.id} value={m.id}>
+                  {formatarData(m.dataInicio)} — {formatarData(m.dataFim)} ·{" "}
+                  {periodoMeta(m)}
+                </option>
+              ))}
+          </select>
+        </label>
+        {Number(meta.valorLimite) !== Number(meta.serie.limitePeriodo) && (
+          <small>Limite proporcional aos dias deste período.</small>
+        )}
+      </div>
+    );
+
   return (
     <section className="metas-page">
       <div role="status" aria-live="polite" className="meta-exclusao-status">
@@ -890,6 +935,15 @@ function SpendingGoals() {
         </div>
       </div>
 
+      <p className="meta-resumo-periodos meta-scope-notice">
+        {viewFilter
+          ? "O odômetro, o disponível e os alertas usam o critério e o recorte global, limitados ao período de cada meta. O limite cadastrado não é reduzido proporcionalmente ao recorte."
+          : "O odômetro acompanha o consumo no período cadastrado de cada meta."}{" "}
+        A seleção local de despesas é mostrada separadamente. Metas sobrepostas
+        podem incluir a mesma despesa; a soma não representa um gasto único da
+        empresa.
+      </p>
+
       <div className="metas-resumo">
         <article>
           <span>Limite planejado</span>
@@ -897,30 +951,40 @@ function SpendingGoals() {
           <strong>{formatarMoeda(resumo.limiteTotal)}</strong>
 
           <small>
-            Limites dos períodos exibidos, sem alteração pelos filtros
+            Soma dos limites cadastrados; não é proporcional ao recorte
           </small>
         </article>
 
         <article>
           <span>
-            {filtrosAtivos ? "Gastos no filtro" : "Gastos acumulados"}
+            {filtrosAtivos
+              ? "Utilizado na seleção"
+              : viewFilter
+                ? "Utilizado no recorte"
+                : "Utilizado nas metas"}
           </span>
 
           <strong>{formatarMoeda(resumo.gastoTotal)}</strong>
 
           <small>
             {filtrosAtivos
-              ? "Despesas selecionadas nos períodos das metas"
-              : "Valor consumido nos períodos exibidos"}
+              ? "Despesas da seleção nos períodos exibidos"
+              : viewFilter
+                ? "Consumo no critério e período selecionados"
+                : "Consumo dos períodos exibidos"}
           </small>
         </article>
 
         <article>
-          <span>Saldo disponível</span>
+          <span>Disponível nas metas</span>
 
           <strong>{formatarMoeda(resumo.saldoTotal)}</strong>
 
-          <small>Saldo nos períodos exibidos, sem filtros</small>
+          <small>
+            {viewFilter
+              ? "Limite menos utilizado no recorte, sem seleção local de despesas"
+              : "Limite menos utilizado, sem seleção local de despesas"}
+          </small>
         </article>
 
         <article>
@@ -928,14 +992,13 @@ function SpendingGoals() {
 
           <strong>{resumo.metasAtencao}</strong>
 
-          <small>Alertas nos períodos exibidos, sem filtros</small>
+          <small>
+            {viewFilter
+              ? "Metas em andamento avaliadas no recorte"
+              : "Metas em andamento com alerta ou excedente"}
+          </small>
         </article>
       </div>
-
-      <p className="meta-resumo-periodos">
-        Resumo dos períodos exibidos em cada cartão. Metas com escopos
-        sobrepostos podem incluir a mesma despesa.
-      </p>
 
       <div className="metas-content">
         <div className="metas-section-heading">
@@ -957,8 +1020,9 @@ function SpendingGoals() {
             <h3>Nenhuma meta cadastrada</h3>
 
             <p>
-              Crie a primeira meta financeira para começar a acompanhar limites
-              e gastos.
+              {usuarioAdmin
+                ? "Crie a primeira meta para acompanhar limites e gastos."
+                : "Nenhuma meta disponível para esta empresa. Solicite o cadastro ao administrador."}
             </p>
 
             {usuarioAdmin && (
@@ -988,152 +1052,92 @@ function SpendingGoals() {
             </button>
           </div>
         ) : (
-          <div className="metas-lista">
+          <div className="metas-lista metas-compact-list">
             {metasFiltradas.map((meta) => {
+              const uso = Number(meta.percentualUtilizado);
+              const barra = Number.isFinite(uso)
+                ? Math.max(0, Math.min(100, uso))
+                : 0;
+              const excedente = Math.max(
+                0,
+                Number(meta.gastoAtual) - Number(meta.valorLimite),
+              );
+              const situacao =
+                meta.status === "EXCEDIDA"
+                  ? "Excedida"
+                  : meta.status === "ALERTA"
+                    ? "Em alerta"
+                    : "Dentro do limite";
               return (
                 <article
-                  className={`meta-card meta-risk-${meta.status.toLowerCase()}`}
+                  className={`meta-card meta-compact-card meta-risk-${meta.status.toLowerCase()}`}
                   key={meta.serie?.id ?? meta.id}
                   id={`meta-${meta.id}`}
                   tabIndex={-1}
                 >
-                  <div className="meta-card-top">
-                    <div>
-                      <h3>
+                  <button
+                    className="meta-open-card"
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-label={`Ver meta: ${meta.serie?.nome ?? `Meta de gastos #${meta.id}`}`}
+                    onClick={() =>
+                      setMetaAberta(String(meta.serie?.id ?? `meta-${meta.id}`))
+                    }
+                  >
+                    <span className="meta-compact-heading">
+                      <strong>
                         {meta.serie?.nome ?? `Meta de gastos #${meta.id}`}
-                      </h3>
-
-                      <small>
-                        <span aria-hidden="true">▦ </span>
-                        {recorrencias[meta.tipo as keyof typeof recorrencias] ??
-                          meta.tipo}{" "}
-                        · {formatarData(meta.dataInicio)}
-                        {" — "}
-                        {formatarData(meta.dataFim)}
-                      </small>
-                    </div>
-
-                    <span
-                      className={`meta-status meta-temporal-${meta.situacaoTemporal.toLowerCase()}`}
-                    >
-                      {meta.situacaoTemporal === "ENCERRADA" && (
-                        <span aria-hidden="true">▣ </span>
-                      )}
-                      {periodoMeta(meta)}
+                      </strong>
+                      <span
+                        className={`meta-compact-status status-${meta.status.toLowerCase()}`}
+                      >
+                        {meta.status === "EXCEDIDA"
+                          ? "▲ "
+                          : meta.status === "ALERTA"
+                            ? "! "
+                            : "✓ "}
+                        {situacao}
+                      </span>
                     </span>
-                  </div>
-
-                  {meta.serie && (
-                    <div className="meta-serie-periodo">
-                      <p>
-                        Vigência: {formatarData(meta.serie.inicio)} —{" "}
-                        {formatarData(meta.serie.fim)} · Limite integral:{" "}
-                        {formatarMoeda(meta.serie.limitePeriodo)}
-                      </p>
-                      <label>
-                        Período em acompanhamento
-                        <select
-                          aria-label="Período em acompanhamento"
-                          value={meta.id}
-                          onChange={(event) =>
-                            setPeriodosSelecionados((atuais) => ({
-                              ...atuais,
-                              [meta.serie!.id]: {
-                                id: Number(event.target.value),
-                                hash,
-                              },
-                            }))
-                          }
-                        >
-                          {metas
-                            .filter((m) => m.serie?.id === meta.serie!.id)
-                            .sort((a, b) =>
-                              a.dataInicio.localeCompare(b.dataInicio),
-                            )
-                            .map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {formatarData(m.dataInicio)} —{" "}
-                                {formatarData(m.dataFim)} · {periodoMeta(m)}
-                              </option>
-                            ))}
-                        </select>
-                      </label>
-                      {Number(meta.valorLimite) !==
-                        Number(meta.serie.limitePeriodo) && (
-                        <small>
-                          Limite proporcional aos dias deste período.
-                        </small>
-                      )}
-                    </div>
-                  )}
-
-                  {(meta.categoria || meta.centroCusto) && (
-                    <div className="meta-contexto">
-                      {meta.centroCusto && (
-                        <span>
-                          <small>Centro de custo</small>
-
-                          <strong>{meta.centroCusto}</strong>
-                        </span>
-                      )}
-
-                      {meta.categoria && (
-                        <span>
-                          <small>Categoria</small>
-
-                          <strong>{meta.categoria}</strong>
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="meta-valores">
-                    <div>
-                      <span>Limite</span>
-
-                      <strong>{formatarMoeda(Number(meta.valorLimite))}</strong>
-                    </div>
-
-                    <div>
-                      <span>Utilizado total</span>
-
+                    <span className="meta-compact-context">
+                      {meta.categoria
+                        ? `Categoria · ${meta.categoria}`
+                        : meta.centroCusto
+                          ? `Centro · ${meta.centroCusto}`
+                          : "Despesas da meta"}
+                    </span>
+                    <span className="meta-compact-period">
+                      {formatarData(meta.dataInicio)} —{" "}
+                      {formatarData(meta.dataFim)} · {periodoMeta(meta)}
+                    </span>
+                    <span className="meta-compact-values">
                       <strong>{formatarMoeda(Number(meta.gastoAtual))}</strong>
-                    </div>
-
-                    <div>
-                      <span>Saldo total</span>
-
-                      <strong>{formatarMoeda(Number(meta.saldoMeta))}</strong>
-                    </div>
-                  </div>
-
-                  {filtrosAtivos && (
-                    <div className="meta-contexto">
+                      <span>de {formatarMoeda(Number(meta.valorLimite))}</span>
+                    </span>
+                    <span className="meta-compact-track" aria-hidden="true">
+                      <i style={{ width: `${barra}%` }} />
+                      <b
+                        style={{
+                          left: `${Math.max(0, Math.min(100, Number(meta.percentualAlerta) || 0))}%`,
+                        }}
+                      />
+                    </span>
+                    <span className="meta-compact-bottom">
                       <span>
-                        <small>Filtro de despesas</small>
-                        <strong>
-                          {meta.filtroCentroCusto || "Todos os centros"}
-                          {" · "}
-                          {meta.filtroCategoria || "Todas as categorias"}
-                        </strong>
+                        {Number.isFinite(uso)
+                          ? `${uso.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% utilizado`
+                          : "Percentual indisponível"}
                       </span>
-                      <span>
-                        <small>Gastos no filtro</small>
-                        <strong>
-                          {formatarMoeda(Number(meta.gastoFiltrado))}
-                        </strong>
-                      </span>
-                      <span>
-                        <small>Participação no limite da meta</small>
-                        <strong>
-                          {Number(meta.percentualFiltrado).toFixed(1)}%
-                        </strong>
-                      </span>
-                    </div>
-                  )}
-
+                      <strong>
+                        {excedente > 0
+                          ? `${formatarMoeda(excedente)} excedido`
+                          : `${formatarMoeda(Number(meta.saldoMeta))} disponível`}
+                      </strong>
+                    </span>
+                    <span className="meta-compact-link">Ver meta ↗</span>
+                  </button>
                   {usuarioAdmin && (
-                    <div className="meta-acoes">
+                    <div className="meta-compact-admin">
                       <button
                         type="button"
                         className="meta-excluir"
@@ -1145,17 +1149,58 @@ function SpendingGoals() {
                       </button>
                     </div>
                   )}
-
-                  <GoalProgress
-                    key={`${meta.id}-${meta.gastoAtual}-${meta.dataReferencia}`}
-                    meta={meta}
-                  />
                 </article>
               );
             })}
           </div>
         )}
       </div>
+      {metaDetalhada && !carregando && (
+        <GoalDetailDialog
+          meta={metaDetalhada}
+          aoFechar={() => setMetaAberta(null)}
+        >
+          {seletorPeriodo(metaDetalhada)}
+          <p className="gp-scope-caption">
+            {viewFilter
+              ? "Valores do critério e recorte global, limitados ao período desta meta. O limite cadastrado permanece integral."
+              : "Valores do período cadastrado desta meta."}
+          </p>
+          {(metaDetalhada.centroCusto || metaDetalhada.categoria) && (
+            <p className="gp-scope-caption">
+              Escopo: {metaDetalhada.centroCusto || "Todos os centros"} ·{" "}
+              {metaDetalhada.categoria || "Todas as categorias"}
+            </p>
+          )}
+          <GoalProgress
+            key={`${metaDetalhada.id}-${metaDetalhada.gastoAtual}-${metaDetalhada.dataReferencia}`}
+            meta={metaDetalhada}
+            automatico
+            valores
+            emDetalhe
+          />
+          {filtrosAtivos && (
+            <aside className="meta-detail-selection">
+              <h3>Seleção local de despesas</h3>
+              <p>
+                {metaDetalhada.filtroCentroCusto || "Todos os centros"} ·{" "}
+                {metaDetalhada.filtroCategoria || "Todas as categorias"}
+              </p>
+              <strong>
+                {formatarMoeda(Number(metaDetalhada.gastoFiltrado))}
+              </strong>
+              <p>
+                {Number(metaDetalhada.percentualFiltrado).toLocaleString(
+                  "pt-BR",
+                  { maximumFractionDigits: 1 },
+                )}
+                % do limite. Esta seleção não substitui o valor usado pelo
+                odômetro.
+              </p>
+            </aside>
+          )}
+        </GoalDetailDialog>
+      )}
     </section>
   );
 }

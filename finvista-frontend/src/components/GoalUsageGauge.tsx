@@ -45,7 +45,7 @@ export default function GoalUsageGauge({
         <path
           d={arco(0, 100)}
           fill="none"
-          stroke="#e8edf2"
+          stroke="var(--fv-border, #E5E2DC)"
           strokeWidth="20"
           strokeLinecap="round"
         />
@@ -53,7 +53,7 @@ export default function GoalUsageGauge({
           <path
             d={arco(0, alerta)}
             fill="none"
-            stroke="#c9e3d8"
+            stroke="var(--fv-dark-success-soft, #EDF5EF)"
             strokeWidth="20"
           />
         )}
@@ -61,7 +61,7 @@ export default function GoalUsageGauge({
           <path
             d={arco(alerta, 100)}
             fill="none"
-            stroke="#f0dfbb"
+            stroke="var(--fv-dark-warning-soft, #FFF5E6)"
             strokeWidth="20"
           />
         )}
@@ -84,7 +84,7 @@ export default function GoalUsageGauge({
               y1={a.y}
               x2={b.x}
               y2={b.y}
-              stroke="#64748b"
+              stroke="var(--fv-muted, #596660)"
               strokeWidth="2"
             />
           );
@@ -93,22 +93,22 @@ export default function GoalUsageGauge({
           <circle
             {...{ cx: ponto(ritmo, 120).x, cy: ponto(ritmo, 120).y }}
             r="5"
-            fill="#64748b"
-            stroke="white"
+            fill="var(--fv-muted, #596660)"
+            stroke="var(--fv-surface, #FFFFFF)"
             strokeWidth="2"
           >
-            <title>Ritmo ideal: {percentual(ritmo)}%</title>
+            <title>{`Ritmo ideal: ${percentual(ritmo)}%`}</title>
           </circle>
         )}
         {projecao != null && Number.isFinite(projecao) && (
           <circle
             {...{ cx: ponto(projecao, 106).x, cy: ponto(projecao, 106).y }}
             r="5"
-            fill="#2563eb"
-            stroke="white"
+            fill="var(--fv-chart-blue, #3786dc)"
+            stroke="var(--fv-surface, #FFFFFF)"
             strokeWidth="2"
           >
-            <title>Estimativa final: {percentual(projecao)}%</title>
+            <title>{`Estimativa final: ${percentual(projecao)}%`}</title>
           </circle>
         )}
         <line
@@ -116,7 +116,7 @@ export default function GoalUsageGauge({
           y1="165"
           x2={needle.x}
           y2={needle.y}
-          stroke="#173955"
+          stroke="var(--fv-text, #172327)"
           strokeWidth="4"
           strokeLinecap="round"
         />
@@ -125,7 +125,7 @@ export default function GoalUsageGauge({
           cy="165"
           r="9"
           fill={cor}
-          stroke="white"
+          stroke="var(--fv-surface, #FFFFFF)"
           strokeWidth="3"
         />
         <text x="30" y="192" textAnchor="middle">
@@ -146,7 +146,7 @@ export default function GoalUsageGauge({
             ? "Clique para ampliar o acompanhamento"
             : uso > 100
               ? "Ponteiro no limite; consumo real indicado acima"
-              : "Consumo total em relação ao limite"}
+              : "Consumo apresentado em relação ao limite"}
         </small>
       </span>
     </>

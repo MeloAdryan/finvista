@@ -1,15 +1,14 @@
-/* Metas ocupa a área disponível, mesmo quando o layout geral força 1440px. */
 .finvista-main > .metas-page {
   width: 100%;
   min-width: 0;
   max-width: 100%;
 }
-/* Inclui borda e padding na largura: evita cortes por estilos gerais de section. */
+
 .metas-page,
 .metas-page * {
   box-sizing: border-box;
 }
-/* Regras específicas prevalecem sobre o CSS geral, sem mudar outras páginas. */
+
 .metas-page .metas-lista {
   grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr));
   align-items: start;
@@ -244,5 +243,291 @@
   }
   .metas-page .meta-card:hover {
     transform: none;
+  }
+}
+
+/* Metas: odometro em destaque, valores proximos e escopo explicito. */
+.metas-page .meta-scope-notice {
+  border: 1px solid var(--fv-border, #e5e2dc);
+  border-left: 3px solid var(--fv-chart-orange, #e58a2f);
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: var(--fv-surface2, #f3f1ed);
+  line-height: 1.6;
+  font-size: 13px;
+}
+.metas-page :is(button, select, input) {
+  min-height: 44px;
+}
+.metas-page .meta-card .goal-progress-new {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.metas-page .meta-card .goal-progress-new > .gp-risk {
+  grid-row: 1;
+}
+.metas-page .meta-card .goal-progress-new > .goal-dial {
+  grid-row: 2;
+}
+.metas-page .meta-card .goal-progress-new > .gp-stats {
+  grid-row: 3;
+  margin: 10px 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+}
+.metas-page .meta-card .goal-progress-new > .gp-scope-caption {
+  grid-row: 4;
+}
+.metas-page .meta-card .goal-progress-new > .gp-legend {
+  grid-row: 5;
+}
+.metas-page .meta-card .goal-progress-new > .gp-bottom-actions {
+  grid-row: 6;
+}
+.metas-page .gp-scope-caption {
+  font-size: 12px;
+  color: var(--fv-muted, #596660);
+  line-height: 1.6;
+}
+.metas-page .meta-local-selection {
+  border-left: 3px solid var(--fv-chart-purple, #8c70d6);
+  padding: 12px;
+  background: var(--fv-surface2, #f3f1ed);
+}
+:is(.metas-page, .goal-detail-dialog) .gp-composition ul {
+  padding: 0;
+  list-style: none;
+}
+:is(.metas-page, .goal-detail-dialog) .gp-composition li {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) minmax(80px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--fv-border, #e5e2dc);
+}
+.gp-composition-track {
+  display: block;
+  height: 10px;
+  background: var(--fv-surface2, #f3f1ed);
+  border-radius: 4px;
+}
+.gp-composition-track i {
+  display: block;
+  height: 100%;
+  background: var(--fv-chart-blue, #3786dc);
+  border-radius: inherit;
+}
+.gp-composition-track.negative i {
+  background:
+    repeating-linear-gradient(135deg, transparent 0 3px, #ffffff66 3px 5px),
+    var(--fv-chart-orange, #e58a2f);
+}
+.goal-detail-dialog .gp-chart {
+  height: clamp(280px, 35vw, 400px);
+}
+:is(.metas-page, .goal-detail-dialog) .gp-table:focus-visible {
+  outline: 3px solid var(--fv-focus, #184e43);
+  outline-offset: 3px;
+}
+:is(.metas-page, .goal-detail-dialog) .recharts-cartesian-axis-tick text,
+.goal-dial svg text {
+  fill: var(--fv-muted, #596660);
+}
+@media (max-width: 600px) {
+  .finvista-main .metas-page .metas-resumo {
+    grid-template-columns: 1fr;
+  }
+  .metas-page :is(select, input) {
+    font-size: 16px;
+  }
+  :is(.metas-page, .goal-detail-dialog) .gp-composition li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  :is(.metas-page, .goal-detail-dialog) .gp-composition-track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+/* Listagem compacta: cada cartao abre somente sua meta. */
+.finvista-main .metas-page .metas-lista.metas-compact-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+.metas-page .metas-lista .meta-compact-card {
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--fv-border, #e5e2dc);
+  border-radius: 14px;
+  background: var(--fv-surface, #fff);
+  box-shadow: var(--fv-shadow, none);
+}
+.metas-page .meta-compact-card .meta-open-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  flex: 1;
+  padding: clamp(16px, 2vw, 24px);
+  gap: 10px;
+  text-align: left;
+  color: var(--fv-text, #172327);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+  font: inherit;
+}
+.metas-page .meta-open-card:hover {
+  background: var(--fv-surface2, #f3f1ed);
+}
+.metas-page .meta-open-card:focus-visible {
+  outline: 3px solid var(--fv-focus, #184e43);
+  outline-offset: -4px;
+}
+.meta-compact-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+  width: 100%;
+}
+.meta-compact-heading > strong {
+  font-size: 16px;
+  line-height: 1.4;
+}
+.meta-compact-status {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+  font-weight: 650;
+}
+.meta-compact-status.status-normal {
+  color: var(--fv-dark-success, #21664f);
+  background: var(--fv-dark-success-soft, #edf5ef);
+}
+.meta-compact-status.status-alerta {
+  color: var(--fv-dark-warning, #86501b);
+  background: var(--fv-dark-warning-soft, #fff5e6);
+}
+.meta-compact-status.status-excedida {
+  color: var(--fv-dark-danger, #ad3040);
+  background: var(--fv-dark-danger-soft, #fbeff0);
+}
+.meta-compact-context,
+.meta-compact-period {
+  color: var(--fv-muted, #596660);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.meta-compact-values {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+  margin: 8px 0;
+  font-variant-numeric: tabular-nums;
+}
+.meta-compact-values > strong {
+  font-size: clamp(22px, 2.2vw, 30px);
+  white-space: nowrap;
+}
+.meta-compact-values > span {
+  font-size: 12px;
+  color: var(--fv-muted, #596660);
+}
+.meta-compact-track {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 7px;
+  background: var(--fv-border, #e5e2dc);
+  border-radius: 6px;
+}
+.meta-compact-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--fv-chart-success, #2c9474);
+}
+.meta-risk-alerta .meta-compact-track i {
+  background: var(--fv-chart-orange, #e58a2f);
+}
+.meta-risk-excedida .meta-compact-track i {
+  background: var(--fv-chart-danger, #d33f50);
+}
+.meta-compact-track b {
+  position: absolute;
+  top: -3px;
+  height: 13px;
+  width: 2px;
+  transform: translateX(-1px);
+  background: var(--fv-text, #172327);
+}
+.meta-compact-bottom {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.meta-compact-bottom > span {
+  color: var(--fv-muted, #596660);
+}
+.meta-compact-bottom > strong {
+  color: var(--fv-dark-success, #21664f);
+}
+.meta-risk-excedida .meta-compact-bottom > strong {
+  color: var(--fv-dark-danger, #ad3040);
+}
+.meta-compact-link {
+  font-size: 12px;
+  color: var(--fv-dark-info, #245f74);
+  align-self: flex-end;
+}
+.metas-page .meta-compact-admin {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--fv-border, #e5e2dc);
+  padding: 0 12px;
+}
+.metas-page .meta-compact-admin button {
+  min-height: 44px;
+  background: transparent;
+  box-shadow: none;
+}
+.goal-detail-dialog .meta-serie-periodo select {
+  width: 100%;
+  min-height: 44px;
+  background: var(--fv-surface, #fff);
+  color: var(--fv-text, #172327);
+  border: 1px solid var(--fv-border, #e5e2dc);
+  border-radius: 8px;
+  padding: 10px;
+}
+.goal-detail-dialog .meta-detail-selection {
+  padding: 16px;
+  border-left: 3px solid var(--fv-chart-purple, #8c70d6);
+  background: var(--fv-surface2, #f3f1ed);
+  border-radius: 8px;
+}
+@media (max-width: 700px) {
+  .finvista-main .metas-page .metas-lista.metas-compact-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .meta-compact-heading {
+    flex-wrap: wrap;
+  }
+  .goal-detail-dialog .meta-serie-periodo select {
+    font-size: 16px;
   }
 }

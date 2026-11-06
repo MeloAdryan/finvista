@@ -33,11 +33,15 @@ export default function GoalProgress({
   automatico = false,
   resumo = false,
   evolucaoEmDialogo = false,
+  valores = resumo,
+  emDetalhe = false,
 }: {
   meta: SpendingGoal;
   automatico?: boolean;
   resumo?: boolean;
   evolucaoEmDialogo?: boolean;
+  valores?: boolean;
+  emDetalhe?: boolean;
 }) {
   const viewFilter = useContext(FinancialViewContext);
   const [aberto, setAberto] = useState(automatico);
@@ -111,24 +115,33 @@ export default function GoalProgress({
             : ""}
         {risco}
       </p>
-      {resumo && (
+      {valores && (
         <div className="gp-stats">
           <div>
             Limite<strong>{moedaMeta(meta.valorLimite)}</strong>
           </div>
           <div>
-            Registrado na meta<strong>{moedaMeta(meta.gastoAtual)}</strong>
+            {viewFilter ? "Utilizado no recorte" : "Utilizado na meta"}
+            <strong>{moedaMeta(meta.gastoAtual)}</strong>
           </div>
           <div>
-            Disponível<strong>{moedaMeta(meta.saldoMeta)}</strong>
+            {viewFilter ? "Disponível no recorte" : "Disponível"}
+            <strong>{moedaMeta(meta.saldoMeta)}</strong>
           </div>
         </div>
+      )}
+      {valores && (
+        <p className="gp-scope-caption">
+          {viewFilter
+            ? "Consumo no recorte global e no período da meta. Seleções locais de despesas aparecem separadas abaixo."
+            : "Consumo do período cadastrado da meta."}
+        </p>
       )}
       <GoalUsageGauge
         meta={meta}
         ritmo={meta.situacaoTemporal === "EM_ANDAMENTO" ? ritmo : null}
         projecao={projecao}
-        aoAmpliar={ampliar}
+        aoAmpliar={emDetalhe ? undefined : ampliar}
       />
       <div className="gp-legend">
         <span>Alerta: {alerta}%</span>
@@ -177,7 +190,7 @@ export default function GoalProgress({
                 dados={dados}
                 tabela={tabela}
                 aoAlternarTabela={() => setTabela((v) => !v)}
-                aoAmpliar={ampliar}
+                aoAmpliar={emDetalhe ? undefined : ampliar}
               />
             </>
           )}
@@ -206,15 +219,21 @@ export default function GoalProgress({
                   Limite<strong>{moedaMeta(meta.valorLimite)}</strong>
                 </div>
                 <div>
-                  Utilizado total<strong>{moedaMeta(meta.gastoAtual)}</strong>
+                  {viewFilter ? "Utilizado no recorte" : "Utilizado no período"}
+                  <strong>{moedaMeta(meta.gastoAtual)}</strong>
                 </div>
                 <div>
-                  Saldo total<strong>{moedaMeta(meta.saldoMeta)}</strong>
+                  {viewFilter
+                    ? "Disponível no recorte"
+                    : "Disponível no período"}
+                  <strong>{moedaMeta(meta.saldoMeta)}</strong>
                 </div>
               </div>
               <p>
                 Alerta: {alerta}% · Limite: 100%. O medidor considera o consumo
-                total da meta, sem alteração pelos filtros.
+                {viewFilter
+                  ? "no critério e recorte global, sem a seleção local de despesas."
+                  : "no período da meta."}
               </p>
               {uso > 100 && (
                 <p className="gp-risk-excedida">

@@ -28,6 +28,7 @@ export default function GoalEvolution({
   aoAmpliar,
 }: Props) {
   const estimativa = dados.estimativaFim;
+  const maiorCategoria = Math.max(0, ...dados.categorias.map((c) => Math.abs(c.valor)).filter(Number.isFinite));
   const [reduzirMovimento, setReduzirMovimento] = useState(
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
@@ -74,7 +75,7 @@ export default function GoalEvolution({
         </button>
       </div>
       {tabela ? (
-        <div className="gp-table">
+        <div className="gp-table" tabIndex={0} role="region" aria-label="Evolução diária, role horizontalmente para ver todas as colunas">
           <table>
             <caption>Consumo diário da meta</caption>
             <thead>
@@ -111,7 +112,7 @@ export default function GoalEvolution({
               onClick={aoAmpliar}
               margin={{ top: 15, right: 16, left: 4, bottom: 5 }}
             >
-              <CartesianGrid stroke="#e4eaf1" />
+              <CartesianGrid stroke="var(--fv-chart-grid, #E5E2DC)" vertical={false} strokeDasharray="3 4" />
               <XAxis
                 dataKey="data"
                 tickFormatter={(s) =>
@@ -129,17 +130,18 @@ export default function GoalEvolution({
                 }
               />
               <Tooltip
+                contentStyle={{ background: "var(--fv-surface, #fff)", color: "var(--fv-text, #172327)", borderColor: "var(--fv-border, #E5E2DC)" }}
                 labelFormatter={(s) => dataBR(String(s))}
                 formatter={(v) => moedaMeta(Number(v))}
               />
-              <ReferenceLine y={0} stroke="#94a3b8" />
-              <ReferenceLine y={dados.limite} stroke="#b45309" label="Limite" />
+              <ReferenceLine y={0} stroke="var(--fv-muted, #596660)" />
+              <ReferenceLine y={dados.limite} stroke="var(--fv-chart-orange, #e58a2f)" label="Limite" />
               <Line
                 isAnimationActive={!reduzirMovimento}
                 type="linear"
                 dataKey="acumuladoRegistrado"
                 name="Registrado"
-                stroke="#153856"
+                stroke="var(--fv-chart-blue, #3786dc)"
                 dot={false}
                 strokeWidth={2}
               />
@@ -147,8 +149,9 @@ export default function GoalEvolution({
                 isAnimationActive={!reduzirMovimento}
                 type="linear"
                 dataKey="ritmoIdeal"
+                strokeDasharray="2 5"
                 name="Ritmo ideal"
-                stroke="#94a3b8"
+                stroke="var(--fv-muted, #596660)"
                 dot={false}
               />
               <Line
@@ -156,7 +159,7 @@ export default function GoalEvolution({
                 type="linear"
                 dataKey="estimativa"
                 name="Estimativa"
-                stroke="#2563eb"
+                stroke="var(--fv-chart-purple, #8c70d6)"
                 strokeDasharray="5 4"
                 dot={false}
               />
@@ -165,17 +168,21 @@ export default function GoalEvolution({
         </div>
       )}
       <div className="gp-legend">
-        <span>Azul escuro: registrado</span>
-        <span>Cinza: ritmo ideal</span>
-        <span>Azul tracejado: estimativa</span>
-        <span>Âmbar: limite</span>
+        <span>━ Registrado · contínua</span>
+        <span>┈ Ritmo ideal · pontilhada</span>
+        <span>┄ Estimativa · tracejada</span>
+        <span>─ Limite cadastrado</span>
       </div>
-      <details>
-        <summary>Consumo por categoria</summary>
+      <details className="gp-composition">
+        <summary>Composição por categoria · {dados.categorias.length} categorias</summary>
+        {dados.categorias.length === 0 && <p>Nenhuma categoria disponível neste recorte.</p>}
         <ul>
           {dados.categorias.map((c) => (
             <li key={c.categoria}>
-              <span>{c.categoria}</span>
+              <span className="gp-composition-name">{c.categoria}</span>
+              <span className={`gp-composition-track ${c.valor < 0 ? "negative" : ""}`} aria-hidden="true">
+                <i style={{ width: `${maiorCategoria > 0 && Number.isFinite(c.valor) ? (Math.abs(c.valor) / maiorCategoria) * 100 : 0}%` }} />
+              </span>
               <strong>
                 {moedaMeta(c.valor)}
                 {dados.totalRegistrado > 0
@@ -185,6 +192,7 @@ export default function GoalEvolution({
             </li>
           ))}
         </ul>
+        <p>As barras mostram a magnitude de cada categoria; valores negativos são ajustes e conservam seu sinal. Nenhuma categoria é retirada do total.</p>
       </details>
     </>
   );

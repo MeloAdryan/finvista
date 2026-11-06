@@ -84,15 +84,9 @@ function DashboardIcon() {
 function GoalsIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="8" />
-
-      <circle cx="12" cy="12" r="4" />
-
-      <circle cx="12" cy="12" r="1" />
-
-      <path d="M15 9L20 4" />
-
-      <path d="M17 4H20V7" />
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5.5" />
+      <circle cx="12" cy="12" r="2" />
     </svg>
   );
 }
@@ -100,13 +94,8 @@ function GoalsIcon() {
 function ProjectionIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 18V6" />
-
-      <path d="M4 18H20" />
-
-      <path d="M7 14L11 10L14 13L20 7" />
-
-      <path d="M16 7H20V11" />
+      <path d="m3 17 6-6 4 4 8-9" />
+      <path d="M15 6h6v6" />
     </svg>
   );
 }
@@ -114,13 +103,7 @@ function ProjectionIcon() {
 function CashFlowIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M7 7H18" />
-
-      <path d="M15 4L18 7L15 10" />
-
-      <path d="M17 17H6" />
-
-      <path d="M9 14L6 17L9 20" />
+      <path d="M3 6c3 0 3 3 6 3s3-3 6-3 3 3 6 3M3 12c3 0 3 3 6 3s3-3 6-3 3 3 6 3M3 18c3 0 3 3 6 3s3-3 6-3 3 3 6 3" />
     </svg>
   );
 }
@@ -128,11 +111,7 @@ function CashFlowIcon() {
 function CostCenterIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="8" />
-
-      <circle cx="12" cy="12" r="4" />
-
-      <circle cx="12" cy="12" r="1" />
+      <path d="m12 2 4 2.5V9L12 11 8 9V4.5L12 2Zm-4 2.5 4 2.3 4-2.3M12 6.8V11M6 11l4 2.5V18l-4 2-4-2v-4.5L6 11Zm-4 2.5 4 2.3 4-2.3M6 15.8V20m12-9 4 2.5V18l-4 2-4-2v-4.5l4-2.5Zm-4 2.5 4 2.3 4-2.3M18 15.8V20" />
     </svg>
   );
 }
@@ -140,13 +119,8 @@ function CostCenterIcon() {
 function ExpenseIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 19V11" />
-
-      <path d="M10 19V5" />
-
-      <path d="M16 19V8" />
-
-      <path d="M22 19H2" />
+      <path d="M5 3h14v18l-2-1-2 1-3-1-3 1-2-1-2 1V3Z" />
+      <path d="M15 8h-4a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4H9M12 6v12" />
     </svg>
   );
 }
@@ -154,13 +128,9 @@ function ExpenseIcon() {
 function BudgetIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M5 3H19V21L16 19L13 21L10 19L7 21L5 19V3Z" />
-
-      <path d="M9 8H15" />
-
-      <path d="M9 12H15" />
-
-      <path d="M9 16H13" />
+      <path d="M20 7H5a2 2 0 0 1 0-4h12v4M3 5v14a2 2 0 0 0 2 2h15V7" />
+      <path d="M20 11h-5a2 2 0 0 0 0 4h5" />
+      <path d="M16 13h.01" />
     </svg>
   );
 }
@@ -180,15 +150,7 @@ function HistoryIcon() {
 function ImportIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 3V15" />
-
-      <path d="M7 10L12 15L17 10" />
-
-      <path d="M5 20H19" />
-
-      <path d="M5 17V20" />
-
-      <path d="M19 17V20" />
+      <path d="M12 16V3m-5 5 5-5 5 5M4 16v5h16v-5" />
     </svg>
   );
 }
@@ -199,6 +161,15 @@ function ClientsIcon() {
       <circle cx="9" cy="7" r="3" />
       <path d="M3 21v-3a6 6 0 0 1 12 0v3" />
       <path d="M16 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v3" />
+    </svg>
+  );
+}
+
+function ReconciliationIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 3v18M8 21h8M4 7h16M5 7 2 15h6L5 7Zm14 0-3 8h6l-3-8Z" />
+      <path d="M2 15a3 3 0 0 0 6 0m8 0a3 3 0 0 0 6 0" />
     </svg>
   );
 }
@@ -572,7 +543,7 @@ function App() {
           <div className="finvista-sidebar-divider" />
 
           <nav className="finvista-navigation" aria-label="Navegação principal">
-            <span className="finvista-navigation-label">VISÃO GERAL</span>
+            <span className="finvista-navigation-label">ANÁLISE</span>
 
             <a
               className={`finvista-nav-item ${
@@ -593,80 +564,6 @@ function App() {
               </span>
 
               <span>Painel executivo</span>
-            </a>
-
-            <a
-              className={`finvista-nav-item ${
-                paginaAtiva === "metas" ? "finvista-nav-item-active" : ""
-              }`}
-              href="/metas"
-              aria-label="Metas"
-              title="Metas"
-              aria-current={paginaAtiva === "metas" ? "page" : undefined}
-              onClick={(event) => {
-                event.preventDefault();
-
-                abrirMetas();
-              }}
-            >
-              <span className="finvista-nav-icon">
-                <GoalsIcon />
-              </span>
-
-              <span>Metas</span>
-            </a>
-
-            <a
-              className={`finvista-nav-item ${paginaAtiva === "alertas" ? "finvista-nav-item-active" : ""}`}
-              href="/alertas"
-              aria-label="Central de alertas"
-              title="Central de alertas"
-              aria-current={paginaAtiva === "alertas" ? "page" : undefined}
-              onClick={(event) => {
-                event.preventDefault();
-                setMenuMobileAberto(false);
-                navigate("/alertas");
-              }}
-            >
-              <span className="finvista-nav-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 3a6 6 0 0 0-6 6v5l-2 3h16l-2-3V9a6 6 0 0 0-6-6Z" />
-                  <path d="M9 20h6" />
-                </svg>
-              </span>
-              <span>Central de alertas</span>
-            </a>
-            <span className="finvista-navigation-label finvista-navigation-group">
-              FINANCEIRO
-            </span>
-
-            <a
-              className={`finvista-nav-item ${
-                paginaAtiva === "projecao" ? "finvista-nav-item-active" : ""
-              }`}
-              href="/projecao"
-              aria-label="Projeção"
-              title="Projeção"
-              aria-current={paginaAtiva === "projecao" ? "page" : undefined}
-              onClick={(event) => {
-                event.preventDefault();
-
-                fecharMenuMobile();
-
-                navigate("/projecao");
-
-                window.scrollTo({
-                  top: 0,
-
-                  behavior: "smooth",
-                });
-              }}
-            >
-              <span className="finvista-nav-icon">
-                <ProjectionIcon />
-              </span>
-
-              <span>Projeção</span>
             </a>
 
             <a
@@ -696,6 +593,35 @@ function App() {
               </span>
 
               <span>Fluxo de caixa</span>
+            </a>
+
+            <a
+              className={`finvista-nav-item ${
+                paginaAtiva === "despesas" ? "finvista-nav-item-active" : ""
+              }`}
+              href="/despesas"
+              aria-label="Despesas"
+              title="Despesas"
+              aria-current={paginaAtiva === "despesas" ? "page" : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+
+                fecharMenuMobile();
+
+                navigate("/despesas");
+
+                window.scrollTo({
+                  top: 0,
+
+                  behavior: "smooth",
+                });
+              }}
+            >
+              <span className="finvista-nav-icon">
+                <ExpenseIcon />
+              </span>
+
+              <span>Despesas</span>
             </a>
 
             <a
@@ -733,18 +659,18 @@ function App() {
 
             <a
               className={`finvista-nav-item ${
-                paginaAtiva === "despesas" ? "finvista-nav-item-active" : ""
+                paginaAtiva === "historico" ? "finvista-nav-item-active" : ""
               }`}
-              href="/despesas"
-              aria-label="Despesas"
-              title="Despesas"
-              aria-current={paginaAtiva === "despesas" ? "page" : undefined}
+              href="/historico"
+              aria-label="Histórico"
+              title="Histórico"
+              aria-current={paginaAtiva === "historico" ? "page" : undefined}
               onClick={(event) => {
                 event.preventDefault();
 
                 fecharMenuMobile();
 
-                navigate("/despesas");
+                navigate("/historico");
 
                 window.scrollTo({
                   top: 0,
@@ -754,10 +680,35 @@ function App() {
               }}
             >
               <span className="finvista-nav-icon">
-                <ExpenseIcon />
+                <HistoryIcon />
               </span>
 
-              <span>Despesas</span>
+              <span>Histórico</span>
+            </a>
+
+            <span className="finvista-navigation-label finvista-navigation-group">
+              PLANEJAMENTO
+            </span>
+
+            <a
+              className={`finvista-nav-item ${
+                paginaAtiva === "metas" ? "finvista-nav-item-active" : ""
+              }`}
+              href="/metas"
+              aria-label="Metas"
+              title="Metas"
+              aria-current={paginaAtiva === "metas" ? "page" : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+
+                abrirMetas();
+              }}
+            >
+              <span className="finvista-nav-icon">
+                <GoalsIcon />
+              </span>
+
+              <span>Metas</span>
             </a>
 
             <a
@@ -791,18 +742,18 @@ function App() {
 
             <a
               className={`finvista-nav-item ${
-                paginaAtiva === "historico" ? "finvista-nav-item-active" : ""
+                paginaAtiva === "projecao" ? "finvista-nav-item-active" : ""
               }`}
-              href="/historico"
-              aria-label="Histórico"
-              title="Histórico"
-              aria-current={paginaAtiva === "historico" ? "page" : undefined}
+              href="/projecao"
+              aria-label="Projeção"
+              title="Projeção"
+              aria-current={paginaAtiva === "projecao" ? "page" : undefined}
               onClick={(event) => {
                 event.preventDefault();
 
                 fecharMenuMobile();
 
-                navigate("/historico");
+                navigate("/projecao");
 
                 window.scrollTo({
                   top: 0,
@@ -812,10 +763,35 @@ function App() {
               }}
             >
               <span className="finvista-nav-icon">
-                <HistoryIcon />
+                <ProjectionIcon />
               </span>
 
-              <span>Histórico</span>
+              <span>Projeção</span>
+            </a>
+
+            <span className="finvista-navigation-label finvista-navigation-group">
+              CONTROLE
+            </span>
+
+            <a
+              className={`finvista-nav-item ${paginaAtiva === "alertas" ? "finvista-nav-item-active" : ""}`}
+              href="/alertas"
+              aria-label="Central de alertas"
+              title="Central de alertas"
+              aria-current={paginaAtiva === "alertas" ? "page" : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+                setMenuMobileAberto(false);
+                navigate("/alertas");
+              }}
+            >
+              <span className="finvista-nav-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3a6 6 0 0 0-6 6v5l-2 3h16l-2-3V9a6 6 0 0 0-6-6Z" />
+                  <path d="M9 20h6" />
+                </svg>
+              </span>
+              <span>Central de alertas</span>
             </a>
 
             <a
@@ -832,36 +808,16 @@ function App() {
               }}
             >
               <span className="finvista-nav-icon">
-                <HistoryIcon />
+                <ReconciliationIcon />
               </span>
               <span>Conferência financeira</span>
             </a>
+
             {usuarioAdmin && (
               <>
                 <span className="finvista-navigation-label finvista-navigation-group">
-                  DADOS
+                  GESTÃO
                 </span>
-
-                <a
-                  className={`finvista-nav-item ${paginaAtiva === "conferencia" ? "Conferência financeira" : paginaAtiva === "cadastros" ? "finvista-nav-item-active" : ""}`}
-                  href="/admin/cadastros"
-                  aria-label="Clientes e usuários"
-                  title="Clientes e usuários"
-                  aria-current={
-                    paginaAtiva === "cadastros" ? "page" : undefined
-                  }
-                  onClick={(event) => {
-                    event.preventDefault();
-                    fecharMenuMobile();
-                    navigate("/admin/cadastros");
-                    window.scrollTo({ top: 0 });
-                  }}
-                >
-                  <span className="finvista-nav-icon">
-                    <ClientsIcon />
-                  </span>
-                  <span>Clientes e usuários</span>
-                </a>
 
                 <a
                   className={`finvista-nav-item ${
@@ -886,6 +842,27 @@ function App() {
                   </span>
 
                   <span>Importar dados</span>
+                </a>
+
+                <a
+                  className={`finvista-nav-item ${paginaAtiva === "cadastros" ? "finvista-nav-item-active" : ""}`}
+                  href="/admin/cadastros"
+                  aria-label="Clientes e usuários"
+                  title="Clientes e usuários"
+                  aria-current={
+                    paginaAtiva === "cadastros" ? "page" : undefined
+                  }
+                  onClick={(event) => {
+                    event.preventDefault();
+                    fecharMenuMobile();
+                    navigate("/admin/cadastros");
+                    window.scrollTo({ top: 0 });
+                  }}
+                >
+                  <span className="finvista-nav-icon">
+                    <ClientsIcon />
+                  </span>
+                  <span>Clientes e usuários</span>
                 </a>
               </>
             )}
