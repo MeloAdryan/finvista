@@ -868,6 +868,22 @@ function App() {
             )}
           </nav>
 
+          {clienteAtual && !sidebarRecolhida && (
+            <div className="finvista-sidebar-user" aria-label="Empresa ativa">
+              <div className="finvista-user-info">
+                <span>Empresa ativa</span>
+                <strong title={clienteAtual.nome}>{clienteAtual.nome}</strong>
+                {usuarioAdmin && (
+                  <button type="button" className="finvista-sidebar-logout" onClick={() => {
+                    fecharMenuMobile();
+                    setClienteAtual(null);
+                  }}>
+                    Trocar empresa
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
           <div className="finvista-sidebar-bottom">
             <div
               className="finvista-sidebar-user"
@@ -1075,7 +1091,7 @@ function App() {
             <div className="finvista-footer-item">
               <small>VERSÃO</small>
 
-              <span>v1.0</span>
+              <span>v2.0</span>
             </div>
 
             <div className="finvista-footer-separator" />

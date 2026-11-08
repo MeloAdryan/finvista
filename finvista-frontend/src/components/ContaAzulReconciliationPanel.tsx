@@ -148,6 +148,7 @@ export default function ContaAzulReconciliationPanel({
     [dados, setDados] = useState<Resultado | null>(null),
     [erro, setErro] = useState(""),
     [busy, setBusy] = useState(false);
+  const [filtroVinculo, setFiltroVinculo] = useState("");
   const [fileKey, setFileKey] = useState("");
   const [apiKey, setApiKey] = useState("");
   const controller = useRef<AbortController | null>(null);
@@ -494,6 +495,11 @@ export default function ContaAzulReconciliationPanel({
               <section>
                 <h3>Conferência individual</h3>
                 <p>
+                  Um vínculo por ID identifica o mesmo movimento nas duas
+                  fontes. Sugestões precisam de revisão. Diferenças de valor ou
+                  data aparecem separadas dos casos sem correspondente.
+                </p>
+                <p>
                   {
                     dados.detalhes.correspondencias.filter(
                       (x) => x.criterio === "ID_BAIXA_DATA_TIPO_VALOR",
@@ -583,37 +589,61 @@ export default function ContaAzulReconciliationPanel({
                 </button>
                 <details>
                   <summary>
-                    Correspondências e sugestões (
+                    Vínculos por ID e sugestões (
                     {dados.detalhes.correspondencias.length})
                   </summary>
-                  {dados.detalhes.correspondencias.slice(0, 100).map((x) => (
-                    <p key={x.extrato.chave}>
-                      {criterionLabel(x.criterio)} · {x.api.data} ·{" "}
-                      {x.api.descricao} ↔ {x.extrato.descricao} ·{" "}
-                      {moeda(x.api.valor)} · API: {accountName(x.api)} ·
-                      Extrato: {accountName(x.extrato)}
-                      {x.extrato.revisao && (
-                        <small>
-                          Conferido por {x.extrato.revisao.usuario} em{" "}
-                          {new Date(x.extrato.revisao.horario).toLocaleString(
-                            "pt-BR",
-                          )}{" "}
-                          · {x.extrato.revisao.motivo}
-                        </small>
-                      )}
-                      {canReview && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFileKey(x.extrato.chave);
-                            setApiKey(x.api.chave);
-                          }}
-                        >
-                          Conferir este vínculo
-                        </button>
-                      )}
-                    </p>
-                  ))}
+                  <label>
+                    Tipo de correspondência
+                    <select
+                      value={filtroVinculo}
+                      onChange={(e) => setFiltroVinculo(e.target.value)}
+                    >
+                      <option value="">Todas</option>
+                      <option value="ID">Por ID</option>
+                      <option value="CONFIRMADO">
+                        Confirmadas pelo contador
+                      </option>
+                      <option value="SUGESTAO">Sugestões</option>
+                    </select>
+                  </label>
+                  {dados.detalhes.correspondencias
+                    .filter(({ criterio }) => {
+                      if (!filtroVinculo) return true;
+                      if (criterio === "ID_BAIXA_DATA_TIPO_VALOR")
+                        return filtroVinculo === "ID";
+                      if (criterio === "VINCULO_CONFIRMADO_PELO_CONTADOR")
+                        return filtroVinculo === "CONFIRMADO";
+                      return filtroVinculo === "SUGESTAO";
+                    })
+                    .slice(0, 100)
+                    .map((x) => (
+                      <p key={x.extrato.chave}>
+                        {criterionLabel(x.criterio)} · {x.api.data} ·{" "}
+                        {x.api.descricao} ↔ {x.extrato.descricao} ·{" "}
+                        {moeda(x.api.valor)} · API: {accountName(x.api)} ·
+                        Extrato: {accountName(x.extrato)}
+                        {x.extrato.revisao && (
+                          <small>
+                            Conferido por {x.extrato.revisao.usuario} em{" "}
+                            {new Date(x.extrato.revisao.horario).toLocaleString(
+                              "pt-BR",
+                            )}{" "}
+                            · {x.extrato.revisao.motivo}
+                          </small>
+                        )}
+                        {canReview && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFileKey(x.extrato.chave);
+                              setApiKey(x.api.chave);
+                            }}
+                          >
+                            Conferir este vínculo
+                          </button>
+                        )}
+                      </p>
+                    ))}
                 </details>
                 <details>
                   <summary>

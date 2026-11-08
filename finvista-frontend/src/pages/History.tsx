@@ -1,5 +1,8 @@
 import { useContext } from "react";
-import { FinancialViewContext, FinancialViewUpdateContext } from "../contexts/financialViewContext";
+import {
+  FinancialViewContext,
+  FinancialViewUpdateContext,
+} from "../contexts/financialViewContext";
 import { viewRange } from "../services/financialViewService";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { getHistory, type HistoryData } from "../services/historyService";
@@ -25,8 +28,8 @@ function nomeMes(mes: string) {
 }
 
 export default function History() {
-  const viewFilter=useContext(FinancialViewContext);
-  const updateView=useContext(FinancialViewUpdateContext);
+  const viewFilter = useContext(FinancialViewContext);
+  const updateView = useContext(FinancialViewUpdateContext);
   const [inicio, setInicio] = useState("");
   const [fim, setFim] = useState("");
   const [referencia, setReferencia] = useState("");
@@ -50,17 +53,28 @@ export default function History() {
       try {
         const ref = await obterReferenciaFinanceira();
         if (controller.signal.aborted) return;
-        const range=viewFilter?viewRange(viewFilter):null;
-        const ultimo = range?.fim.slice(0,7) ?? `${ref.ano}-${String(ref.mes).padStart(2, "0")}`;
-        const primeiro = range?.inicio.slice(0,7) ?? recuarMeses(ultimo, 11);
+        const range = viewFilter ? viewRange(viewFilter) : null;
+        const ultimo =
+          range?.fim.slice(0, 7) ??
+          `${ref.ano}-${String(ref.mes).padStart(2, "0")}`;
+        const primeiro = range?.inicio.slice(0, 7) ?? recuarMeses(ultimo, 11);
         setReferencia(ultimo);
         setInicio(primeiro);
         setFim(ultimo);
-        const result = await getHistory(primeiro, ultimo, controller.signal, viewFilter ?? undefined);
+        const result = await getHistory(
+          primeiro,
+          ultimo,
+          controller.signal,
+          viewFilter ?? undefined,
+        );
         if (!controller.signal.aborted) {
           setDados(result);
-          setAplicado({ inicio: result[0]?.periodo ?? primeiro, fim: result.at(-1)?.periodo ?? ultimo });
-          setInicio(result[0]?.periodo ?? primeiro);setFim(result.at(-1)?.periodo ?? ultimo);
+          setAplicado({
+            inicio: result[0]?.periodo ?? primeiro,
+            fim: result.at(-1)?.periodo ?? ultimo,
+          });
+          setInicio(result[0]?.periodo ?? primeiro);
+          setFim(result.at(-1)?.periodo ?? ultimo);
         }
       } catch (error) {
         if (!controller.signal.aborted)
@@ -85,13 +99,21 @@ export default function History() {
       setErro("O mês inicial deve ser anterior ou igual ao mês final.");
       return;
     }
-    if(viewFilter && updateView) {
-      if(!primeiro && !ultimo) updateView({...viewFilter,periodo:"TODOS"});
+    if (viewFilter && updateView) {
+      if (!primeiro && !ultimo) updateView({ ...viewFilter, periodo: "TODOS" });
       else {
-        const first=primeiro||dados[0]?.periodo||referencia, last=ultimo||dados.at(-1)?.periodo||referencia;
-        const [year,month]=last.split("-").map(Number);
-        const end=new Date(Date.UTC(year,month,0,12)).toISOString().slice(0,10);
-        updateView({...viewFilter,periodo:"PERSONALIZADO",inicio:first+"-01",fim:end});
+        const first = primeiro || dados[0]?.periodo || referencia,
+          last = ultimo || dados.at(-1)?.periodo || referencia;
+        const [year, month] = last.split("-").map(Number);
+        const end = new Date(Date.UTC(year, month, 0, 12))
+          .toISOString()
+          .slice(0, 10);
+        updateView({
+          ...viewFilter,
+          periodo: "PERSONALIZADO",
+          inicio: first + "-01",
+          fim: end,
+        });
       }
       return;
     }
@@ -137,6 +159,11 @@ export default function History() {
   const despesa = dados.reduce((s, d) => s + d.despesa, 0);
   const resultado = dados.reduce((s, d) => s + d.resultado, 0);
   const totalPaginas = Math.max(1, Math.ceil(dados.length / 12));
+  const porBaixa =
+    viewFilter?.criterio === "BAIXA" ||
+    viewFilter?.criterio === "BAIXA_EXTRATO";
+  const receitaLabel = porBaixa ? "Recebimentos" : "Receitas";
+  const despesaLabel = porBaixa ? "Pagamentos" : "Despesas";
   const linhas = dados.slice(pagina * 12, pagina * 12 + 12);
   const periodo = aplicado
     ? !aplicado.inicio && !aplicado.fim
@@ -296,35 +323,52 @@ export default function History() {
                     <thead>
                       <tr>
                         <th scope="col">Mês</th>
-                        <th scope="col">Receita</th>
-                        <th scope="col">Despesa</th>
+                        <th scope="col">{receitaLabel}</th>
+                        <th scope="col">{despesaLabel}</th>
                         <th scope="col">Resultado</th>
                         <th scope="col">Margem</th>
+                        <th scope="col">Variação do resultado</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {linhas.map((d) => (
-                        <tr key={d.periodo}>
-                          <th scope="row">{d.periodo}</th>
-                          <td data-label="Receita">{moeda(d.receita)}</td>
-                          <td data-label="Despesa">{moeda(d.despesa)}</td>
-                          <td
-                            data-label="Resultado"
-                            className={
-                              d.resultado < 0
-                                ? "fv-history-negative"
-                                : "fv-history-positive"
-                            }
-                          >
-                            {moeda(d.resultado)}
-                          </td>
-                          <td data-label="Margem">
-                            {d.receita === 0
-                              ? "Não aplicável"
-                              : `${d.margem.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`}
-                          </td>
-                        </tr>
-                      ))}
+                      {linhas.map((d, index) => {
+                        const anterior = dados[pagina * 12 + index - 1];
+                        const posteriorNaLista = dados[pagina * 12 + index + 1];
+                        const referencia = [anterior, posteriorNaLista].find(
+                          (mes) => mes && mes.periodo < d.periodo,
+                        );
+                        return (
+                          <tr key={d.periodo}>
+                            <th scope="row">{d.periodo}</th>
+                            <td data-label={receitaLabel}>
+                              {moeda(d.receita)}
+                            </td>
+                            <td data-label={despesaLabel}>
+                              {moeda(d.despesa)}
+                            </td>
+                            <td
+                              data-label="Resultado"
+                              className={
+                                d.resultado < 0
+                                  ? "fv-history-negative"
+                                  : "fv-history-positive"
+                              }
+                            >
+                              {moeda(d.resultado)}
+                            </td>
+                            <td data-label="Margem">
+                              {d.receita <= 0
+                                ? "Não aplicável"
+                                : `${d.margem.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`}
+                            </td>
+                            <td data-label="Variação do resultado">
+                              {referencia
+                                ? moeda(d.resultado - referencia.resultado)
+                                : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                   <nav

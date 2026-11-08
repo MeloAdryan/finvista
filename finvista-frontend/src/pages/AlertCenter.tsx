@@ -173,7 +173,7 @@ export default function AlertCenter() {
     <div className="ac-page">
       <header className="ac-heading">
         <span>Acompanhamento financeiro</span>
-        <h1>Central de Alertas</h1>
+        <h1>O que precisa de atenção</h1>
         <p>Consulte avisos, evidências e o histórico da empresa selecionada.</p>
       </header>
       <section className="ac-panel" aria-label="Filtros dos alertas">
@@ -208,95 +208,110 @@ export default function AlertCenter() {
               : "Atualizar alertas"}
           </button>
         </form>
-        <div className="ac-filters">
-          <label>
-            Gravidade
-            <select
-              aria-label="Gravidade"
-              value={consulta.filtros.gravidade ?? ""}
+        <div className="ac-severity-filter" role="group" aria-label="Gravidade">
+          <button
+            type="button"
+            disabled={ocupado}
+            aria-pressed={!consulta.filtros.gravidade}
+            onClick={() => trocarFiltro("gravidade", undefined)}
+          >
+            Todos
+          </button>
+          {(["CRITICO", "ATENCAO", "INFORMATIVO"] as const).map((gravidade) => (
+            <button
+              key={gravidade}
+              type="button"
               disabled={ocupado}
-              onChange={(event) =>
-                trocarFiltro(
-                  "gravidade",
-                  (event.target.value ||
-                    undefined) as AlertCenterFilters["gravidade"],
-                )
-              }
+              aria-pressed={consulta.filtros.gravidade === gravidade}
+              onClick={() => trocarFiltro("gravidade", gravidade)}
             >
-              <option value="">Todas</option>
-              {Object.entries(gravidades).map(([valor, nome]) => (
-                <option key={valor} value={valor}>
-                  {nome}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Tipo
-            <select
-              aria-label="Tipo"
-              value={consulta.filtros.tipo ?? ""}
-              disabled={ocupado}
-              onChange={(event) =>
-                trocarFiltro(
-                  "tipo",
-                  (event.target.value ||
-                    undefined) as AlertCenterFilters["tipo"],
-                )
-              }
-            >
-              <option value="">Todos</option>
-              {Object.entries(tipos).map(([valor, nome]) => (
-                <option key={valor} value={valor}>
-                  {nome}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Estado
-            <select
-              aria-label="Estado"
-              value={consulta.filtros.estado ?? ""}
-              disabled={ocupado}
-              onChange={(event) =>
-                trocarFiltro(
-                  "estado",
-                  (event.target.value ||
-                    undefined) as AlertCenterFilters["estado"],
-                )
-              }
-            >
-              <option value="">Todos</option>
-              <option value="ATIVO">Ativos</option>
-              <option value="RESOLVIDO">Resolvidos</option>
-            </select>
-          </label>
-          <label>
-            Leitura
-            <select
-              aria-label="Leitura"
-              value={
-                consulta.filtros.lido === undefined
-                  ? ""
-                  : String(consulta.filtros.lido)
-              }
-              disabled={ocupado}
-              onChange={(event) =>
-                trocarFiltro(
-                  "lido",
-                  event.target.value === ""
-                    ? undefined
-                    : event.target.value === "true",
-                )
-              }
-            >
-              <option value="">Todos</option>
-              <option value="false">Não lidos</option>
-              <option value="true">Lidos</option>
-            </select>
-          </label>
+              {gravidades[gravidade]}
+            </button>
+          ))}
         </div>
+        <details className="ac-more-filters">
+          <summary>
+            Mais filtros ·{" "}
+            {consulta.filtros.estado === "ATIVO"
+              ? "Ativos"
+              : consulta.filtros.estado === "RESOLVIDO"
+                ? "Resolvidos"
+                : "Todos os estados"}
+            {consulta.filtros.tipo ? ` · ${tipos[consulta.filtros.tipo]}` : ""}
+            {consulta.filtros.lido === undefined
+              ? ""
+              : consulta.filtros.lido
+                ? " · Lidos"
+                : " · Não lidos"}
+          </summary>
+          <div className="ac-filters">
+            <label>
+              Tipo
+              <select
+                aria-label="Tipo"
+                value={consulta.filtros.tipo ?? ""}
+                disabled={ocupado}
+                onChange={(event) =>
+                  trocarFiltro(
+                    "tipo",
+                    (event.target.value ||
+                      undefined) as AlertCenterFilters["tipo"],
+                  )
+                }
+              >
+                <option value="">Todos</option>
+                {Object.entries(tipos).map(([valor, nome]) => (
+                  <option key={valor} value={valor}>
+                    {nome}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Estado
+              <select
+                aria-label="Estado"
+                value={consulta.filtros.estado ?? ""}
+                disabled={ocupado}
+                onChange={(event) =>
+                  trocarFiltro(
+                    "estado",
+                    (event.target.value ||
+                      undefined) as AlertCenterFilters["estado"],
+                  )
+                }
+              >
+                <option value="">Todos</option>
+                <option value="ATIVO">Ativos</option>
+                <option value="RESOLVIDO">Resolvidos</option>
+              </select>
+            </label>
+            <label>
+              Leitura
+              <select
+                aria-label="Leitura"
+                value={
+                  consulta.filtros.lido === undefined
+                    ? ""
+                    : String(consulta.filtros.lido)
+                }
+                disabled={ocupado}
+                onChange={(event) =>
+                  trocarFiltro(
+                    "lido",
+                    event.target.value === ""
+                      ? undefined
+                      : event.target.value === "true",
+                  )
+                }
+              >
+                <option value="">Todos</option>
+                <option value="false">Não lidos</option>
+                <option value="true">Lidos</option>
+              </select>
+            </label>
+          </div>
+        </details>
         <p className="ac-note">
           A reavaliação usa toda a empresa; a categoria selecionada no painel
           não restringe esta central. Metas e orçamentos mantêm seus períodos
@@ -349,32 +364,33 @@ export default function AlertCenter() {
                     key={registro.id}
                     className={`ac-card ac-${alerta.gravidade.toLowerCase()}`}
                   >
+                    <h2>{alerta.titulo}</h2>
                     <div className="ac-badges">
                       <span>{gravidades[alerta.gravidade]}</span>
+                      <span>{tipos[alerta.tipo]}</span>
                       <span>
                         {registro.estado === "ATIVO" ? "Ativo" : "Resolvido"}
                       </span>
                       <span>{registro.lido ? "Lido" : "Não lido"}</span>
                       {alerta.encerrado && <span>Período encerrado</span>}
                     </div>
-                    <h2>{alerta.titulo}</h2>
                     <p>{alerta.motivo}</p>
-                    <p>
-                      {registro.estado === "RESOLVIDO"
-                        ? "Última ocorrência: "
-                        : ""}
-                      {dataBR(alerta.inicio)} — {dataBR(alerta.fim)} ·{" "}
-                      {alerta.percentual.toLocaleString("pt-BR")}%{" "}
-                      {aumento ? "de aumento" : "utilizado"}
-                    </p>
-                    {registro.estado === "RESOLVIDO" && (
-                      <p className="ac-note">
-                        A regra deixou de gerar este aviso na reavaliação. Isso
-                        não comprova quitação de despesas.
-                      </p>
-                    )}
                     <details>
                       <summary>Ver evidências e histórico</summary>
+                      <p>
+                        {registro.estado === "RESOLVIDO"
+                          ? "Última ocorrência: "
+                          : ""}
+                        {dataBR(alerta.inicio)} — {dataBR(alerta.fim)} ·{" "}
+                        {alerta.percentual.toLocaleString("pt-BR")}%{" "}
+                        {aumento ? "de aumento" : "utilizado"}
+                      </p>
+                      {registro.estado === "RESOLVIDO" && (
+                        <p className="ac-note">
+                          A regra deixou de gerar este aviso na reavaliação.
+                          Isso não comprova quitação de despesas.
+                        </p>
+                      )}
                       {registro.estado === "RESOLVIDO" && (
                         <p>
                           Valores preservados da última ocorrência que gerou o
@@ -506,6 +522,31 @@ export default function AlertCenter() {
           )}
         </>
       )}
+      <details className="ac-panel ac-criteria">
+        <summary>Critérios dos avisos</summary>
+        <p className="ac-note">
+          A avaliação usa competência. Metas e orçamentos seguem seus períodos
+          cadastrados.
+        </p>
+        <ul>
+          <li>
+            <strong>Metas.</strong> O aviso usa o percentual configurado na
+            meta. O consumo acima do limite gera alerta crítico.
+          </li>
+          <li>
+            <strong>Orçamentos.</strong> O sistema sinaliza valores registrados
+            acima do limite planejado.
+          </li>
+          <li>
+            <strong>Despesas.</strong> O aumento é avaliado quando o período
+            terminou, há registros nos dois períodos e o total anterior é
+            positivo.
+          </li>
+        </ul>
+        {atualizacao && (
+          <p className="ac-note">{comparacoes[atualizacao.comparacao]}</p>
+        )}
+      </details>
     </div>
   );
 }

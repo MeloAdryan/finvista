@@ -169,6 +169,7 @@ export default function ContaAzulAutoPanel({
     }
   }
   const atual = status?.execucoes[0];
+  const [situacaoHistorico, setSituacaoHistorico] = useState("");
   return (
     <section
       className="ca-auto"
@@ -206,7 +207,10 @@ export default function ContaAzulAutoPanel({
               {data(status.configuracao.fim)}
             </strong>
             {status.configuracao.sincronizacaoCompleta && (
-              <small>Transferências e saldos iniciais: desde 2000 até a data fixada na coleta.</small>
+              <small>
+                Transferências e saldos iniciais: desde 2000 até a data fixada
+                na coleta.
+              </small>
             )}
           </div>
           <div>
@@ -264,7 +268,7 @@ export default function ContaAzulAutoPanel({
       {cliente && status?.configuracao.sincronizacaoCompleta && (
         <ContaAzulReconciliationPanel
           canReview
-            key={`conferencia-${cliente.id}`}
+          key={`conferencia-${cliente.id}`}
           clienteId={cliente.id}
         />
       )}
@@ -299,10 +303,11 @@ export default function ContaAzulAutoPanel({
         {completa && (
           <p>
             Os filtros das páginas não limitam esta coleta. Novas varreduras
-            incluem parcelas desde 2000 e compromissos futuros. Transferências
-            e saldos iniciais são consultados desde 2000 até a data fixada na
-            coleta. Parcelas antigas já vinculadas continuam sendo reconsultadas.
-            Novas parcelas dependem da autorização abaixo; impedimentos ficam para conferência.
+            incluem parcelas desde 2000 e compromissos futuros. Transferências e
+            saldos iniciais são consultados desde 2000 até a data fixada na
+            coleta. Parcelas antigas já vinculadas continuam sendo
+            reconsultadas. Novas parcelas dependem da autorização abaixo;
+            impedimentos ficam para conferência.
           </p>
         )}
         <label className="ca-auto-check" hidden={completa}>
@@ -506,8 +511,11 @@ export default function ContaAzulAutoPanel({
             </h3>
           </div>
           <p>
-            {atual.modo === "ALTERACOES" ? "Alcance das parcelas" : "Período consultado"}: {data(atual.inicio)} a {data(atual.fim)} ·
-            início {horario(atual.criadoEm)}
+            {atual.modo === "ALTERACOES"
+              ? "Alcance das parcelas"
+              : "Período consultado"}
+            : {data(atual.inicio)} a {data(atual.fim)} · início{" "}
+            {horario(atual.criadoEm)}
             {atual.concluidoEm
               ? ` · término ${horario(atual.concluidoEm)}`
               : ""}
@@ -528,11 +536,19 @@ export default function ContaAzulAutoPanel({
               </div>
             ))}
           </dl>
-          {atual.modo === "ALTERACOES" && <p>
-            Atualizando alterações de {horario(atual.alteracoesDesde ?? null)} até {horario(atual.alteracoesAte ?? null)}.
-            Parcelas futuras continuam abrangidas. Revisão histórica completa a cada sete dias.
-          </p>}
-          {atual.modo === "HISTORICO" && <p>Revisão histórica: conferindo os dados da empresa e preservando as pendências para análise.</p>}
+          {atual.modo === "ALTERACOES" && (
+            <p>
+              Atualizando alterações de {horario(atual.alteracoesDesde ?? null)}{" "}
+              até {horario(atual.alteracoesAte ?? null)}. Parcelas futuras
+              continuam abrangidas. Revisão histórica completa a cada sete dias.
+            </p>
+          )}
+          {atual.modo === "HISTORICO" && (
+            <p>
+              Revisão histórica: conferindo os dados da empresa e preservando as
+              pendências para análise.
+            </p>
+          )}
           {atual.mensagem &&
             !["CONCLUIDA", "CONCLUIDA_COM_PENDENCIAS"].includes(
               atual.status,
@@ -588,15 +604,66 @@ export default function ContaAzulAutoPanel({
           )}
           <details>
             <summary>Ver histórico das execuções</summary>
-            <ul>
-              {status!.execucoes.map((r) => (
-                <li key={r.id}>
-                  {horario(r.criadoEm)} · {rotulos[r.status] || r.status} ·{" "}
-                  {r.incluidas} incluídas, {r.atualizadas} atualizadas,{" "}
-                  {r.pendentes} pendentes
-                </li>
-              ))}
-            </ul>
+            <label>
+              Situação
+              <select
+                value={situacaoHistorico}
+                onChange={(e) => setSituacaoHistorico(e.target.value)}
+              >
+                <option value="">Todas</option>
+                {Array.from(
+                  new Set(status!.execucoes.map((r) => r.status)),
+                ).map((valor) => (
+                  <option key={valor} value={valor}>
+                    {rotulos[valor] || valor}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div
+              style={{ overflowX: "auto" }}
+              tabIndex={0}
+              role="region"
+              aria-label="Histórico de sincronizações"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    {[
+                      "Data",
+                      "Origem",
+                      "Incluídas",
+                      "Atualizadas",
+                      "Pendentes",
+                      "Situação",
+                      "Mensagem",
+                    ].map((titulo) => (
+                      <th key={titulo} scope="col">
+                        {titulo}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {status!.execucoes
+                    .filter(
+                      (r) =>
+                        !situacaoHistorico || r.status === situacaoHistorico,
+                    )
+                    .map((r) => (
+                      <tr key={r.id}>
+                        <th scope="row">{horario(r.criadoEm)}</th>
+                        <td>API Conta Azul</td>
+                        <td>{r.incluidas}</td>
+                        <td>{r.atualizadas}</td>
+                        <td>{r.pendentes}</td>
+                        <td>{rotulos[r.status] || r.status}</td>
+                        <td>{r.mensagem || "—"}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </details>
         </section>
       )}

@@ -389,3 +389,29 @@
     grid-template-columns: 1fr;
   }
 }
+
+.ax-advanced-fields:not([hidden]) {
+  display: contents;
+}
+
+.ax-expenses .ax-expense-search {
+  display: grid;
+  gap: 0.4rem;
+  max-width: 24rem;
+  margin-block: 0.75rem;
+}
+
+.ax-expenses .ax-expense-search input {
+  min-height: 44px;
+  padding-inline: 0.75rem;
+  border: 1px solid;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+}
+
+@media (min-width: 1050px) {
+  .ax-expenses .ax-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

@@ -339,3 +339,60 @@
     font-size: 16px;
   }
 }
+
+.ba-comparison-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.ba-comparison-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+  padding: 1rem;
+  border: 1px solid var(--fv-dark-border, #e5e2dc);
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}
+
+.ba-comparison-list li > div > span,
+.ba-comparison-list li > div > strong {
+  display: block;
+}
+
+.ba-comparison-usage {
+  grid-column: 1 / -1;
+}
+
+.ba-comparison-track {
+  height: 0.5rem;
+  margin-top: 0.35rem;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: var(--fv-dark-border, #e5e2dc);
+}
+
+.ba-comparison-track > div {
+  height: 100%;
+  background: var(--fv-dark-success, #28786b);
+}
+
+.ba-comparison-track > .ba-comparison-over {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--fv-dark-danger, #b33131) 0 5px,
+    var(--fv-dark-surface, #fff) 5px 7px
+  );
+}
+
+@media (max-width: 600px) {
+  .ba-comparison-list li {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ba-comparison-list li > div:first-child {
+    grid-column: 1 / -1;
+  }
+}

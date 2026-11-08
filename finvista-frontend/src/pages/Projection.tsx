@@ -123,7 +123,7 @@ export default function Projection() {
     <div className="dashboard fe-page projection-page">
       <section className="fe-card projection-premises">
         <span className="fe-eyebrow">Premissas da simulação</span>
-        <h1>Projeção financeira de seis meses</h1>
+        <h1>Simulação de cenários</h1>
         <p className="fe-note">
           As despesas são as já cadastradas. Receitas complementares são
           hipóteses, não lançamentos novos. Os campos não alteram o banco.
@@ -232,6 +232,29 @@ export default function Projection() {
               base por competência nem cria projeções fora do horizonte de seis
               meses.
             </p>
+            <section
+              className="fe-card"
+              aria-label="Resumo do recorte projetado"
+            >
+              <h2>Meses exibidos</h2>
+              <p>
+                {mesesVisiveis.length} de{" "}
+                {dadosVisiveis.recorteVisual ? 6 : mesesVisiveis.length} meses
+                da simulação · {mesesVisiveis[0].periodo} a{" "}
+                {mesesVisiveis.at(-1)?.periodo}
+              </p>
+              <p>
+                Despesas cadastradas no recorte:{" "}
+                <strong>
+                  {moedaFinanceira(
+                    mesesVisiveis.reduce(
+                      (total, mes) => total + mes.despesaRegistrada,
+                      0,
+                    ),
+                  )}
+                </strong>
+              </p>
+            </section>
             <ProjectionChart dados={dadosVisiveis} />
           </>
         ) : (

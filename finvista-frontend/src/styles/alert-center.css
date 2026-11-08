@@ -198,3 +198,40 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.ac-page .ac-severity-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+.ac-page .ac-severity-filter button {
+  min-height: 44px;
+  border-radius: 999px;
+  padding-inline: 14px;
+}
+.ac-page .ac-severity-filter button[aria-pressed="true"] {
+  color: #fff;
+  background: var(--fv-dark-primary, #184e43);
+}
+.ac-page :is(.ac-more-filters, .ac-criteria) > summary {
+  cursor: pointer;
+  padding-block: 10px;
+  font-weight: 600;
+}
+.ac-page .ac-more-filters .ac-filters {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+}
+.ac-page .ac-card {
+  padding: 16px;
+}
+.ac-page .ac-card h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+.ac-page .ac-criteria {
+  margin-top: 20px;
+}
+.ac-page .ac-criteria li {
+  margin-block: 8px;
+}

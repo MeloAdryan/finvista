@@ -76,11 +76,11 @@ export default function FinancialAlertsPanel({
   }, [clienteId, inicio, fim, categoria, tentativa]);
 
   return (
-    <section className="fa-panel" aria-labelledby="financial-alerts-title">
+    <section className="fa-panel fa-attention" aria-labelledby="financial-alerts-title">
       <div className="fa-heading">
         <div>
-          <span className="fa-label">Acompanhamento financeiro</span>
-          <h2 id="financial-alerts-title">Pontos de atenção · competência</h2>
+          <h2 id="financial-alerts-title">Precisa de atenção</h2>
+          <p className="fa-note fa-subtitle">Sinais detectados automaticamente · competência</p>
         </div>
         {dados && (
           <span className="fa-count">
@@ -89,18 +89,7 @@ export default function FinancialAlertsPanel({
               : `${dados.alertas.length} de ${dados.total} avisos`}
           </span>
         )}
-        <Link to="/alertas">Ver central de alertas</Link>
       </div>
-      <details className="fa-method">
-        <summary>Como os alertas são avaliados</summary>
-        <p className="fa-note">
-          Os alertas cadastrados usam competência, independentemente do critério
-          analítico dos gráficos. Metas e orçamentos usam seus períodos e
-          escopos completos. O filtro de categoria do painel se aplica ao
-          aumento de despesas. Valores registrados podem incluir lançamentos em
-          aberto.
-        </p>
-      </details>
       {erro ? (
         <div role="status" className="fa-state">
           <p>{erro}</p>
@@ -145,14 +134,18 @@ export default function FinancialAlertsPanel({
                     key={alerta.id}
                     className={`fa-card fa-${alerta.gravidade.toLowerCase()}`}
                   >
-                    <div className="fa-badges">
+                    <div className="fa-row-heading">
+                      <h3>{alerta.titulo}</h3>
+                      <div className="fa-badges">
                       <span className="fa-severity">
                         {gravidades[alerta.gravidade]}
                       </span>
                       {alerta.encerrado && <span>Período encerrado</span>}
                     </div>
-                    <h3>{alerta.titulo}</h3>
+                    </div>
                     <p>{alerta.motivo}</p>
+                    <details>
+                      <summary>Ver detalhes</summary>
                     <p className="fa-period">
                       {dataBR(alerta.inicio)} — {dataBR(alerta.fim)}
                     </p>
@@ -162,8 +155,6 @@ export default function FinancialAlertsPanel({
                       })}
                       %<span>{aumento ? " de aumento" : " utilizado"}</span>
                     </strong>
-                    <details>
-                      <summary>Ver detalhes</summary>
                       <dl>
                         <div>
                           <dt>Registrado</dt>
@@ -200,7 +191,6 @@ export default function FinancialAlertsPanel({
                         Categoria: {alerta.categoria ?? "Todas"}. Centro:{" "}
                         {alerta.centroCusto ?? "Todos"}.
                       </p>
-                    </details>
                     <Link
                       to={destino}
                       onClick={() => {
@@ -218,6 +208,7 @@ export default function FinancialAlertsPanel({
                           ? "Ver meta"
                           : "Ver orçamento"}
                     </Link>
+                    </details>
                   </article>
                 );
               })}
@@ -234,6 +225,17 @@ export default function FinancialAlertsPanel({
           )}
         </>
       )}
+      <details className="fa-method">
+        <summary>Como os alertas são avaliados</summary>
+        <p className="fa-note">
+          Os alertas cadastrados usam competência, independentemente do critério
+          analítico dos gráficos. Metas e orçamentos usam seus períodos e
+          escopos completos. O filtro de categoria do painel se aplica ao
+          aumento de despesas. Valores registrados podem incluir lançamentos em
+          aberto.
+        </p>
+      </details>
+      <Link className="fa-center-link" to="/alertas">Abrir central de alertas →</Link>
     </section>
   );
 }

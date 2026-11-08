@@ -1,5 +1,9 @@
-import {useContext} from "react";
-import {FinancialViewContext, FinancialViewUpdateContext} from "../contexts/financialViewContext";
+import { criterionNames, viewRange } from "../services/financialViewService";
+import { useContext } from "react";
+import {
+  FinancialViewContext,
+  FinancialViewUpdateContext,
+} from "../contexts/financialViewContext";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 
@@ -22,12 +26,13 @@ import {
   detectarSobreposicoes,
   filtrarOrcamentos,
   moedaOrcamento,
+  percentualOrcamento,
   type FiltroOrcamento,
 } from "../services/budgetAnalysis";
 
 function Budgets() {
-  const viewFilter=useContext(FinancialViewContext);
-  const updateView=useContext(FinancialViewUpdateContext);
+  const viewFilter = useContext(FinancialViewContext);
+  const updateView = useContext(FinancialViewUpdateContext);
   const { search } = useLocation();
   const [orcamentoAlvo] = useState(
     () => Number(new URLSearchParams(search).get("orcamento")) || null,
@@ -105,7 +110,9 @@ function Budgets() {
     }
 
     void carregarPagina();
-    return () => { ativo = false; };
+    return () => {
+      ativo = false;
+    };
   }, [orcamentoAlvo, viewFilter]);
 
   const visiveis = useMemo(
@@ -139,9 +146,19 @@ function Budgets() {
     (s, item) => s + Number(item.valorDisponivel),
     0,
   );
-  const comExcedente = visiveis.filter(
-    (item) => Number(item.valorUtilizado) > Number(item.valorPlanejado),
-  ).length;
+  const excedentes = visiveis
+    .map((item) => ({
+      item,
+      valor:
+        Math.round(Number(item.valorUtilizado) * 100) -
+        Math.round(Number(item.valorPlanejado) * 100),
+    }))
+    .filter(({ valor }) => valor > 0)
+    .sort((a, b) => b.valor - a.valor);
+  const totalExcedente =
+    excedentes.reduce((total, { valor }) => total + valor, 0) / 100;
+  const periodoAnalise = viewFilter ? viewRange(viewFilter) : null;
+
   function selecionarPeriodo(valor: string) {
     setErroFiltro("");
     if (valor === "TODOS") {
@@ -219,7 +236,13 @@ function Budgets() {
         categoria: novoOrcamento.categoria?.trim() || null,
       });
 
-      if (viewFilter && updateView) updateView({...viewFilter,periodo:"PERSONALIZADO",inicio:cadastrado.dataInicio,fim:cadastrado.dataFim});
+      if (viewFilter && updateView)
+        updateView({
+          ...viewFilter,
+          periodo: "PERSONALIZADO",
+          inicio: cadastrado.dataInicio,
+          fim: cadastrado.dataFim,
+        });
 
       setOrcamentos((atuais) => [...atuais, cadastrado]);
 
@@ -271,9 +294,15 @@ function Budgets() {
       <header className="ba-page-heading">
         <div>
           <span className="ba-eyebrow">Controle orçamentário</span>
-          <h1>Orçamentos empresariais</h1>
+          <h1>Planejado × registrado</h1>
           <p>
-            Acompanhe cada limite no seu período e identifique os excedentes.
+            {viewFilter
+              ? `${criterionNames[viewFilter.criterio]} · ${
+                  periodoAnalise
+                    ? `${dataOrcamento(periodoAnalise.inicio)} a ${dataOrcamento(periodoAnalise.fim)}`
+                    : "Todo o período"
+                }`
+              : "Acompanhe cada limite no seu período e identifique os excedentes."}
           </p>
         </div>
         {usuarioAdmin && (
@@ -439,54 +468,57 @@ function Budgets() {
 
       <section
         className="ba-filter"
-        aria-label="Selecionar período dos orçamentos"
+        aria-label="Filtrar orçamentos pelo período cadastrado"
       >
-        <div className="ba-filter-grid">
-          <label>
-            Período cadastrado
-            <select
-              value={
-                filtro.modo === "TODOS"
-                  ? "TODOS"
-                  : filtro.modo === "EXATO"
-                    ? `${filtro.inicio}|${filtro.fim}`
-                    : "PERSONALIZADO"
-              }
-              onChange={(e) => selecionarPeriodo(e.target.value)}
-            >
-              <option value="TODOS">Todos os períodos</option>
-              <option value="PERSONALIZADO" disabled>
-                Intervalo personalizado
-              </option>
-              {periodos.map((item) => (
-                <option key={chavePeriodo(item)} value={chavePeriodo(item)}>
-                  {dataOrcamento(item.dataInicio)} —{" "}
-                  {dataOrcamento(item.dataFim)}
+        <details>
+          <summary>Filtrar por período cadastrado</summary>
+          <div className="ba-filter-grid">
+            <label>
+              Período cadastrado
+              <select
+                value={
+                  filtro.modo === "TODOS"
+                    ? "TODOS"
+                    : filtro.modo === "EXATO"
+                      ? `${filtro.inicio}|${filtro.fim}`
+                      : "PERSONALIZADO"
+                }
+                onChange={(e) => selecionarPeriodo(e.target.value)}
+              >
+                <option value="TODOS">Todos os períodos</option>
+                <option value="PERSONALIZADO" disabled>
+                  Intervalo personalizado
                 </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Data inicial
-            <input
-              type="date"
-              value={inicio}
-              onChange={(e) => setInicio(e.target.value)}
-            />
-          </label>
-          <label>
-            Data final
-            <input
-              type="date"
-              value={fim}
-              min={inicio || undefined}
-              onChange={(e) => setFim(e.target.value)}
-            />
-          </label>
-          <button type="button" onClick={aplicarIntervalo}>
-            Aplicar intervalo
-          </button>
-        </div>
+                {periodos.map((item) => (
+                  <option key={chavePeriodo(item)} value={chavePeriodo(item)}>
+                    {dataOrcamento(item.dataInicio)} —{" "}
+                    {dataOrcamento(item.dataFim)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Data inicial
+              <input
+                type="date"
+                value={inicio}
+                onChange={(e) => setInicio(e.target.value)}
+              />
+            </label>
+            <label>
+              Data final
+              <input
+                type="date"
+                value={fim}
+                min={inicio || undefined}
+                onChange={(e) => setFim(e.target.value)}
+              />
+            </label>
+            <button type="button" onClick={aplicarIntervalo}>
+              Aplicar intervalo
+            </button>
+          </div>
+        </details>
         <p>
           Exibido:{" "}
           {filtro.modo === "TODOS"
@@ -500,9 +532,9 @@ function Budgets() {
           . {visiveis.length} orçamento(s).
         </p>
         <p className="ba-note">
-          O período cadastrado seleciona os orçamentos exibidos. O consumo
-          segue o critério e o período de análise selecionados. O limite
-          cadastrado não é rateado por dias.
+          O período cadastrado seleciona os orçamentos exibidos. O consumo segue
+          o critério e o período de análise selecionados. O limite cadastrado
+          não é rateado por dias.
         </p>
         {erroFiltro && (
           <p role="alert" className="ba-error">
@@ -514,8 +546,8 @@ function Budgets() {
         <aside className="ba-overlap">
           <strong>Os critérios de alguns orçamentos se sobrepõem.</strong>
           <p>
-            Uma mesma despesa pode entrar em mais de um orçamento. A soma dos indicadores
-            não representa despesas únicas da empresa.
+            Uma mesma despesa pode entrar em mais de um orçamento. A soma dos
+            indicadores não representa despesas únicas da empresa.
           </p>
           <details>
             <summary>
@@ -536,22 +568,25 @@ function Budgets() {
         aria-label="Resumo dos orçamentos exibidos"
       >
         <div>
-          <span>Limites somados</span>
+          <span>Planejado</span>
           <strong>{moedaOrcamento(totalPlanejado)}</strong>
         </div>
         <div>
-          <span>Utilizado nos orçamentos</span>
+          <span>Registrado nos orçamentos</span>
           <strong>{moedaOrcamento(totalUtilizado)}</strong>
         </div>
         <div>
-          <span>Disponível nos orçamentos</span>
+          <span>Saldo do orçamento</span>
           <strong>{moedaOrcamento(totalDisponivel)}</strong>
         </div>
         <div>
-          <span>Orçamentos com excedente</span>
+          <span>Orçamentos excedidos</span>
           <strong>
-            {comExcedente} de {visiveis.length}
+            {excedentes.length} de {visiveis.length}
           </strong>
+          <small>
+            {moedaOrcamento(totalExcedente)} em excedentes individuais
+          </small>
         </div>
       </section>
       {filtro.modo === "TODOS" && periodos.length > 1 && (
@@ -560,7 +595,106 @@ function Budgets() {
           individual nas barras.
         </p>
       )}
-      <BudgetPipelineChart dados={visiveis} />
+      <section
+        className="ba-filter ba-comparison"
+        aria-labelledby="ba-comparison-title"
+      >
+        <h2 id="ba-comparison-title">Comparativo por orçamento</h2>
+        {visiveis.length === 0 && (
+          <p>Nenhum orçamento para os filtros aplicados.</p>
+        )}
+        <ul className="ba-comparison-list">
+          {visiveis.map((item) => {
+            const percentual = Number(item.percentualUtilizado);
+            const excedido =
+              Math.round(Number(item.valorUtilizado) * 100) >
+              Math.round(Number(item.valorPlanejado) * 100);
+            return (
+              <li key={item.id}>
+                <div>
+                  <strong>{item.nome}</strong>
+                  <p>
+                    {dataOrcamento(item.dataInicio)} a{" "}
+                    {dataOrcamento(item.dataFim)}
+                  </p>
+                  <p>
+                    {[item.categoria, item.centroCusto]
+                      .filter(Boolean)
+                      .join(" · ") || "Todas as despesas"}
+                  </p>
+                </div>
+                <div>
+                  <span>Planejado</span>
+                  <strong>{moedaOrcamento(item.valorPlanejado)}</strong>
+                </div>
+                <div>
+                  <span>Registrado</span>
+                  <strong>{moedaOrcamento(item.valorUtilizado)}</strong>
+                </div>
+                <div className="ba-comparison-usage">
+                  <strong>
+                    {percentualOrcamento(percentual)}% ·{" "}
+                    {excedido ? "Excedido" : "Dentro do limite"}
+                  </strong>
+                  <div className="ba-comparison-track" aria-hidden="true">
+                    <div
+                      className={excedido ? "ba-comparison-over" : ""}
+                      style={{
+                        width: `${Math.max(0, Math.min(100, percentual))}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+      {visiveis.length > 0 && (
+        <details className="ba-filter">
+          <summary>Ver gráfico e detalhamento</summary>
+          <BudgetPipelineChart dados={visiveis} />
+        </details>
+      )}
+      <section className="ba-filter" aria-labelledby="ba-overages-title">
+        <h2 id="ba-overages-title">Excedentes</h2>
+        {excedentes.length === 0 ? (
+          <p>Nenhum excedente nos orçamentos exibidos.</p>
+        ) : (
+          <div
+            className="ba-table-scroll"
+            tabIndex={0}
+            role="region"
+            aria-label="Tabela de excedentes"
+          >
+            <table className="ba-table">
+              <thead>
+                <tr>
+                  <th scope="col">Orçamento</th>
+                  <th scope="col">Planejado</th>
+                  <th scope="col">Registrado</th>
+                  <th scope="col">Excedente</th>
+                </tr>
+              </thead>
+              <tbody>
+                {excedentes.map(({ item, valor }) => (
+                  <tr key={item.id}>
+                    <th scope="row">
+                      {item.nome}
+                      <br />
+                      {dataOrcamento(item.dataInicio)} a{" "}
+                      {dataOrcamento(item.dataFim)}
+                    </th>
+                    <td>{moedaOrcamento(item.valorPlanejado)}</td>
+                    <td>{moedaOrcamento(item.valorUtilizado)}</td>
+                    <td>{moedaOrcamento(valor / 100)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

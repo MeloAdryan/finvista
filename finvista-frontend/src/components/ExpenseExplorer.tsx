@@ -1,3 +1,4 @@
+import { criterionNames } from "../services/financialViewService";
 import { useContext } from "react";
 import {
   FinancialViewContext,
@@ -45,6 +46,15 @@ export default function ExpenseExplorer({
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const [hierarquia, setHierarquia] = useState(false);
   const [pagina, setPagina] = useState(0);
+  const [busca, setBusca] = useState("");
+  const despesas = prioridade === "categorias";
+  const normalizar = (texto: string) =>
+    texto.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("pt-BR");
+  const termo = despesas ? normalizar(busca.trim()) : "";
+  const itensVisiveis =
+    dados?.itens.filter((item) =>
+      normalizar(item.descricao ?? "").includes(termo),
+    ) ?? [];
   useEffect(() => {
     const c = new AbortController();
     let ativo = true;
@@ -84,11 +94,17 @@ export default function ExpenseExplorer({
   }, [filtros, revision, tentativa, atualizarPeriodo, viewFilter]);
   function aplicar(e: FormEvent) {
     e.preventDefault();
-    if (!draft.inicio || !draft.fim || draft.fim < draft.inicio) {
+    if (
+      (!despesas || !viewFilter) &&
+      (!draft.inicio || !draft.fim || draft.fim < draft.inicio)
+    ) {
       setErro("Informe as duas datas em ordem válida.");
       return;
     }
     if (
+      !despesas &&
+      draft.inicio &&
+      draft.fim &&
       viewFilter &&
       updateView &&
       (draft.inicio !== dados?.inicio || draft.fim !== dados?.fim)
@@ -99,7 +115,12 @@ export default function ExpenseExplorer({
         inicio: draft.inicio,
         fim: draft.fim,
       });
-    setFiltros({ ...draft });
+    setFiltros(
+      despesas && viewFilter
+        ? { ...draft, inicio: undefined, fim: undefined }
+        : { ...draft },
+    );
+    if (despesas) setFiltrosAbertos(false);
   }
   function selecionar(tipo: "centroCusto" | "categoria", nome: string) {
     if (!dados) return;
@@ -290,7 +311,7 @@ export default function ExpenseExplorer({
         <h1>
           {prioridade === "centros"
             ? "Análise dos centros de custo"
-            : "Análise das despesas"}
+            : "Direcionamento das despesas"}
         </h1>
         <p className="ax-note">
           {prioridade === "centros"
@@ -301,8 +322,7 @@ export default function ExpenseExplorer({
           <>
             <div className="ax-filter-toolbar">
               <p className="ax-note">
-                Filtros da análise · os gráficos usam os critérios aplicados
-                abaixo.
+                Categoria, centro e filtros adicionais afetam toda a análise.
               </p>
               <button
                 type="button"
@@ -310,9 +330,7 @@ export default function ExpenseExplorer({
                 aria-controls="expense-local-filters"
                 onClick={() => setFiltrosAbertos(!filtrosAbertos)}
               >
-                {filtrosAbertos
-                  ? "Fechar filtros da análise"
-                  : "Editar filtros da análise"}
+                {filtrosAbertos ? "Ocultar mais filtros" : "Mais filtros"}
               </button>
             </div>
             {dados && (
@@ -320,7 +338,9 @@ export default function ExpenseExplorer({
                 className="ax-applied-chips"
                 aria-label="Critérios aplicados à análise"
               >
-                <span>Período: {datas(dados.inicio, dados.fim)}</span>
+                {viewFilter && (
+                  <span>{criterionNames[viewFilter.criterio]}</span>
+                )}
                 <span>Centro: {dados.centroCusto || "Todos"}</span>
                 <span>Categoria: {dados.categoria || "Todas"}</span>
                 {filtros.comportamento && (
@@ -345,30 +365,31 @@ export default function ExpenseExplorer({
             )}
           </>
         )}
-        <form
-          id={prioridade === "categorias" ? "expense-local-filters" : undefined}
-          hidden={prioridade === "categorias" && !filtrosAbertos}
-          onSubmit={aplicar}
-          className="ax-filter-grid"
-        >
-          <label>
-            Data inicial
-            <input
-              type="date"
-              disabled={loading}
-              value={draft.inicio ?? ""}
-              onChange={(e) => setDraft({ ...draft, inicio: e.target.value })}
-            />
-          </label>
-          <label>
-            Data final
-            <input
-              type="date"
-              disabled={loading}
-              value={draft.fim ?? ""}
-              onChange={(e) => setDraft({ ...draft, fim: e.target.value })}
-            />
-          </label>
+        <form onSubmit={aplicar} className="ax-filter-grid">
+          {(!despesas || !viewFilter) && (
+            <>
+              <label>
+                Data inicial
+                <input
+                  type="date"
+                  disabled={loading}
+                  value={draft.inicio ?? ""}
+                  onChange={(e) =>
+                    setDraft({ ...draft, inicio: e.target.value })
+                  }
+                />
+              </label>
+              <label>
+                Data final
+                <input
+                  type="date"
+                  disabled={loading}
+                  value={draft.fim ?? ""}
+                  onChange={(e) => setDraft({ ...draft, fim: e.target.value })}
+                />
+              </label>
+            </>
+          )}
           <label>
             Centro de custo
             <select
@@ -399,53 +420,59 @@ export default function ExpenseExplorer({
               ))}
             </select>
           </label>
-          <label>
-            Comportamento
-            <select
-              disabled={loading}
-              value={draft.comportamento ?? ""}
-              onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  comportamento: e.target
-                    .value as ExpenseFilters["comportamento"],
-                })
-              }
-            >
-              <option value="">Todos</option>
-              <option value="FIXO">Fixo</option>
-              <option value="VARIAVEL">Variável</option>
-              <option value="NAO_CLASSIFICADO">Não classificado</option>
-            </select>
-          </label>
-          <label>
-            Natureza
-            <select
-              disabled={loading}
-              value={draft.natureza ?? ""}
-              onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  natureza: e.target.value as ExpenseFilters["natureza"],
-                })
-              }
-            >
-              <option value="">Todas</option>
-              {[
-                ["TAXAS", "Taxas"],
-                ["IMPOSTOS", "Impostos"],
-                ["PESSOAL", "Pessoal"],
-                ["SERVICOS", "Serviços"],
-                ["MATERIAIS", "Materiais"],
-                ["OUTROS", "Outros"],
-                ["NAO_CLASSIFICADO", "Não classificado"],
-              ].map(([v, n]) => (
-                <option key={v} value={v}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div
+            id={despesas ? "expense-local-filters" : undefined}
+            className="ax-advanced-fields"
+            hidden={despesas && !filtrosAbertos}
+          >
+            <label>
+              Comportamento
+              <select
+                disabled={loading}
+                value={draft.comportamento ?? ""}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    comportamento: e.target
+                      .value as ExpenseFilters["comportamento"],
+                  })
+                }
+              >
+                <option value="">Todos</option>
+                <option value="FIXO">Fixo</option>
+                <option value="VARIAVEL">Variável</option>
+                <option value="NAO_CLASSIFICADO">Não classificado</option>
+              </select>
+            </label>
+            <label>
+              Natureza
+              <select
+                disabled={loading}
+                value={draft.natureza ?? ""}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    natureza: e.target.value as ExpenseFilters["natureza"],
+                  })
+                }
+              >
+                <option value="">Todas</option>
+                {[
+                  ["TAXAS", "Taxas"],
+                  ["IMPOSTOS", "Impostos"],
+                  ["PESSOAL", "Pessoal"],
+                  ["SERVICOS", "Serviços"],
+                  ["MATERIAIS", "Materiais"],
+                  ["OUTROS", "Outros"],
+                  ["NAO_CLASSIFICADO", "Não classificado"],
+                ].map(([v, n]) => (
+                  <option key={v} value={v}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
           <div className="ax-actions">
             <button disabled={loading} type="submit">
               Aplicar filtros
@@ -455,7 +482,9 @@ export default function ExpenseExplorer({
               type="button"
               onClick={() => setFiltros({})}
             >
-              Voltar ao mês de referência
+              {despesas && viewFilter
+                ? "Limpar filtros locais"
+                : "Voltar ao mês de referência"}
             </button>
           </div>
         </form>
@@ -492,7 +521,7 @@ export default function ExpenseExplorer({
             </p>
             <div className="ax-summary">
               <div>
-                Despesa na seleção
+                {despesas ? "Total filtrado" : "Despesa na seleção"}
                 <strong>{moedaFinanceira(dados.total)}</strong>
               </div>
               <div>
@@ -524,6 +553,17 @@ export default function ExpenseExplorer({
                   </small>
                 )}
               </div>
+              {despesas && (
+                <div>
+                  Maior categoria
+                  <strong>
+                    {categorias[0]?.atual > 0 ? categorias[0].nome : "—"}
+                  </strong>
+                  {categorias[0]?.atual > 0 && (
+                    <small>{moedaFinanceira(categorias[0].atual)}</small>
+                  )}
+                </div>
+              )}
             </div>
             {(dados.centroCusto || dados.categoria) && (
               <div className="ax-actions">
@@ -681,9 +721,26 @@ export default function ExpenseExplorer({
                     ])
                   }
                 >
-                  CSV de lançamentos
+                  {despesas ? "CSV do recorte completo" : "CSV de lançamentos"}
                 </button>
               </div>
+              {despesas && (
+                <label className="ax-expense-search">
+                  Busca nesta tabela
+                  <input
+                    type="search"
+                    placeholder="Buscar descrição"
+                    value={busca}
+                    onChange={(event) => {
+                      setBusca(event.target.value);
+                      setPagina(0);
+                    }}
+                  />
+                  <span role="status">
+                    {itensVisiveis.length} de {dados.itens.length} lançamentos
+                  </span>
+                </label>
+              )}
               <div
                 className="ax-table"
                 tabIndex={0}
@@ -693,14 +750,23 @@ export default function ExpenseExplorer({
                 <table>
                   <thead>
                     <tr>
-                      <th>Data</th>
+                      <th>
+                        {despesas && viewFilter
+                          ? {
+                              COMPETENCIA: "Competência",
+                              VENCIMENTO: "Vencimento",
+                              BAIXA: "Data da baixa",
+                              BAIXA_EXTRATO: "Data do movimento",
+                            }[viewFilter.criterio]
+                          : "Data"}
+                      </th>
                       <th>Descrição</th>
                       <th>Selecionado</th>
                       <th>Integral</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {dados.itens
+                    {itensVisiveis
                       .slice(pagina * 15, pagina * 15 + 15)
                       .map((m) => (
                         <tr key={m.id}>
@@ -723,11 +789,11 @@ export default function ExpenseExplorer({
                 </button>
                 <span>
                   {pagina + 1} de{" "}
-                  {Math.max(1, Math.ceil(dados.itens.length / 15))}
+                  {Math.max(1, Math.ceil(itensVisiveis.length / 15))}
                 </span>
                 <button
                   type="button"
-                  disabled={(pagina + 1) * 15 >= dados.itens.length}
+                  disabled={(pagina + 1) * 15 >= itensVisiveis.length}
                   onClick={() => setPagina(pagina + 1)}
                 >
                   Próxima

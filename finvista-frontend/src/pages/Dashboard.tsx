@@ -571,16 +571,13 @@ function Dashboard() {
         />
       </details>
 
-      <details className="ev-secondary">
-        <summary>Alertas e pendências · Ver regras e resultados</summary>
-        <FinancialAlertsPanel
-          key={`${analise.clienteId}:${analise.inicio}:${analise.fim}:${analise.categoria ?? ""}`}
-          clienteId={analise.clienteId}
-          inicio={analise.inicio}
-          fim={analise.fim}
-          categoria={analise.categoria}
-        />
-      </details>
+      <FinancialAlertsPanel
+        key={`${analise.clienteId}:${analise.inicio}:${analise.fim}:${analise.categoria ?? ""}`}
+        clienteId={analise.clienteId}
+        inicio={analise.inicio}
+        fim={analise.fim}
+        categoria={analise.categoria}
+      />
 
       {detalhamento !== null && (
         <DashboardFilteredDetail
