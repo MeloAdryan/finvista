@@ -304,6 +304,7 @@ export async function expensesForFilter(
   filter: ViewFilter,
   local: ExpenseFilters,
   signal: AbortSignal,
+  tipo: "DESPESA" | "RECEITA" = "DESPESA",
 ): Promise<ExpenseAnalysis> {
   const f = {
     ...filter,
@@ -317,7 +318,7 @@ export async function expensesForFilter(
       : [];
   const classify = (lines: ViewLine[]) =>
     lines.filter((l) => {
-      if (l.tipo !== "DESPESA") return false;
+      if (l.tipo !== tipo) return false;
       const c = classifications.find(
         (c) =>
           c.categoria.trim().toLocaleLowerCase() ===
@@ -343,8 +344,8 @@ export async function expensesForFilter(
     categoria: f.categoria || null,
     comportamento: local.comportamento || null,
     natureza: local.natureza || null,
-    total: sum(now, "DESPESA"),
-    totalAnterior: sum(before, "DESPESA"),
+    total: sum(now, tipo),
+    totalAnterior: sum(before, tipo),
     centrosDisponiveis: [
       ...new Set([
         ...current.centros,

@@ -47,10 +47,13 @@ export default function ExpenseExplorer({
   const [hierarquia, setHierarquia] = useState(false);
   const [pagina, setPagina] = useState(0);
   const [busca, setBusca] = useState("");
-  const despesas = prioridade === "categorias";
+  const analisePorCategoria = prioridade === "categorias";
+  const [tipo, setTipo] = useState<"DESPESA" | "RECEITA">("DESPESA");
+  const receitas = tipo === "RECEITA";
+  const prefixoCsv = receitas ? "receitas" : "despesas";
   const normalizar = (texto: string) =>
     texto.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("pt-BR");
-  const termo = despesas ? normalizar(busca.trim()) : "";
+  const termo = analisePorCategoria ? normalizar(busca.trim()) : "";
   const itensVisiveis =
     dados?.itens.filter((item) =>
       normalizar(item.descricao ?? "").includes(termo),
@@ -62,9 +65,10 @@ export default function ExpenseExplorer({
       setLoading(true);
       try {
         const d = await getExpenseAnalysis(
-          filtros,
+          receitas ? { ...filtros, comportamento: "", natureza: "" } : filtros,
           c.signal,
           viewFilter ?? undefined,
+          tipo,
         );
         if (ativo) {
           setDados(d);
@@ -91,18 +95,26 @@ export default function ExpenseExplorer({
       ativo = false;
       c.abort();
     };
-  }, [filtros, revision, tentativa, atualizarPeriodo, viewFilter]);
+  }, [
+    filtros,
+    revision,
+    tentativa,
+    atualizarPeriodo,
+    viewFilter,
+    receitas,
+    tipo,
+  ]);
   function aplicar(e: FormEvent) {
     e.preventDefault();
     if (
-      (!despesas || !viewFilter) &&
+      (!analisePorCategoria || !viewFilter) &&
       (!draft.inicio || !draft.fim || draft.fim < draft.inicio)
     ) {
       setErro("Informe as duas datas em ordem válida.");
       return;
     }
     if (
-      !despesas &&
+      !analisePorCategoria &&
       draft.inicio &&
       draft.fim &&
       viewFilter &&
@@ -116,11 +128,11 @@ export default function ExpenseExplorer({
         fim: draft.fim,
       });
     setFiltros(
-      despesas && viewFilter
+      analisePorCategoria && viewFilter
         ? { ...draft, inicio: undefined, fim: undefined }
         : { ...draft },
     );
-    if (despesas) setFiltrosAbertos(false);
+    if (analisePorCategoria) setFiltrosAbertos(false);
   }
   function selecionar(tipo: "centroCusto" | "categoria", nome: string) {
     if (!dados) return;
@@ -147,7 +159,7 @@ export default function ExpenseExplorer({
   const topCinco = categorias.slice(0, 5).reduce((s, m) => s + m.atual, 0);
   const exportar = () => {
     if (dados)
-      exportarFinanceiro("despesas-por-categoria.csv", [
+      exportarFinanceiro(`${prefixoCsv}-por-categoria.csv`, [
         [
           "Categoria",
           "Atual",
@@ -180,8 +192,16 @@ export default function ExpenseExplorer({
     <section className="ax-panel">
       <div className="ax-heading">
         <div>
-          <h2>Gastos por centro de custo</h2>
-          <p className="ax-note">Onde os gastos estão concentrados?</p>
+          <h2>
+            {receitas
+              ? "Receitas por centro de custo"
+              : "Gastos por centro de custo"}
+          </h2>
+          <p className="ax-note">
+            {receitas
+              ? "Onde as receitas estão concentradas?"
+              : "Onde os gastos estão concentrados?"}
+          </p>
         </div>
         {centros.length > 10 && (
           <button
@@ -224,7 +244,9 @@ export default function ExpenseExplorer({
           <h2>
             {prioridade === "centros" && dados.centroCusto
               ? `Categorias de ${dados.centroCusto}`
-              : "Despesas por categoria"}
+              : receitas
+                ? "Receitas por categoria"
+                : "Despesas por categoria"}
           </h2>
           <p className="ax-note">
             {dados.total > 0
@@ -311,28 +333,55 @@ export default function ExpenseExplorer({
         <h1>
           {prioridade === "centros"
             ? "Análise dos centros de custo"
-            : "Direcionamento das despesas"}
+            : receitas
+              ? "Direcionamento das receitas"
+              : "Direcionamento das despesas"}
         </h1>
         <p className="ax-note">
           {prioridade === "centros"
             ? "Compare os centros e selecione um para consultar suas categorias e lançamentos."
-            : "Explore as categorias de despesas e os lançamentos que compõem cada valor."}
+            : "Explore as categorias e os lançamentos que compõem cada valor."}
         </p>
+        {analisePorCategoria && viewFilter && (
+          <div
+            className="ax-actions"
+            role="group"
+            aria-label="Tipo de lançamento"
+          >
+            {(["DESPESA", "RECEITA"] as const).map((opcao) => (
+              <button
+                key={opcao}
+                type="button"
+                aria-pressed={tipo === opcao}
+                onClick={() => {
+                  if (tipo === opcao) return;
+                  setLoading(true);
+                  setErro("");
+                  setTipo(opcao);
+                }}
+              >
+                {opcao === "DESPESA" ? "Despesas" : "Receitas"}
+              </button>
+            ))}
+          </div>
+        )}
         {prioridade === "categorias" && (
           <>
-            <div className="ax-filter-toolbar">
-              <p className="ax-note">
-                Categoria, centro e filtros adicionais afetam toda a análise.
-              </p>
-              <button
-                type="button"
-                aria-expanded={filtrosAbertos}
-                aria-controls="expense-local-filters"
-                onClick={() => setFiltrosAbertos(!filtrosAbertos)}
-              >
-                {filtrosAbertos ? "Ocultar mais filtros" : "Mais filtros"}
-              </button>
-            </div>
+            {!receitas && (
+              <div className="ax-filter-toolbar">
+                <p className="ax-note">
+                  Categoria, centro e filtros adicionais afetam toda a análise.
+                </p>
+                <button
+                  type="button"
+                  aria-expanded={filtrosAbertos}
+                  aria-controls="expense-local-filters"
+                  onClick={() => setFiltrosAbertos(!filtrosAbertos)}
+                >
+                  {filtrosAbertos ? "Ocultar mais filtros" : "Mais filtros"}
+                </button>
+              </div>
+            )}
             {dados && (
               <div
                 className="ax-applied-chips"
@@ -343,7 +392,7 @@ export default function ExpenseExplorer({
                 )}
                 <span>Centro: {dados.centroCusto || "Todos"}</span>
                 <span>Categoria: {dados.categoria || "Todas"}</span>
-                {filtros.comportamento && (
+                {!receitas && filtros.comportamento && (
                   <span>
                     Comportamento:{" "}
                     {filtros.comportamento === "FIXO"
@@ -353,7 +402,7 @@ export default function ExpenseExplorer({
                         : "Não classificado"}
                   </span>
                 )}
-                {filtros.natureza && (
+                {!receitas && filtros.natureza && (
                   <span>
                     Natureza:{" "}
                     {filtros.natureza
@@ -366,7 +415,7 @@ export default function ExpenseExplorer({
           </>
         )}
         <form onSubmit={aplicar} className="ax-filter-grid">
-          {(!despesas || !viewFilter) && (
+          {(!analisePorCategoria || !viewFilter) && (
             <>
               <label>
                 Data inicial
@@ -421,9 +470,9 @@ export default function ExpenseExplorer({
             </select>
           </label>
           <div
-            id={despesas ? "expense-local-filters" : undefined}
+            id={analisePorCategoria ? "expense-local-filters" : undefined}
             className="ax-advanced-fields"
-            hidden={despesas && !filtrosAbertos}
+            hidden={receitas || (analisePorCategoria && !filtrosAbertos)}
           >
             <label>
               Comportamento
@@ -482,7 +531,7 @@ export default function ExpenseExplorer({
               type="button"
               onClick={() => setFiltros({})}
             >
-              {despesas && viewFilter
+              {analisePorCategoria && viewFilter
                 ? "Limpar filtros locais"
                 : "Voltar ao mês de referência"}
             </button>
@@ -521,7 +570,7 @@ export default function ExpenseExplorer({
             </p>
             <div className="ax-summary">
               <div>
-                {despesas ? "Total filtrado" : "Despesa na seleção"}
+                {analisePorCategoria ? "Total filtrado" : "Despesa na seleção"}
                 <strong>{moedaFinanceira(dados.total)}</strong>
               </div>
               <div>
@@ -532,7 +581,7 @@ export default function ExpenseExplorer({
                 Diferença entre totais registrados
                 <strong
                   className={
-                    prioridade === "categorias" && comparavel
+                    !receitas && prioridade === "categorias" && comparavel
                       ? diferenca > 0
                         ? "ax-increase"
                         : diferenca < 0
@@ -553,7 +602,7 @@ export default function ExpenseExplorer({
                   </small>
                 )}
               </div>
-              {despesas && (
+              {analisePorCategoria && (
                 <div>
                   Maior categoria
                   <strong>
@@ -629,7 +678,7 @@ export default function ExpenseExplorer({
                   <button
                     type="button"
                     onClick={() =>
-                      exportarFinanceiro("despesas-por-centro.csv", [
+                      exportarFinanceiro(`${prefixoCsv}-por-centro.csv`, [
                         [
                           "Centro",
                           "Atual",
@@ -721,10 +770,12 @@ export default function ExpenseExplorer({
                     ])
                   }
                 >
-                  {despesas ? "CSV do recorte completo" : "CSV de lançamentos"}
+                  {analisePorCategoria
+                    ? "CSV do recorte completo"
+                    : "CSV de lançamentos"}
                 </button>
               </div>
-              {despesas && (
+              {analisePorCategoria && (
                 <label className="ax-expense-search">
                   Busca nesta tabela
                   <input
@@ -751,7 +802,7 @@ export default function ExpenseExplorer({
                   <thead>
                     <tr>
                       <th>
-                        {despesas && viewFilter
+                        {analisePorCategoria && viewFilter
                           ? {
                               COMPETENCIA: "Competência",
                               VENCIMENTO: "Vencimento",

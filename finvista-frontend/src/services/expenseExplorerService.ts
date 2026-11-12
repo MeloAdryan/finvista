@@ -44,8 +44,11 @@ export async function getExpenseAnalysis(
   filtros: ExpenseFilters,
   signal: AbortSignal,
   viewFilter?: ViewFilter,
+  tipo: "DESPESA" | "RECEITA" = "DESPESA",
 ): Promise<ExpenseAnalysis> {
-  if (viewFilter) return expensesForFilter(viewFilter, filtros, signal);
+  if (viewFilter) return expensesForFilter(viewFilter, filtros, signal, tipo);
+  if (tipo === "RECEITA")
+    throw new Error("Aplique um critério de data para consultar receitas.");
   const params = new URLSearchParams();
   Object.entries(filtros).forEach(([k, v]) => {
     if (v) params.set(k, v);
