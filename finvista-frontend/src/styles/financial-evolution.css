@@ -581,3 +581,33 @@
     height: clamp(280px, 80vw, 340px);
   }
 }
+
+.cash-flow-page .cf-export {
+  position: relative;
+}
+
+.cash-flow-page .cf-export summary {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--fv-dark-border, #dbe4ef);
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.cash-flow-page .cf-export-options {
+  position: absolute;
+  z-index: 3;
+  inset-inline-end: 0;
+  top: calc(100% + 0.25rem);
+  display: grid;
+  gap: 0.25rem;
+  min-width: max-content;
+  padding: 0.375rem;
+  border: 1px solid var(--fv-dark-border, #dbe4ef);
+  border-radius: 0.5rem;
+  background: var(--fv-dark-panel, Canvas);
+  box-shadow: 0 4px 12px #0002;
+}
+
+.cash-flow-page .cf-export-options button {
+  text-align: start;
+}

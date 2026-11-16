@@ -50,6 +50,23 @@ export async function listarClientes(): Promise<Cliente[]> {
   return (await response.json()) as Cliente[];
 }
 
+export async function listarEmpresasVinculadas(
+  signal: AbortSignal,
+  usuarioId?: number,
+): Promise<Cliente[]> {
+  const response = await apiFetch(
+    `${API_URL}/api/clientes/vinculadas${usuarioId == null ? "" : `/${usuarioId}`}`,
+    {
+      credentials: "include",
+      cache: "no-store",
+      signal,
+    },
+  );
+  if (!response.ok)
+    return lerErro(response, "Não foi possível consultar os vínculos.");
+  return response.json();
+}
+
 export async function obterClienteAtual(): Promise<Cliente | null> {
   const response = await apiFetch(`${API_URL}/api/clientes/contexto`, {
     method: "GET",

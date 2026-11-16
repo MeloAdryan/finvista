@@ -10,6 +10,7 @@ export interface AdminUser {
   clienteNome: string | null;
   ativo: boolean;
   revisao?: string;
+  empresasAdicionais?: number[];
 }
 export interface NewUser {
   nome: string;
@@ -76,6 +77,7 @@ export const atualizarUsuarioAdmin = (
   ativo: boolean,
   novaSenha: string | null,
   confirmarSenha: string | null,
+  empresasAdicionais?: number[],
 ) =>
   request<AdminUser>(
     `usuarios/${original.id}`,
@@ -86,6 +88,7 @@ export const atualizarUsuarioAdmin = (
       revisao: original.revisao,
       novaSenha,
       confirmarSenha,
+      empresasAdicionais,
     },
     "PUT",
   );

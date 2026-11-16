@@ -43,10 +43,14 @@ const periods = {
 export default function FinancialCriteriaWorkspace({
   page,
   clienteId,
+  consolidado = false,
+  usuarioAtendido,
   children,
 }: {
   page: string;
   clienteId?: number;
+  consolidado?: boolean;
+  usuarioAtendido?: number;
   children: ReactNode;
 }) {
   const [applied, setApplied] = useState<ViewFilter>(() =>
@@ -55,7 +59,10 @@ export default function FinancialCriteriaWorkspace({
   const [draft, setDraft] = useState<ViewFilter>(() =>
     savedViewFilter(clienteId),
   );
-  const [meta, setMeta] = useState<FinancialView | null>(null);
+  const [metadata, setMetadata] = useState<{
+    filter: ViewFilter;
+    data: FinancialView;
+  } | null>(null);
   const [error, setError] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const id = useId();
@@ -66,16 +73,24 @@ export default function FinancialCriteriaWorkspace({
       ...applied,
       categoria: page === "dashboard" ? applied.categoria : "",
       centro: "",
-      clienteId,
+      clienteId: consolidado ? undefined : clienteId,
+      consolidado: consolidado || undefined,
+      usuarioAtendido: consolidado ? usuarioAtendido : undefined,
     }),
-    [applied, clienteId, page],
+    [applied, clienteId, consolidado, page, usuarioAtendido],
   );
+  const meta = metadata?.filter === scopedFilter ? metadata.data : null;
   const update = useCallback(
     (next: ViewFilter) => {
-      saveViewFilter(next, clienteId);
-      setApplied(next);
-      setDraft(next);
-      setMeta(null);
+      const filters = {
+        ...next,
+        clienteId,
+        consolidado: undefined,
+        usuarioAtendido: undefined,
+      };
+      saveViewFilter(filters, clienteId);
+      setApplied(filters);
+      setDraft(filters);
       setError("");
     },
     [clienteId],
@@ -83,18 +98,19 @@ export default function FinancialCriteriaWorkspace({
   useEffect(() => {
     if (!enabled || projection) return;
     const c = new AbortController();
-    void getFinancialView({ ...applied, categoria: "", centro: "" }, c.signal)
+    void getFinancialView({ ...scopedFilter, categoria: "", centro: "" }, c.signal)
       .then((data) => {
-        if (clienteId != null && data.clienteId !== clienteId)
-          throw new Error("A empresa mudou. Atualize a página.");
-        if (!c.signal.aborted) setMeta(data);
+        if (!c.signal.aborted) {
+          setMetadata({ filter: scopedFilter, data });
+          setError("");
+        }
       })
       .catch((e) => {
         if (!c.signal.aborted)
           setError(e instanceof Error ? e.message : "Falha nos filtros.");
       });
     return () => c.abort();
-  }, [applied, clienteId, enabled, projection]);
+  }, [scopedFilter, enabled, projection]);
   if (!enabled) return <>{children}</>;
   const baixa =
     draft.criterio === "BAIXA" || draft.criterio === "BAIXA_EXTRATO";

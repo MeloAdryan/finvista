@@ -56,7 +56,7 @@ export async function getCashFlow(
   }));
 }
 export interface RealizedCashFlow {
-  clienteId: number;
+  clienteId: number | null;
   inicio: string;
   fim: string;
   lancamentosConferidos: number;

@@ -27,6 +27,7 @@ export default function ExpenseExplorer({
   revision?: number;
 }) {
   const viewFilter = useContext(FinancialViewContext);
+  const consolidado = viewFilter?.consolidado === true;
   const updateView = useContext(FinancialViewUpdateContext);
   const { periodo, atualizarPeriodo } = useAnalysisPeriod();
   const [filtros, setFiltros] = useState<ExpenseFilters>(() => ({
@@ -367,7 +368,7 @@ export default function ExpenseExplorer({
         )}
         {prioridade === "categorias" && (
           <>
-            {!receitas && (
+            {!receitas && !consolidado && (
               <div className="ax-filter-toolbar">
                 <p className="ax-note">
                   Categoria, centro e filtros adicionais afetam toda a análise.
@@ -381,6 +382,11 @@ export default function ExpenseExplorer({
                   {filtrosAbertos ? "Ocultar mais filtros" : "Mais filtros"}
                 </button>
               </div>
+            )}
+            {consolidado && (
+              <p className="ax-note">
+                Comportamento e natureza estão disponíveis na visão individual.
+              </p>
             )}
             {dados && (
               <div
@@ -472,7 +478,11 @@ export default function ExpenseExplorer({
           <div
             id={analisePorCategoria ? "expense-local-filters" : undefined}
             className="ax-advanced-fields"
-            hidden={receitas || (analisePorCategoria && !filtrosAbertos)}
+            hidden={
+              consolidado ||
+              receitas ||
+              (analisePorCategoria && !filtrosAbertos)
+            }
           >
             <label>
               Comportamento

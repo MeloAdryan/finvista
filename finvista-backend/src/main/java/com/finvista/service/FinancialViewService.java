@@ -129,6 +129,64 @@ public class FinancialViewService {
 
     @Transactional(readOnly = true)
     public Resposta consultar(Filtro f) {
+        return consultarEmpresa(f, context.getClienteAtualId(), true);
+    }
+
+    public record EmpresaTotal(Long id, String nome, Total totais) {}
+
+    public record Consolidado(Faixa intervalo, Total totais, List<EmpresaTotal> empresas) {}
+
+    @Transactional(readOnly = true)
+    public Consolidado consolidar(Filtro filtro, com.finvista.service.ClienteService clientes) {
+        return consolidar(filtro, clientes, null);
+    }
+
+    @Transactional(readOnly = true)
+    public Consolidado consolidar(Filtro filtro, ClienteService clientes, Long usuarioId) {
+        var vinculadas = usuarioId == null ? clientes.listarEmpresasVinculadas()
+                : clientes.listarEmpresasDoCliente(usuarioId);
+        var empresas = vinculadas.stream()
+                .map(c -> new EmpresaTotal(c.id(), c.nome(), consultarEmpresa(filtro, c.id(), false).totais()))
+                .toList();
+        var receitas = empresas.stream().map(e -> e.totais().receita()).reduce(BigDecimal.ZERO, BigDecimal::add);
+        var despesas = empresas.stream().map(e -> e.totais().despesa()).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new Consolidado(new Faixa(filtro.inicio(), filtro.fim()),
+                new Total(receitas, despesas, receitas.subtract(despesas)), empresas);
+    }
+
+    @Transactional(readOnly = true)
+    public Resposta consultarConsolidado(Filtro filtro, ClienteService clientes, Long usuarioId) {
+        var empresas = usuarioId == null ? clientes.listarEmpresasVinculadas()
+                : clientes.listarEmpresasDoCliente(usuarioId);
+        var respostas = empresas.stream().map(c -> c.id()).distinct()
+                .map(id -> consultarEmpresa(filtro, id, false)).toList();
+        if (respostas.isEmpty()) {
+            throw new IllegalArgumentException("Nenhuma empresa ativa vinculada para consolidar.");
+        }
+
+        var primeira = respostas.get(0);
+        var faixa = primeira.intervalo();
+        if (filtro.periodo() == Periodo.TODOS) {
+            var datas = respostas.stream().filter(r -> !r.categorias().isEmpty())
+                    .flatMap(r -> java.util.stream.Stream.of(r.intervalo().inicio(), r.intervalo().fim())).toList();
+            faixa = intervalo(filtro, primeira.hoje(), datas);
+        }
+
+        var linhas = respostas.stream().flatMap(r -> r.linhas().stream())
+                .sorted(Comparator.comparing(Linha::data)
+                        .thenComparing(Linha::id, Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+        var categorias = respostas.stream().flatMap(r -> r.categorias().stream()).distinct().sorted().toList();
+        var centros = respostas.stream().flatMap(r -> r.centros().stream()).distinct().sorted().toList();
+        Map<String, Integer> exclusoes = new TreeMap<>();
+        respostas.forEach(r -> r.exclusoes().forEach((motivo, count) -> exclusoes.merge(motivo, count, Integer::sum)));
+        return new Resposta(null, filtro, faixa, primeira.hoje(), total(linhas),
+                series(linhas, faixa, filtro.periodo()), linhas, exclusoes, categorias, centros,
+                List.of(), List.of(), primeira.baseValor(),
+                "Soma dos registros das empresas vinculadas, sem eliminar operações entre empresas. " + primeira.aviso());
+    }
+
+    Resposta consultarEmpresa(Filtro f, Long cliente, boolean incluirLimites) {
         Objects.requireNonNull(f.criterio());
         Objects.requireNonNull(f.periodo());
         Objects.requireNonNull(f.situacao());
@@ -138,10 +196,9 @@ public class FinancialViewService {
         if ((f.categoria() != null && f.categoria().length() > 255) || (f.centro() != null && f.centro().length() > 255)) {
             throw new IllegalArgumentException("Filtro muito longo.");
         }
-        Long cliente = context.getClienteAtualId();
         LocalDate hoje = LocalDate.now(clock.withZone(ZoneId.of("America/Sao_Paulo")));
         if (f.criterio() == Criterio.BAIXA_EXTRATO) {
-            return consultarExtrato(cliente, f, hoje);
+            return consultarExtrato(cliente, f, hoje, incluirLimites);
         }
         var registros = transactions.findByClienteId(cliente);
         Map<String, Integer> excluidos = new TreeMap<>();
@@ -236,18 +293,20 @@ public class FinancialViewService {
         var linhas = todas.stream().filter(l -> filtro(f.categoria(), l.categoria()) && filtro(f.centro(), l.centro()))
                 .sorted(Comparator.comparing(Linha::data).thenComparing(Linha::id, Comparator.nullsLast(Comparator.naturalOrder()))).toList();
         List<Limite> metas = new ArrayList<>(), orcamentos = new ArrayList<>();
-        for (var g : goals.listarComSituacao()) {
-            if (cruza(g.dataInicio(), g.dataFim(), faixa)) {
-                metas.add(limite(g.id(), g.serie() == null ? "Meta #" + g.id() : g.serie().nome(), g.dataInicio(), g.dataFim(), g.valorLimite(), linhas, g.categoria(), g.centroCusto(), faixa));
+        if (incluirLimites) {
+            for (var g : goals.listarComSituacao()) {
+                if (cruza(g.dataInicio(), g.dataFim(), faixa)) {
+                    metas.add(limite(g.id(), g.serie() == null ? "Meta #" + g.id() : g.serie().nome(), g.dataInicio(), g.dataFim(), g.valorLimite(), linhas, g.categoria(), g.centroCusto(), faixa));
+                }
             }
-        }
-        for (var b : budgets.listar()) {
-            if (cruza(b.dataInicio(), b.dataFim(), faixa)) {
-                orcamentos.add(limite(b.id(), b.nome(), b.dataInicio(), b.dataFim(), b.valorPlanejado(), linhas, b.categoria(), b.centroCusto(), faixa));
+            for (var b : budgets.listar()) {
+                if (cruza(b.dataInicio(), b.dataFim(), faixa)) {
+                    orcamentos.add(limite(b.id(), b.nome(), b.dataInicio(), b.dataFim(), b.valorPlanejado(), linhas, b.categoria(), b.centroCusto(), faixa));
+                }
             }
-        }
-        if (!cliente.equals(context.getClienteAtualId())) {
-            throw new IllegalStateException("A empresa selecionada mudou.");
+            if (!cliente.equals(context.getClienteAtualId())) {
+                throw new IllegalStateException("A empresa selecionada mudou.");
+            }
         }
         return new Resposta(cliente, f, faixa, hoje, total(linhas), series(linhas, faixa, f.periodo()), linhas, excluidos, categorias, centros, metas, orcamentos,
                 f.criterio() == Criterio.COMPETENCIA ? "PRINCIPAL" : "LIQUIDO",
@@ -257,7 +316,7 @@ public class FinancialViewService {
     /**
      * Separate source: never adds extract movements to the same API payment.
      */
-    private Resposta consultarExtrato(Long cliente, Filtro f, LocalDate hoje) {
+    private Resposta consultarExtrato(Long cliente, Filtro f, LocalDate hoje, boolean incluirLimites) {
         List<Linha> base = new ArrayList<>();
         Map<String, Integer> exclusions = new TreeMap<>();
         for (var saved : statements.findByClienteIdOrderByIdAsc(cliente)) {
@@ -296,18 +355,20 @@ public class FinancialViewService {
         var lines = within.stream().filter(l -> filtro(f.categoria(), l.categoria()) && filtro(f.centro(), l.centro()))
                 .sorted(Comparator.comparing(Linha::data).thenComparing(Linha::id)).toList();
         List<Limite> goalLimits = new ArrayList<>(), budgetLimits = new ArrayList<>();
-        for (var g : goals.listarComSituacao()) {
-            if (cruza(g.dataInicio(), g.dataFim(), range)) {
-                goalLimits.add(limite(g.id(), g.serie() == null ? "Meta #" + g.id() : g.serie().nome(), g.dataInicio(), g.dataFim(), g.valorLimite(), lines, g.categoria(), g.centroCusto(), range));
+        if (incluirLimites) {
+            for (var g : goals.listarComSituacao()) {
+                if (cruza(g.dataInicio(), g.dataFim(), range)) {
+                    goalLimits.add(limite(g.id(), g.serie() == null ? "Meta #" + g.id() : g.serie().nome(), g.dataInicio(), g.dataFim(), g.valorLimite(), lines, g.categoria(), g.centroCusto(), range));
+                }
             }
-        }
-        for (var b : budgets.listar()) {
-            if (cruza(b.dataInicio(), b.dataFim(), range)) {
-                budgetLimits.add(limite(b.id(), b.nome(), b.dataInicio(), b.dataFim(), b.valorPlanejado(), lines, b.categoria(), b.centroCusto(), range));
+            for (var b : budgets.listar()) {
+                if (cruza(b.dataInicio(), b.dataFim(), range)) {
+                    budgetLimits.add(limite(b.id(), b.nome(), b.dataInicio(), b.dataFim(), b.valorPlanejado(), lines, b.categoria(), b.centroCusto(), range));
+                }
             }
-        }
-        if (!cliente.equals(context.getClienteAtualId())) {
-            throw new IllegalStateException("A empresa selecionada mudou.");
+            if (!cliente.equals(context.getClienteAtualId())) {
+                throw new IllegalStateException("A empresa selecionada mudou.");
+            }
         }
         return new Resposta(cliente, f, range, hoje, total(lines), series(lines, range, f.periodo()), lines, exclusions, categories, centers, goalLimits, budgetLimits, "LIQUIDO",
                 "Fonte exclusiva: extratos confirmados desta empresa. Não soma parcelas ou baixas da API. Data de movimento e valor líquido; transferências e origens não financeiras ficam fora dos indicadores. Cobertura limitada aos arquivos enviados. Rateios não conferidos permanecem sinalizados para revisão. Limites não são proporcionalizados.");
@@ -373,11 +434,11 @@ public class FinancialViewService {
                 t.getValor(), t.getValorRealizado(), t.getValorAberto(), t.getValorTotalRealizado(), t.getValorTotalAberto(), m.movimentoId(), m.contaId());
     }
 
-    private static boolean cruza(LocalDate a, LocalDate b, Faixa f) {
+    static boolean cruza(LocalDate a, LocalDate b, Faixa f) {
         return !a.isAfter(f.fim()) && !b.isBefore(f.inicio());
     }
 
-    private static Limite limite(Long id, String nome, LocalDate a, LocalDate b, BigDecimal limite, List<Linha> linhas, String cat, String centro, Faixa faixa) {
+    static Limite limite(Long id, String nome, LocalDate a, LocalDate b, BigDecimal limite, List<Linha> linhas, String cat, String centro, Faixa faixa) {
         BigDecimal consumo = linhas.stream().filter(l -> "DESPESA".equals(l.tipo()) && !l.data().isBefore(a) && !l.data().isAfter(b) && filtro(cat, l.categoria()) && filtro(centro, l.centro())).map(Linha::valor).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new Limite(id, nome, a, b, limite, consumo, limite.signum() > 0 ? consumo.multiply(new BigDecimal("100")).divide(limite, 2, RoundingMode.HALF_UP) : null, faixa.inicio().isAfter(a) || faixa.fim().isBefore(b));
     }

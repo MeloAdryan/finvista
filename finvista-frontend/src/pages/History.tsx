@@ -51,12 +51,14 @@ export default function History() {
       setErro(null);
       setPagina(0);
       try {
-        const ref = await obterReferenciaFinanceira();
+        const ref = viewFilter ? null : await obterReferenciaFinanceira();
         if (controller.signal.aborted) return;
         const range = viewFilter ? viewRange(viewFilter) : null;
         const ultimo =
           range?.fim.slice(0, 7) ??
-          `${ref.ano}-${String(ref.mes).padStart(2, "0")}`;
+          (ref
+            ? `${ref.ano}-${String(ref.mes).padStart(2, "0")}`
+            : (viewFilter?.referencia.slice(0, 7) ?? ""));
         const primeiro = range?.inicio.slice(0, 7) ?? recuarMeses(ultimo, 11);
         setReferencia(ultimo);
         setInicio(primeiro);
@@ -73,6 +75,7 @@ export default function History() {
             inicio: result[0]?.periodo ?? primeiro,
             fim: result.at(-1)?.periodo ?? ultimo,
           });
+          setReferencia(result.at(-1)?.periodo ?? ultimo);
           setInicio(result[0]?.periodo ?? primeiro);
           setFim(result.at(-1)?.periodo ?? ultimo);
         }

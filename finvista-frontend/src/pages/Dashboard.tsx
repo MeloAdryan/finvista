@@ -47,6 +47,7 @@ import {
 
 function Dashboard() {
   const viewFilter = useContext(FinancialViewContext);
+  const consolidado = viewFilter?.consolidado === true;
   const positionRange = viewFilter ? viewRange(viewFilter) : null;
   const updateView = useContext(FinancialViewUpdateContext);
   const { periodo, atualizarPeriodo } = useAnalysisPeriod();
@@ -83,12 +84,14 @@ function Dashboard() {
             controller.signal,
             viewFilter ?? undefined,
           ),
-          listarMetas(
-            {},
-            viewFilter
-              ? { ...viewFilter, categoria: "", centro: "" }
-              : undefined,
-          ),
+          consolidado
+            ? Promise.resolve([])
+            : listarMetas(
+                {},
+                viewFilter
+                  ? { ...viewFilter, categoria: "", centro: "" }
+                  : undefined,
+              ),
         ]);
         if (!controller.signal.aborted) {
           setAnalise(resultado);
@@ -119,7 +122,7 @@ function Dashboard() {
       controller.abort();
       consulta.current?.abort();
     };
-  }, [periodoInicial, atualizarPeriodo, viewFilter]);
+  }, [periodoInicial, atualizarPeriodo, viewFilter, consolidado]);
   async function aplicar(
     event?: FormEvent<HTMLFormElement>,
     seisMeses = false,
@@ -529,25 +532,29 @@ function Dashboard() {
         onCategoria={(nome) => void aplicar(undefined, false, nome)}
       />
       <section className="ev-bottom-grid">
-        <SpendingGoalGauge
-          compacto
-          meta={metaSelecionada}
-          metas={metasCompativeis}
-          metaSelecionadaId={metaSelecionada?.id ?? null}
-          onSelecionarMeta={setMetaSelecionadaId}
-        />
+        {!consolidado && (
+          <SpendingGoalGauge
+            compacto
+            meta={metaSelecionada}
+            metas={metasCompativeis}
+            metaSelecionadaId={metaSelecionada?.id ?? null}
+            onSelecionarMeta={setMetaSelecionadaId}
+          />
+        )}
         <ExecutiveHighlights
           analise={analise}
           caixa={caixa}
           onDetalhar={setDetalhamento}
           onCategoria={(nome) => void aplicar(undefined, false, nome)}
         />
-        <FinancialPositionPanel
-          inicio={viewFilter ? positionRange?.inicio : analise.inicio}
-          fim={viewFilter ? positionRange?.fim : analise.fim}
-          key={analise.clienteId}
-          clienteId={analise.clienteId}
-        />
+        {analise.clienteId != null && (
+          <FinancialPositionPanel
+            inicio={viewFilter ? positionRange?.inicio : analise.inicio}
+            fim={viewFilter ? positionRange?.fim : analise.fim}
+            key={analise.clienteId}
+            clienteId={analise.clienteId}
+          />
+        )}
       </section>
 
       {metaSelecionada && (
@@ -571,13 +578,15 @@ function Dashboard() {
         />
       </details>
 
-      <FinancialAlertsPanel
-        key={`${analise.clienteId}:${analise.inicio}:${analise.fim}:${analise.categoria ?? ""}`}
-        clienteId={analise.clienteId}
-        inicio={analise.inicio}
-        fim={analise.fim}
-        categoria={analise.categoria}
-      />
+      {analise.clienteId != null && (
+        <FinancialAlertsPanel
+          key={`${analise.clienteId}:${analise.inicio}:${analise.fim}:${analise.categoria ?? ""}`}
+          clienteId={analise.clienteId}
+          inicio={analise.inicio}
+          fim={analise.fim}
+          categoria={analise.categoria}
+        />
+      )}
 
       {detalhamento !== null && (
         <DashboardFilteredDetail

@@ -1,5 +1,6 @@
 package com.finvista.controller;
 
+import com.finvista.service.ClienteService;
 import com.finvista.service.FinancialViewService;
 import com.finvista.service.FinancialViewService.*;
 import java.time.LocalDate;
@@ -14,8 +15,11 @@ public class FinancialViewController {
 
     private final FinancialViewService service;
 
-    public FinancialViewController(FinancialViewService service) {
+    private final ClienteService clientes;
+
+    public FinancialViewController(FinancialViewService service, ClienteService clientes) {
         this.service = service;
+        this.clientes = clientes;
     }
 
     @GetMapping
@@ -27,9 +31,14 @@ public class FinancialViewController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
             @RequestParam(required = false) String categoria,
-            @RequestParam(required = false) String centro) {
+            @RequestParam(required = false) String centro,
+            @RequestParam(defaultValue = "false") boolean consolidado,
+            @RequestParam(required = false) Long usuarioAtendido) {
         try {
-            return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.consultar(new Filtro(criterio, periodo, situacao, referencia, inicio, fim, categoria, centro)));
+            var filtro = new Filtro(criterio, periodo, situacao, referencia, inicio, fim, categoria, centro);
+            var resposta = consolidado ? service.consultarConsolidado(filtro, clientes, usuarioAtendido)
+                    : service.consultar(filtro);
+            return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(resposta);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }

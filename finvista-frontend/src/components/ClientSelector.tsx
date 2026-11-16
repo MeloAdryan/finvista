@@ -3,19 +3,27 @@ import logoClaro from "../assets/logo-skyline-claro.svg";
 import "../styles/brand-assets.css";
 import { useEffect, useState } from "react";
 
+import { listarUsuariosAdmin } from "../services/adminRegistrationService";
 import { listarClientes, type Cliente } from "../services/clientService";
 
 import "../styles/client-selector.css";
 
 interface ClientSelectorProps {
-  onSelecionar: (cliente: Cliente) => Promise<void>;
+  onSelecionar: (empresa: Cliente, usuarioId?: number) => Promise<void>;
 }
 
+type Opcao = {
+  chave: string;
+  nome: string;
+  empresas: Cliente[];
+  usuarioId?: number;
+};
+
 function ClientSelector({ onSelecionar }: ClientSelectorProps) {
-  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [clientes, setClientes] = useState<Opcao[]>([]);
   const [carregando, setCarregando] = useState(true);
 
-  const [selecionandoId, setSelecionandoId] = useState<number | null>(null);
+  const [selecionandoId, setSelecionandoId] = useState<string | null>(null);
 
   const [erro, setErro] = useState<string | null>(null);
 
@@ -27,7 +35,40 @@ function ClientSelector({ onSelecionar }: ClientSelectorProps) {
         setCarregando(true);
         setErro(null);
 
-        const resposta = await listarClientes();
+        const [empresas, usuarios] = await Promise.all([
+          listarClientes(),
+          listarUsuariosAdmin(),
+        ]);
+        const vinculadas = new Set<number>();
+        const resposta: Opcao[] = usuarios
+          .filter((usuario) => usuario.ativo && usuario.perfil === "CLIENTE")
+          .flatMap((usuario) => {
+            const ids = new Set([
+              usuario.clienteId,
+              ...(usuario.empresasAdicionais ?? []),
+            ]);
+            const acessos = empresas.filter((empresa) => ids.has(empresa.id));
+            for (const empresa of acessos) vinculadas.add(empresa.id);
+            return acessos.length
+              ? [
+                  {
+                    chave: `usuario-${usuario.id}`,
+                    nome: usuario.nome,
+                    empresas: acessos,
+                    usuarioId: usuario.id,
+                  },
+                ]
+              : [];
+          });
+        resposta.push(
+          ...empresas
+            .filter((empresa) => !vinculadas.has(empresa.id))
+            .map((empresa) => ({
+              chave: `empresa-${empresa.id}`,
+              nome: empresa.nome,
+              empresas: [empresa],
+            })),
+        );
 
         if (ativo) {
           setClientes(resposta);
@@ -56,12 +97,12 @@ function ClientSelector({ onSelecionar }: ClientSelectorProps) {
     };
   }, []);
 
-  const selecionar = async (cliente: Cliente) => {
+  const selecionar = async (cliente: Opcao) => {
     try {
-      setSelecionandoId(cliente.id);
+      setSelecionandoId(cliente.chave);
       setErro(null);
 
-      await onSelecionar(cliente);
+      await onSelecionar(cliente.empresas[0], cliente.usuarioId);
     } catch (error) {
       console.error("Erro ao selecionar cliente:", error);
 
@@ -119,9 +160,7 @@ function ClientSelector({ onSelecionar }: ClientSelectorProps) {
 
           <h1>Selecione um cliente</h1>
 
-          <p>
-            Escolha a empresa cujos dados financeiros você deseja administrar.
-          </p>
+          <p>Escolha o cliente que você deseja atender.</p>
         </div>
 
         <div className="finvista-client-selector-content">
@@ -167,7 +206,8 @@ function ClientSelector({ onSelecionar }: ClientSelectorProps) {
                   <strong>Clientes disponíveis</strong>
 
                   <span>
-                    Selecione uma empresa para acessar o painel financeiro.
+                    Acesse o painel financeiro do cliente ou de uma empresa sem
+                    cliente ativo vinculado.
                   </span>
                 </div>
 
@@ -178,11 +218,11 @@ function ClientSelector({ onSelecionar }: ClientSelectorProps) {
 
               <div className="finvista-client-selector-list">
                 {clientes.map((cliente) => {
-                  const selecionando = selecionandoId === cliente.id;
+                  const selecionando = selecionandoId === cliente.chave;
 
                   return (
                     <button
-                      key={cliente.id}
+                      key={cliente.chave}
                       type="button"
                       className={`finvista-client-selector-item ${
                         selecionando
@@ -203,11 +243,9 @@ function ClientSelector({ onSelecionar }: ClientSelectorProps) {
 
                         <small>
                           <span className="finvista-client-selector-status-dot" />
-                          Cliente ativo
-                          <span className="finvista-client-selector-info-separator">
-                            •
-                          </span>
-                          ID #{cliente.id}
+                          {cliente.usuarioId == null
+                            ? "Empresa sem cliente ativo vinculado"
+                            : `${cliente.empresas.length} ${cliente.empresas.length === 1 ? "empresa vinculada" : "empresas vinculadas"}`}
                         </small>
                       </span>
 

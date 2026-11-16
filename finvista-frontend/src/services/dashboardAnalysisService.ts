@@ -9,7 +9,7 @@ export interface DashboardAnalysis {
     receitasAnterior: number;
     despesasAnterior: number;
   };
-  clienteId: number;
+  clienteId: number | null;
   inicio: string;
   fim: string;
   inicioAnterior: string;

@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { API_URL } from "../config/api";
+import { apiFetch } from "../config/http";
 import {
   Bar,
   Brush,
@@ -51,6 +53,9 @@ export default function CashFlowChart({
   const [historico, setHistorico] = useState(false);
   const [linhaMensal, setLinhaMensal] = useState(false);
   const [pagina, setPagina] = useState(0);
+  const [exportando, setExportando] = useState(false);
+  const [erroExportacao, setErroExportacao] = useState("");
+  const controleExportacao = useRef<HTMLDetailsElement>(null);
   const meses = prepararEvolucao(dados).map((m) => ({
     ...m,
     pagamentoVisual: -m.saidas,
@@ -75,8 +80,16 @@ export default function CashFlowChart({
   const recebimentos = realizado ? "Recebimentos" : "Receitas registradas";
   const pagamentos = realizado ? "Pagamentos" : "Despesas registradas";
   const page = Math.min(pagina, Math.max(0, Math.ceil(meses.length / 24) - 1));
-  const exportar = () =>
-    exportarFinanceiro("fluxo-financeiro-mensal.csv", [
+  async function exportar(formato: "csv" | "xlsx" | "xls") {
+    if (exportando) return;
+    const controle = controleExportacao.current;
+    if (controle) {
+      controle.open = false;
+      controle.querySelector("summary")?.focus();
+    }
+    setErroExportacao("");
+    const nome = `fluxo-financeiro-mensal.${formato}`;
+    const linhas = [
       [
         "Mês",
         recebimentos,
@@ -95,7 +108,39 @@ export default function CashFlowChart({
         m.acumuladoHistorico,
         m.saldoInicial,
       ]),
-    ]);
+    ];
+    if (formato === "csv") {
+      exportarFinanceiro(nome, linhas);
+      return;
+    }
+    setExportando(true);
+    try {
+      const resposta = await apiFetch(
+        `${API_URL}/api/fluxo-caixa/exportar/${formato}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(linhas),
+        },
+      );
+      if (!resposta.ok)
+        throw new Error("Não foi possível exportar a planilha.");
+      const url = URL.createObjectURL(await resposta.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = nome;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (erro) {
+      setErroExportacao(
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível exportar a planilha.",
+      );
+    } finally {
+      setExportando(false);
+    }
+  }
   const atual = mesAtualSaoPaulo();
   return (
     <section
@@ -186,11 +231,51 @@ export default function CashFlowChart({
                 />
                 Incluir histórico na linha
               </label>
-              <button type="button" onClick={exportar}>
-                CSV completo
-              </button>
+              <details
+                className="cf-export"
+                ref={controleExportacao}
+                onKeyDown={(event) => {
+                  if (event.key !== "Escape" || !event.currentTarget.open)
+                    return;
+                  event.currentTarget.open = false;
+                  event.currentTarget.querySelector("summary")?.focus();
+                }}
+              >
+                <summary>{exportando ? "Exportando…" : "Exportar"}</summary>
+                <div
+                  className="cf-export-options"
+                  aria-label="Formato da exportação"
+                >
+                  <button
+                    type="button"
+                    disabled={exportando}
+                    onClick={() => void exportar("xlsx")}
+                  >
+                    Excel (.xlsx)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={exportando}
+                    onClick={() => void exportar("csv")}
+                  >
+                    CSV (.csv)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={exportando}
+                    onClick={() => void exportar("xls")}
+                  >
+                    Excel 97–2003 (.xls)
+                  </button>
+                </div>
+              </details>
             </div>
           </div>
+          {erroExportacao && (
+            <p className="fe-note" role="alert">
+              {erroExportacao}
+            </p>
+          )}
           <div
             className="cf-chart"
             role="img"

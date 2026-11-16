@@ -296,6 +296,7 @@ export default function AdminRegistration({
           />
           <AdminUserManagement
             usuarios={usuarios}
+            empresas={clientes}
             ocupado={salvando}
             usuarioAtualId={usuarioAtualId}
             aoOcupar={setSalvando}

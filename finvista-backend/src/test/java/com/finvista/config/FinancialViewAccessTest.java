@@ -1,8 +1,10 @@
 package com.finvista.config;
 
 import com.finvista.controller.FinancialViewController;
+import com.finvista.service.ClienteService;
 import com.finvista.service.FinancialViewService;
 import com.finvista.service.FinancialViewService.*;
+import jakarta.persistence.EntityManagerFactory;
 import jakarta.servlet.Filter;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -26,6 +28,16 @@ class FinancialViewAccessTest {
     @Configuration
     @Import(FinancialViewController.class)
     static class ViewConfig {
+
+        @Bean
+        EntityManagerFactory entityManagerFactory() {
+            return mock(EntityManagerFactory.class);
+        }
+
+        @Bean
+        ClienteService clienteService() {
+            return mock(ClienteService.class);
+        }
 
         @Bean
         FinancialViewService financialViewService() {

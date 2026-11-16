@@ -12,8 +12,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class ClienteContextService {
 
-    public static final String CLIENTE_SELECIONADO_SESSION_KEY =
-            "FINVISTA_CLIENTE_SELECIONADO_ID";
+    public static final String CLIENTE_SELECIONADO_SESSION_KEY
+            = "FINVISTA_CLIENTE_SELECIONADO_ID";
 
     private final UsuarioService usuarioService;
     private final ClienteRepository clienteRepository;
@@ -49,9 +49,11 @@ public class ClienteContextService {
             );
         }
 
-        Usuario usuario = (escrita()?usuarioService.bloquearPorEmail(authentication.getName()):usuarioService.buscarPorEmail(authentication.getName()))
+        Usuario usuario = (escrita() ? usuarioService.bloquearPorEmail(authentication.getName()) : usuarioService.buscarPorEmail(authentication.getName()))
                 .orElseThrow(this::invalidarSessao);
-        if (!AuthSessionProof.valid(usuario, authentication.getDetails())) throw invalidarSessao();
+        if (!AuthSessionProof.valid(usuario, authentication.getDetails())) {
+            throw invalidarSessao();
+        }
         return usuario;
     }
 
@@ -74,27 +76,36 @@ public class ClienteContextService {
 
         validarClienteAtivo(cliente);
 
-        if(escrita())return clienteRepository.bloquearAtivoPorId(cliente.getId()).orElseThrow(()->new IllegalStateException("Empresa removida ou inativa."));
+        if (escrita()) {
+            return clienteRepository.bloquearAtivoPorId(cliente.getId()).orElseThrow(() -> new IllegalStateException("Empresa removida ou inativa."));
+        }
         return cliente;
     }
 
     /**
-     * Retorna o cliente que deve ser utilizado nas operações
-     * financeiras do FinVista.
+     * Retorna o cliente que deve ser utilizado nas operações financeiras do
+     * FinVista.
      *
-     * USUARIO comum:
-     *     utiliza automaticamente o Cliente associado ao usuário.
+     * USUARIO comum: utiliza automaticamente o Cliente associado ao usuário.
      *
-     * ADMIN:
-     *     utiliza o Cliente atualmente selecionado na sessão.
+     * ADMIN: utiliza o Cliente atualmente selecionado na sessão.
      */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public Cliente getClienteAtual() {
 
-        if (!isAdmin()) {
-            return getClienteDoUsuarioAutenticado();
-        }
-
+        Usuario usuario = getUsuarioAutenticado();
         Long clienteId = getClienteSelecionadoId();
+        if (!"ADMIN".equalsIgnoreCase(usuario.getPerfil())) {
+            if (clienteId == null || !possuiVinculo(usuario, clienteId)
+                    || clienteRepository.findByIdAndAtivoTrue(clienteId).isEmpty()) {
+                if (usuario.getCliente() != null && Boolean.TRUE.equals(usuario.getCliente().getAtivo())) {
+                    return getClienteDoUsuarioAutenticado();
+                }
+                clienteId = usuario.getEmpresasAdicionais().stream()
+                        .filter(c -> Boolean.TRUE.equals(c.getAtivo()))
+                        .map(Cliente::getId).min(Long::compareTo).orElse(null);
+            }
+        }
 
         if (clienteId == null) {
             throw new IllegalStateException(
@@ -102,7 +113,7 @@ public class ClienteContextService {
             );
         }
 
-        return (escrita()?clienteRepository.bloquearAtivoPorId(clienteId):clienteRepository.findByIdAndAtivoTrue(clienteId))
+        return (escrita() ? clienteRepository.bloquearAtivoPorId(clienteId) : clienteRepository.findByIdAndAtivoTrue(clienteId))
                 .orElseThrow(() -> {
                     limparClienteSelecionado();
 
@@ -115,6 +126,7 @@ public class ClienteContextService {
     /**
      * Retorna somente o ID do cliente atual.
      */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public Long getClienteAtualId() {
         return getClienteAtual().getId();
     }
@@ -124,16 +136,27 @@ public class ClienteContextService {
      *
      * O cliente selecionado fica armazenado na HttpSession.
      */
+    private boolean possuiVinculo(Usuario usuario, Long clienteId) {
+        return (usuario.getCliente() != null && clienteId.equals(usuario.getCliente().getId()))
+                || usuario.getEmpresasAdicionais().stream().anyMatch(c -> clienteId.equals(c.getId()));
+    }
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public Cliente selecionarCliente(
             Long clienteId
     ) {
 
-        validarAdministrador();
+        Usuario usuario = getUsuarioAutenticado();
 
         if (clienteId == null) {
             throw new IllegalArgumentException(
                     "O ID do cliente é obrigatório."
             );
+        }
+
+        if (!"ADMIN".equalsIgnoreCase(usuario.getPerfil()) && !possuiVinculo(usuario, clienteId)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Empresa sem vínculo com este usuário.");
         }
 
         Cliente cliente = clienteRepository
@@ -142,8 +165,8 @@ public class ClienteContextService {
                         "Cliente não encontrado ou inativo."
                 ));
 
-        HttpSession session =
-                httpServletRequest.getSession(true);
+        HttpSession session
+                = httpServletRequest.getSession(true);
 
         session.setAttribute(
                 CLIENTE_SELECIONADO_SESSION_KEY,
@@ -156,13 +179,13 @@ public class ClienteContextService {
     /**
      * Retorna o ID armazenado na sessão do ADMIN.
      *
-     * Caso ainda não exista uma sessão ou nenhum cliente tenha
-     * sido selecionado, retorna null.
+     * Caso ainda não exista uma sessão ou nenhum cliente tenha sido
+     * selecionado, retorna null.
      */
     public Long getClienteSelecionadoId() {
 
-        HttpSession session =
-                httpServletRequest.getSession(false);
+        HttpSession session
+                = httpServletRequest.getSession(false);
 
         if (session == null) {
             return null;
@@ -201,8 +224,8 @@ public class ClienteContextService {
      */
     public void limparClienteSelecionado() {
 
-        HttpSession session =
-                httpServletRequest.getSession(false);
+        HttpSession session
+                = httpServletRequest.getSession(false);
 
         if (session != null) {
             session.removeAttribute(
@@ -242,13 +265,20 @@ public class ClienteContextService {
         }
     }
 
-    private boolean escrita(){return org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()
-        && !org.springframework.transaction.support.TransactionSynchronizationManager.isCurrentTransactionReadOnly();}
-    private org.springframework.web.server.ResponseStatusException invalidarSessao(){
-        var session=httpServletRequest.getSession(false);if(session!=null)session.invalidate();
-        SecurityContextHolder.clearContext();
-        return new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED,"Sessão expirada após alteração do cadastro. Entre novamente.");
+    private boolean escrita() {
+        return org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()
+                && !org.springframework.transaction.support.TransactionSynchronizationManager.isCurrentTransactionReadOnly();
     }
+
+    private org.springframework.web.server.ResponseStatusException invalidarSessao() {
+        var session = httpServletRequest.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        SecurityContextHolder.clearContext();
+        return new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Sessão expirada após alteração do cadastro. Entre novamente.");
+    }
+
     private void validarClienteAtivo(
             Cliente cliente
     ) {

@@ -312,10 +312,10 @@ export async function expensesForFilter(
     centro: local.centroCusto ?? filter.centro,
   };
   const { current, previous, range } = await readPagePair(f, signal);
+  const comportamento = filter.consolidado ? "" : local.comportamento;
+  const natureza = filter.consolidado ? "" : local.natureza;
   const classifications =
-    local.comportamento || local.natureza
-      ? await getCostClassifications(signal)
-      : [];
+    comportamento || natureza ? await getCostClassifications(signal) : [];
   const classify = (lines: ViewLine[]) =>
     lines.filter((l) => {
       if (l.tipo !== tipo) return false;
@@ -325,10 +325,9 @@ export async function expensesForFilter(
           l.categoria.trim().toLocaleLowerCase(),
       );
       return (
-        (!local.comportamento ||
-          local.comportamento === (c?.comportamento ?? "NAO_CLASSIFICADO")) &&
-        (!local.natureza ||
-          local.natureza === (c?.natureza ?? "NAO_CLASSIFICADO"))
+        (!comportamento ||
+          comportamento === (c?.comportamento ?? "NAO_CLASSIFICADO")) &&
+        (!natureza || natureza === (c?.natureza ?? "NAO_CLASSIFICADO"))
       );
     });
   const now = classify(selectedLines(current, f)),
@@ -342,8 +341,8 @@ export async function expensesForFilter(
     fimAnterior: range.fim,
     centroCusto: f.centro || null,
     categoria: f.categoria || null,
-    comportamento: local.comportamento || null,
-    natureza: local.natureza || null,
+    comportamento: comportamento || null,
+    natureza: natureza || null,
     total: sum(now, tipo),
     totalAnterior: sum(before, tipo),
     centrosDisponiveis: [

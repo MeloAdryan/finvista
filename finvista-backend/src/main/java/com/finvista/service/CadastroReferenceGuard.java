@@ -5,10 +5,7 @@ import jakarta.persistence.EntityManager;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 
-/**
- * Counts references only; no cascades, deletes, dynamic user input or guessed
- * identities.
- */
+
 @Service
 public class CadastroReferenceGuard {
 
@@ -19,7 +16,9 @@ public class CadastroReferenceGuard {
     }
 
     public boolean empresa(Long id) {
-        return referenced(Cliente.class, Set.of("clienteId"), id);
+        return referenced(Cliente.class, Set.of("clienteId"), id)
+                || em.createQuery("select count(u) from Usuario u join u.empresasAdicionais c where c.id = :id", Long.class)
+                        .setParameter("id", id).getSingleResult() > 0;
     }
 
     public boolean usuario(Long id) {

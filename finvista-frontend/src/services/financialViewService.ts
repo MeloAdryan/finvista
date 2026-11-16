@@ -12,6 +12,8 @@ export type ViewPeriod =
   | "PERSONALIZADO";
 export interface ViewFilter {
   clienteId?: number;
+  consolidado?: boolean;
+  usuarioAtendido?: number;
   criterio: ViewCriterion;
   periodo: ViewPeriod;
   situacao: "TODAS" | "PAGAS" | "ABERTAS" | "VENCIDAS" | "PARCIAIS";
@@ -50,7 +52,7 @@ export interface ViewLimit {
   recorteParcial: boolean;
 }
 export interface FinancialView {
-  clienteId: number;
+  clienteId: number | null;
   filtro: ViewFilter;
   intervalo: { inicio: string; fim: string };
   hoje: string;
@@ -142,7 +144,13 @@ export async function getFinancialView(
         : "Não foi possível consultar os filtros. Confira as datas e a disponibilidade da atualização do servidor.",
     );
   const d: FinancialView = await r.json();
-  if (f.clienteId != null && d.clienteId !== f.clienteId)
+  if (f.consolidado && d.clienteId !== null)
+    throw new Error("A visão consolidada não está disponível no servidor.");
+  if (
+    !f.consolidado &&
+    (d.clienteId == null ||
+      (f.clienteId != null && d.clienteId !== f.clienteId))
+  )
     throw new Error("A empresa selecionada mudou. Atualize a página.");
   if (
     !Array.isArray(d.linhas) ||

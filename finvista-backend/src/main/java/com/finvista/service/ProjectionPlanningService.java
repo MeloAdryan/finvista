@@ -25,6 +25,11 @@ public class ProjectionPlanningService {
 
     @Transactional(readOnly = true)
     public ProjectionPlanningResponse simular(BigDecimal receitaMensal, BigDecimal saldoInicial, BigDecimal variacao) {
+        return simular(receitaMensal, saldoInicial, variacao, null);
+    }
+
+    ProjectionPlanningResponse simular(BigDecimal receitaMensal, BigDecimal saldoInicial, BigDecimal variacao,
+            List<Long> empresas) {
         if (receitaMensal != null) {
             validarDinheiro(receitaMensal, false, "Receita mensal");
         }
@@ -39,10 +44,13 @@ public class ProjectionPlanningService {
         YearMonth referencia = YearMonth.from(hoje);
         LocalDate inicio = referencia.atDay(1), fim = referencia.plusMonths(5).atEndOfMonth();
         Map<YearMonth, MonthlyFinancialSummary> registros = new HashMap<>();
-        // O serviço agregado resolve o cliente autenticado; nenhum cliente vem da requisição.
-        for (var resumo : aggregation.obterResumoMensal(referencia.minusMonths(3).atDay(1), fim)) {
-            registros.put(resumo.periodo(), resumo);
-        }
+        var inicioHistorico = referencia.minusMonths(3).atDay(1);
+        var resumos = empresas == null
+                ? aggregation.obterResumoMensal(inicioHistorico, fim).stream()
+                : empresas.stream().flatMap(id -> aggregation.obterResumoMensal(id, inicioHistorico, fim).stream());
+        resumos.forEach(resumo -> registros.merge(resumo.periodo(), resumo,
+                (a, b) -> new MonthlyFinancialSummary(a.periodo(),
+                        zero(a.receita()).add(zero(b.receita())), zero(a.despesa()).add(zero(b.despesa())))));
         BigDecimal receitasAnteriores = BigDecimal.ZERO;
         for (int i = 1; i <= 3; i++) {
             var anterior = registros.get(referencia.minusMonths(i));

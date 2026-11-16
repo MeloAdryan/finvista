@@ -728,3 +728,116 @@
     flex-direction: column;
   }
 }
+
+.finvista-shell-v2 .finvista-company-selector {
+  position: relative;
+  z-index: 3;
+  flex: none;
+  margin: 4px 0 16px;
+  --empresa-fundo: var(--fv-dark-surface, #fff);
+  --empresa-texto: var(--fv-dark-text, #213331);
+  --empresa-borda: var(--fv-dark-border, #e4e1d9);
+  --empresa-destaque: var(--fv-dark-success, #246652);
+  color: var(--empresa-texto);
+}
+
+.finvista-company-selector summary,
+.finvista-company-options {
+  border: 1px solid var(--empresa-borda);
+  border-radius: 12px;
+  background: var(--empresa-fundo);
+}
+
+.finvista-company-selector summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  min-height: 52px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.finvista-company-selector summary::-webkit-details-marker {
+  display: none;
+}
+
+.finvista-company-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: color-mix(
+    in srgb,
+    var(--empresa-destaque) 16%,
+    var(--empresa-fundo)
+  );
+  color: var(--empresa-destaque);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.finvista-company-caption {
+  flex: 1;
+  min-width: 0;
+}
+.finvista-company-caption strong,
+.finvista-company-caption small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.finvista-company-caption small {
+  opacity: 0.8;
+}
+.finvista-company-selector[open] .finvista-company-chevron {
+  transform: rotate(180deg);
+}
+
+.finvista-company-options {
+  position: absolute;
+  inset: calc(100% + 4px) 0 auto;
+  box-shadow: 0 6px 16px #0003;
+  max-height: 44vh;
+  overflow: auto;
+}
+.finvista-company-options > small,
+.finvista-company-options > p {
+  display: block;
+  padding: 8px 12px;
+}
+.finvista-company-options > small {
+  text-transform: uppercase;
+}
+.finvista-company-options button {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.finvista-company-options button:hover,
+.finvista-company-options button[aria-current] {
+  background: color-mix(
+    in srgb,
+    var(--empresa-destaque) 10%,
+    var(--empresa-fundo)
+  );
+}
+.finvista-company-options button[aria-current],
+.finvista-company-options button span:first-child {
+  color: var(--empresa-destaque);
+}
+.finvista-company-options .finvista-company-all {
+  border-bottom: 1px solid var(--empresa-borda);
+}

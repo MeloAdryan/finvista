@@ -16,6 +16,7 @@ import WelcomeScreen from "./components/splash/WelcomeScreen";
 import ClientSelector from "./components/ClientSelector";
 
 import {
+  listarEmpresasVinculadas,
   obterClienteAtual,
   selecionarCliente,
   type Cliente,
@@ -37,6 +38,10 @@ import "./styles/shell-navigation.css";
 import { useSidebarDrawer } from "./hooks/useSidebarDrawer";
 
 import PageBoundary from "./components/PageBoundary";
+import {
+  lerEscopoEmpresas,
+  salvarEscopoEmpresas,
+} from "./services/companyScopeStorage";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AlertCenter = lazy(() => import("./pages/AlertCenter"));
@@ -47,6 +52,12 @@ const CashFlow = lazy(() => import("./pages/CashFlow"));
 const CostCenters = lazy(() => import("./pages/CostCenters"));
 const Expenses = lazy(() => import("./pages/Expenses"));
 const Budgets = lazy(() => import("./pages/Budgets"));
+const GroupBudgets = lazy(() =>
+  import("./pages/GroupPlanning").then((m) => ({ default: m.GroupBudgets })),
+);
+const GroupConference = lazy(() =>
+  import("./pages/GroupPlanning").then((m) => ({ default: m.GroupConference })),
+);
 const FinancialControlCenter = lazy(
   () => import("./pages/FinancialControlCenter"),
 );
@@ -66,6 +77,16 @@ type PaginaAtiva =
   | "historico"
   | "importacao"
   | "cadastros";
+
+function iniciaisEmpresa(nome: string) {
+  return nome
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((palavra) => palavra.charAt(0))
+    .join("")
+    .toUpperCase();
+}
 
 function DashboardIcon() {
   return (
@@ -201,7 +222,14 @@ function App() {
     setMostrarBoasVindas(false);
   }, []);
 
+  const [usuarioAtendido, setUsuarioAtendido] = useState<number>();
+  const [visaoConsolidada, setVisaoConsolidada] = useState(false);
   const [clienteAtual, setClienteAtual] = useState<Cliente | null>(null);
+
+  const [empresasMenu, setEmpresasMenu] = useState<Cliente[] | null>(null);
+  const [trocandoEmpresa, setTrocandoEmpresa] = useState(false);
+  const [erroEmpresa, setErroEmpresa] = useState("");
+  const menuEmpresas = useRef<HTMLDetailsElement>(null);
 
   const [verificandoCliente, setVerificandoCliente] = useState(false);
 
@@ -249,7 +277,7 @@ function App() {
         const usuarioAtual = await obterUsuarioAtual();
 
         if (ativo) {
-          setVerificandoCliente(usuarioAtual?.perfil === "ADMIN");
+          setVerificandoCliente(Boolean(usuarioAtual));
           setUsuario(usuarioAtual);
         }
       } catch (error) {
@@ -275,6 +303,7 @@ function App() {
   useEffect(() => {
     let ativo = true;
 
+    const controller = new AbortController();
     const verificarCliente = async () => {
       if (!usuario) {
         if (ativo) {
@@ -285,28 +314,26 @@ function App() {
         return;
       }
 
-      /*
-       * Usuários comuns não precisam escolher cliente.
-       * O backend resolve automaticamente o cliente
-       * associado ao usuário.
-       */
-      if (usuario.perfil !== "ADMIN") {
-        if (ativo) {
-          setClienteAtual(null);
-          setVerificandoCliente(false);
-        }
-
-        return;
-      }
-
       try {
-        setVerificandoCliente(true);
-
+        const salvo = lerEscopoEmpresas(usuario.id);
+        const usuarioId =
+          usuario.perfil === "ADMIN" ? salvo?.usuarioAtendido : undefined;
         const cliente = await obterClienteAtual();
-
-        if (ativo) {
-          setClienteAtual(cliente);
-        }
+        const empresas = await listarEmpresasVinculadas(
+          controller.signal,
+          usuarioId,
+        ).catch(() => []);
+        if (!ativo) return;
+        const pertenceAoGrupo = empresas.some(
+          (empresa) => empresa.id === cliente?.id,
+        );
+        const contextoValido = usuarioId == null || pertenceAoGrupo;
+        setClienteAtual(contextoValido ? cliente : null);
+        setUsuarioAtendido(contextoValido ? usuarioId : undefined);
+        setEmpresasMenu(contextoValido ? empresas : []);
+        setVisaoConsolidada(
+          salvo?.modo === "todas" && pertenceAoGrupo && empresas.length > 1,
+        );
       } catch (error) {
         console.error("Erro ao verificar cliente atual:", error);
 
@@ -324,6 +351,7 @@ function App() {
 
     return () => {
       ativo = false;
+      controller.abort();
     };
   }, [usuario]);
 
@@ -371,8 +399,37 @@ function App() {
   const selecionarClienteAdmin = async (cliente: Cliente) => {
     const clienteSelecionado = await selecionarCliente(cliente.id);
 
+    setReferenciaFinanceira(null);
     setClienteAtual(clienteSelecionado);
+    setVisaoConsolidada(false);
   };
+
+  useEffect(() => {
+    if (!usuario || verificandoCliente) return;
+    const controller = new AbortController();
+    void listarEmpresasVinculadas(controller.signal, usuarioAtendido)
+      .then((empresas) => {
+        if (!controller.signal.aborted) setEmpresasMenu(empresas);
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [usuario, location.pathname, usuarioAtendido, verificandoCliente]);
+
+  async function trocarEmpresaMenu(empresa: Cliente) {
+    if (!usuario || trocandoEmpresa) return;
+    setTrocandoEmpresa(true);
+    setErroEmpresa("");
+    try {
+      await selecionarClienteAdmin(empresa);
+      salvarEscopoEmpresas(usuario.id, { modo: "individual", usuarioAtendido });
+      if (menuEmpresas.current) menuEmpresas.current.open = false;
+      setMenuMobileAberto(false);
+    } catch {
+      setErroEmpresa("Não foi possível trocar de empresa. Tente novamente.");
+    } finally {
+      setTrocandoEmpresa(false);
+    }
+  }
 
   const fecharMenuMobile = () => {
     setMenuMobileAberto(false);
@@ -426,6 +483,7 @@ function App() {
     } catch (error) {
       console.error("Erro ao encerrar sessão:", error);
     } finally {
+      if (usuario) salvarEscopoEmpresas(usuario.id, null);
       setClienteAtual(null);
 
       setMostrarBoasVindas(false);
@@ -445,8 +503,12 @@ function App() {
     return (
       <Login
         onLogin={(usuarioAutenticado) => {
-          setVerificandoCliente(usuarioAutenticado.perfil === "ADMIN");
+          setVerificandoCliente(true);
           setMostrarBoasVindas(true);
+          setEmpresasMenu(null);
+          setErroEmpresa("");
+          setUsuarioAtendido(undefined);
+          setVisaoConsolidada(false);
           setUsuario(usuarioAutenticado);
 
           navigate("/dashboard");
@@ -454,7 +516,7 @@ function App() {
       />
     );
   }
-  if (usuario.perfil === "ADMIN" && verificandoCliente) {
+  if (verificandoCliente) {
     return (
       <LoadingScreen
         key="cliente"
@@ -472,7 +534,37 @@ function App() {
     !clienteAtual &&
     paginaAtiva !== "cadastros"
   ) {
-    return <ClientSelector onSelecionar={selecionarClienteAdmin} />;
+    return (
+      <ClientSelector
+        onSelecionar={async (empresa, usuarioId) => {
+          const vinculadas =
+            usuarioId == null
+              ? []
+              : await listarEmpresasVinculadas(
+                  new AbortController().signal,
+                  usuarioId,
+                );
+          if (
+            usuarioId != null &&
+            !vinculadas.some((vinculo) => vinculo.id === empresa.id)
+          ) {
+            throw new Error(
+              "Os vínculos mudaram. Recarregue a lista de clientes.",
+            );
+          }
+          await selecionarClienteAdmin(empresa);
+          setUsuarioAtendido(usuarioId);
+          setEmpresasMenu(vinculadas);
+          const modo = vinculadas.length > 1 ? "todas" : "individual";
+          setVisaoConsolidada(modo === "todas");
+          salvarEscopoEmpresas(usuario.id, {
+            modo,
+            usuarioAtendido: usuarioId,
+          });
+          navigate("/dashboard");
+        }}
+      />
+    );
   }
   if (mostrarBoasVindas) {
     return (
@@ -480,6 +572,23 @@ function App() {
     );
   }
   const usuarioAdmin = usuario.perfil === "ADMIN";
+  const consolidadoAtivo = visaoConsolidada && (empresasMenu?.length ?? 0) > 1;
+  const paginaAceitaConsolidacao =
+    paginaAtiva === "dashboard" ||
+    paginaAtiva === "despesas" ||
+    paginaAtiva === "fluxo-caixa" ||
+    paginaAtiva === "centros-custo" ||
+    paginaAtiva === "historico" ||
+    paginaAtiva === "orcamentos" ||
+    paginaAtiva === "projecao" ||
+    paginaAtiva === "conferencia";
+  const exigeEmpresaIndividual =
+    consolidadoAtivo &&
+    !paginaAceitaConsolidacao &&
+    paginaAtiva !== "cadastros";
+  const empresaDoSeletor = empresasMenu?.find(
+    (empresa) => empresa.id === clienteAtual?.id,
+  );
 
   return (
     <div
@@ -539,6 +648,89 @@ function App() {
               alt="FinVista"
             />
           </div>
+
+          {(!sidebarRecolhida || mobile) &&
+            empresasMenu &&
+            empresasMenu.length > 1 && (
+              <details
+                ref={menuEmpresas}
+                className="finvista-company-selector"
+                onKeyDown={(event) => {
+                  if (event.key === "Escape" && event.currentTarget.open) {
+                    event.stopPropagation();
+                    event.currentTarget.open = false;
+                    event.currentTarget.querySelector("summary")?.focus();
+                  }
+                }}
+              >
+                <summary>
+                  <span className="finvista-company-avatar" aria-hidden="true">
+                    {consolidadoAtivo
+                      ? "F"
+                      : iniciaisEmpresa(empresaDoSeletor?.nome ?? "") || "F"}
+                  </span>
+                  <span className="finvista-company-caption">
+                    <strong>
+                      {consolidadoAtivo
+                        ? `${empresasMenu.length} empresas`
+                        : (empresaDoSeletor?.nome ?? "Selecionar empresa")}
+                    </strong>
+                    <small>
+                      {consolidadoAtivo
+                        ? "Visão consolidada do grupo"
+                        : "Empresa ativa"}
+                    </small>
+                  </span>
+                  <span className="finvista-company-chevron" aria-hidden="true">
+                    ⌄
+                  </span>
+                </summary>
+                <div className="finvista-company-options">
+                  <small>Empresas</small>
+                  {trocandoEmpresa && <p role="status">Trocando empresa…</p>}
+                  {erroEmpresa && <p role="alert">{erroEmpresa}</p>}
+                  <button
+                    type="button"
+                    className="finvista-company-all"
+                    disabled={trocandoEmpresa}
+                    aria-current={consolidadoAtivo ? "true" : undefined}
+                    onClick={() => {
+                      setVisaoConsolidada(true);
+                      salvarEscopoEmpresas(usuario.id, {
+                        modo: "todas",
+                        usuarioAtendido,
+                      });
+                      if (menuEmpresas.current)
+                        menuEmpresas.current.open = false;
+                      setMenuMobileAberto(false);
+                    }}
+                  >
+                    <span aria-hidden="true">▦</span>
+                    <span>Todas as empresas</span>
+                    {consolidadoAtivo && <span aria-hidden="true">✓</span>}
+                  </button>
+                  {empresasMenu.map((empresa) => {
+                    const ativa =
+                      !consolidadoAtivo && empresa.id === clienteAtual?.id;
+                    return (
+                      <button
+                        type="button"
+                        key={empresa.id}
+                        disabled={trocandoEmpresa}
+                        aria-current={ativa ? "true" : undefined}
+                        onClick={() => void trocarEmpresaMenu(empresa)}
+                      >
+                        <span aria-hidden="true">
+                          {iniciaisEmpresa(empresa.nome)}
+                        </span>
+                        <span>{empresa.nome}</span>
+                        {ativa && <span aria-hidden="true">✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </details>
+            )}
 
           <div className="finvista-sidebar-divider" />
 
@@ -868,22 +1060,6 @@ function App() {
             )}
           </nav>
 
-          {clienteAtual && !sidebarRecolhida && (
-            <div className="finvista-sidebar-user" aria-label="Empresa ativa">
-              <div className="finvista-user-info">
-                <span>Empresa ativa</span>
-                <strong title={clienteAtual.nome}>{clienteAtual.nome}</strong>
-                {usuarioAdmin && (
-                  <button type="button" className="finvista-sidebar-logout" onClick={() => {
-                    fecharMenuMobile();
-                    setClienteAtual(null);
-                  }}>
-                    Trocar empresa
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
           <div className="finvista-sidebar-bottom">
             <div
               className="finvista-sidebar-user"
@@ -1010,6 +1186,7 @@ function App() {
         >
           <main
             className="finvista-main"
+            inert={trocandoEmpresa}
             tabIndex={-1}
             ref={(element) => {
               if (element && focarPainel.current) {
@@ -1020,18 +1197,44 @@ function App() {
           >
             <FinancialCriteriaWorkspace
               key={clienteAtual?.id}
-              page={paginaAtiva}
+              page={exigeEmpresaIndividual ? "" : paginaAtiva}
               clienteId={clienteAtual?.id}
+              consolidado={consolidadoAtivo && paginaAceitaConsolidacao}
+              usuarioAtendido={usuarioAtendido}
             >
-              <PageBoundary key={paginaAtiva}>
-                {paginaAtiva === "cadastros" && usuarioAdmin ? (
+              <PageBoundary
+                key={`${paginaAtiva}:${consolidadoAtivo ? "todas" : "individual"}`}
+              >
+                {exigeEmpresaIndividual ? (
+                  <section
+                    className="executive-panel"
+                    aria-labelledby="empresa-individual-title"
+                  >
+                    <h2 id="empresa-individual-title">Selecione uma empresa</h2>
+                    <p>Esta página está disponível na visão individual.</p>
+                    {erroEmpresa && <p role="alert">{erroEmpresa}</p>}
+                    {empresasMenu?.map((empresa) => (
+                      <p key={empresa.id}>
+                        <button
+                          type="button"
+                          disabled={trocandoEmpresa}
+                          onClick={() => void trocarEmpresaMenu(empresa)}
+                        >
+                          {empresa.nome}
+                        </button>
+                      </p>
+                    ))}
+                  </section>
+                ) : paginaAtiva === "cadastros" && usuarioAdmin ? (
                   <AdminRegistration
                     usuarioAtualId={usuario.id}
                     onVoltar={() => navigate("/metas")}
                     textoVoltar="Voltar às metas"
                   />
                 ) : paginaAtiva === "dashboard" ? (
-                  <Dashboard key={clienteAtual?.id ?? "sem-cliente"} />
+                  <Dashboard
+                    key={consolidadoAtivo ? "consolidado" : clienteAtual?.id}
+                  />
                 ) : paginaAtiva === "alertas" ? (
                   <AlertCenter />
                 ) : paginaAtiva === "metas" ? (
@@ -1043,9 +1246,25 @@ function App() {
                 ) : paginaAtiva === "centros-custo" ? (
                   <CostCenters />
                 ) : paginaAtiva === "despesas" ? (
-                  <Expenses />
+                  <Expenses
+                    key={consolidadoAtivo ? "consolidado" : clienteAtual?.id}
+                  />
                 ) : paginaAtiva === "orcamentos" ? (
-                  <Budgets />
+                  consolidadoAtivo ? (
+                    <GroupBudgets
+                      onEmpresa={trocarEmpresaMenu}
+                      empresas={empresasMenu ?? []}
+                    />
+                  ) : (
+                    <Budgets />
+                  )
+                ) : paginaAtiva === "conferencia" && consolidadoAtivo ? (
+                  <GroupConference
+                    usuarioAtendido={usuarioAtendido}
+                    clienteId={clienteAtual?.id}
+                    empresas={empresasMenu ?? []}
+                    onEmpresa={trocarEmpresaMenu}
+                  />
                 ) : paginaAtiva === "conferencia" ? (
                   <FinancialControlCenter
                     key={clienteAtual?.id ?? "sem-cliente"}
@@ -1091,7 +1310,7 @@ function App() {
             <div className="finvista-footer-item">
               <small>VERSÃO</small>
 
-              <span>v2.0</span>
+              <span>v2.2</span>
             </div>
 
             <div className="finvista-footer-separator" />

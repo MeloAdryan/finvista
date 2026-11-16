@@ -29,14 +29,22 @@ export interface ProjectionInputs {
 export async function getProjectionPlanning(
   dados: ProjectionInputs,
   signal: AbortSignal,
+  grupo?: { usuarioAtendido?: number },
 ): Promise<ProjectionPlanning> {
   const params = new URLSearchParams();
   for (const [chave, valor] of Object.entries(dados))
     if (valor != null) params.set(chave, String(valor));
-  const response = await fetch(
-    `${API_URL}/api/projecao/planejamento?${params}`,
-    { credentials: "include", signal, cache: "no-store" },
-  );
+  if (grupo?.usuarioAtendido != null) {
+    params.set("usuarioAtendido", String(grupo.usuarioAtendido));
+  }
+  const endpoint = grupo
+    ? "/api/analises/grupo/projecao"
+    : "/api/projecao/planejamento";
+  const response = await fetch(`${API_URL}${endpoint}?${params}`, {
+    credentials: "include",
+    signal,
+    cache: "no-store",
+  });
   if (!response.ok)
     throw new Error(
       response.status === 401

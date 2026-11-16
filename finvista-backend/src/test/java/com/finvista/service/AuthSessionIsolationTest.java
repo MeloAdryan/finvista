@@ -59,7 +59,8 @@ class AuthSessionIsolationTest {
 
     @Test
     void clienteNaoPodeSelecionarOutraEmpresa() {
-        assertThrows(IllegalStateException.class, () -> ctx.selecionarCliente(3L));
+        var erro = assertThrows(ResponseStatusException.class, () -> ctx.selecionarCliente(3L));
+        assertEquals(org.springframework.http.HttpStatus.FORBIDDEN, erro.getStatusCode());
         assertEquals(2L, ctx.getClienteAtualId());
         verifyNoInteractions(clients);
     }

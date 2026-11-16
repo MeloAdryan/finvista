@@ -41,12 +41,11 @@ public FinancialTransactionAggregationService(
             LocalDate dataInicial,
             LocalDate dataFinal
     ) {
-        validarPeriodo(
-                dataInicial,
-                dataFinal
-        );
+        return obterResumoMensal(obterClienteId(), dataInicial, dataFinal);
+    }
 
-        Long clienteId = obterClienteId();
+    List<MonthlyFinancialSummary> obterResumoMensal(Long clienteId, LocalDate dataInicial, LocalDate dataFinal) {
+        validarPeriodo(dataInicial, dataFinal);
 
         List<FinancialTransaction> lancamentos
                 = financialTransactionRepository

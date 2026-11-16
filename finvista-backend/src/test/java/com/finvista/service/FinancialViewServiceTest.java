@@ -73,6 +73,39 @@ class FinancialViewServiceTest {
     }
 
     @Test
+    void consolidatedDashboardSumsOnlyDistinctAuthorizedCompanies() {
+        var clientes = mock(ClienteService.class);
+        var first = new com.finvista.dto.ClienteResponse(7L, "Embraseg", true, null);
+        var second = new com.finvista.dto.ClienteResponse(8L, "Embrasol", true, null);
+        when(clientes.listarEmpresasDoCliente(12L)).thenReturn(List.of(first, second, first));
+
+        var receita = item();
+        receita.setTipo("RECEITA");
+        receita.setDataCompetencia(LocalDate.of(2026, 9, 2));
+        receita.setValor(new BigDecimal("100"));
+        var despesa = new FinancialTransaction();
+        org.springframework.test.util.ReflectionTestUtils.setField(despesa, "id", 2L);
+        despesa.setTipo("DESPESA");
+        despesa.setDataCompetencia(LocalDate.of(2026, 9, 3));
+        despesa.setValor(new BigDecimal("30"));
+        when(transactions.findByClienteId(8L)).thenReturn(List.of(despesa));
+
+        var consolidado = service.consultarConsolidado(filter(Criterio.COMPETENCIA, Periodo.PERSONALIZADO), clientes, 12L);
+
+        assertNull(consolidado.clienteId());
+        assertEquals(2, consolidado.linhas().size());
+        assertEquals(0, new BigDecimal("100").compareTo(consolidado.totais().receita()));
+        assertEquals(0, new BigDecimal("30").compareTo(consolidado.totais().despesa()));
+        var resultadoDaSerie = consolidado.serie().stream().map(Serie::resultado)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertEquals(0, new BigDecimal("70").compareTo(resultadoDaSerie));
+        verify(clientes).listarEmpresasDoCliente(12L);
+        verify(transactions).findByClienteId(7L);
+        verify(transactions).findByClienteId(8L);
+        verifyNoMoreInteractions(transactions);
+    }
+
+    @Test
     void weeklyStartsMonday() {
         var f = FinancialViewService.intervalo(filter(Criterio.COMPETENCIA, Periodo.SEMANAL), today, List.of());
         assertEquals(LocalDate.of(2026, 10, 19), f.inicio());

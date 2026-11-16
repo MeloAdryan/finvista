@@ -26,6 +26,7 @@ import "../styles/financial-integrity.css";
 
 export default function CashFlow() {
   const viewFilter = useContext(FinancialViewContext);
+  const consolidado = viewFilter?.consolidado === true;
   const updateView = useContext(FinancialViewUpdateContext);
   const [modo, setModo] = useState<"realizado" | "competencia">("realizado");
   const [cobertura, setCobertura] = useState<RealizedCashFlow | null>(null);
@@ -140,6 +141,13 @@ export default function CashFlow() {
           Atualizar fluxo
         </button>
       </div>
+      {consolidado && (
+        <p className="fe-card">
+          Os valores somam os registros das empresas vinculadas. O acumulado é
+          calculado a partir desses movimentos. Para consultar saldo bancário,
+          transferências e vencimentos por conta, selecione uma empresa.
+        </p>
+      )}
       {cobertura && !carregando && !erro && (
         <details className="fe-card cf-coverage">
           <summary>
@@ -192,7 +200,7 @@ export default function CashFlow() {
           }
         />
       )}
-      {viewFilter?.criterio === "BAIXA" && (
+      {!consolidado && viewFilter?.criterio === "BAIXA" && (
         <FinancialLedgerPanel
           key={JSON.stringify(viewFilter) + tentativa}
           filter={viewFilter}

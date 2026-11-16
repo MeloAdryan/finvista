@@ -4,7 +4,10 @@ import {
   excluirUsuarioAdmin,
   type AdminUser,
 } from "../services/adminRegistrationService";
+import type { Cliente } from "../services/clientService";
+
 type Props = {
+  empresas: Cliente[];
   usuarios: AdminUser[];
   ocupado: boolean;
   usuarioAtualId?: number;
@@ -14,6 +17,7 @@ type Props = {
 };
 export default function AdminUserManagement({
   usuarios,
+  empresas,
   ocupado,
   usuarioAtualId,
   aoOcupar,
@@ -32,6 +36,7 @@ export default function AdminUserManagement({
     [textoExclusao, setTextoExclusao] = useState(""),
     [erro, setErro] = useState(""),
     [sucesso, setSucesso] = useState("");
+  const [empresasAdicionais, setEmpresasAdicionais] = useState<number[]>([]);
   function fechar() {
     setOriginal(null);
     setRemover(null);
@@ -47,6 +52,7 @@ export default function AdminUserManagement({
     setNome(u.nome);
     setEmail(u.email);
     setAtivo(u.ativo);
+    setEmpresasAdicionais(u.empresasAdicionais ?? []);
     setErro("");
     setSucesso("");
   }
@@ -78,10 +84,11 @@ export default function AdminUserManagement({
         ativo,
         reset ? senha : null,
         reset ? confirmar : null,
+        empresasAdicionais,
       );
       aoAtualizar(result);
       setSucesso(
-        "Usuário atualizado. Alterações de e-mail, senha ou status exigem novo login nas sessões anteriores.",
+        "Usuário atualizado. Alterações de e-mail, senha, status ou vínculos exigem novo login nas sessões anteriores.",
       );
       fechar();
     } catch (e) {
@@ -186,6 +193,42 @@ export default function AdminUserManagement({
             {original.clienteNome ?? "Carteira de clientes"}
             {original.clienteId != null ? ` · #${original.clienteId}` : ""}
           </p>
+          {
+            <fieldset className="ar-company-links" disabled={ocupado}>
+              <legend>Empresas vinculadas ao seletor</legend>
+              {original.clienteId != null && (
+                <div className="ar-company-primary">
+                  <strong>{original.clienteNome ?? `Empresa #${original.clienteId}`}</strong>
+                  <span>Empresa principal{empresas.some((empresa) =>
+                    empresa.id === original.clienteId && !empresa.ativo
+                  ) ? " · Inativa" : ""}</span>
+                </div>
+              )}
+              {empresas
+                .filter(
+                  (empresa) =>
+                    empresa.id !== original.clienteId &&
+                    (empresa.ativo || empresasAdicionais.includes(empresa.id)),
+                )
+                .map((empresa) => (
+                  <label key={empresa.id} className="ar-checkbox-row">
+                    <input
+                      type="checkbox"
+                      checked={empresasAdicionais.includes(empresa.id)}
+                      onChange={(event) => {
+                        const marcado = event.target.checked;
+                        setEmpresasAdicionais((ids) =>
+                          marcado
+                            ? [...ids, empresa.id]
+                            : ids.filter((id) => id !== empresa.id),
+                        );
+                      }}
+                    />
+                    <span>{empresa.nome}{empresa.ativo ? "" : " (inativa)"}</span>
+                  </label>
+                ))}
+            </fieldset>
+          }
           <label>
             Nome
             <input
@@ -220,7 +263,7 @@ export default function AdminUserManagement({
             </select>
           </label>
           {original.ativo && !ativo && (
-            <label>
+            <label className="ar-checkbox-row">
               <input
                 type="checkbox"
                 required
@@ -231,7 +274,7 @@ export default function AdminUserManagement({
               Confirmo a desativação do acesso deste usuário
             </label>
           )}
-          <label>
+          <label className="ar-checkbox-row">
             <input
               type="checkbox"
               checked={reset}

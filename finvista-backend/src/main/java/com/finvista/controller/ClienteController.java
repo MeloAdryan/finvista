@@ -39,6 +39,18 @@ public class ClienteController {
     }
 
 
+    @GetMapping("/vinculadas")
+    public ResponseEntity<List<ClienteResponse>> vinculadas() {
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(clienteService.listarEmpresasVinculadas());
+    }
+
+    @GetMapping("/vinculadas/{usuarioId}")
+    public ResponseEntity<List<ClienteResponse>> empresasDoCliente(@PathVariable Long usuarioId) {
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(clienteService.listarEmpresasDoCliente(usuarioId));
+    }
+
     @PostMapping("/contexto/{clienteId}")
     public ResponseEntity<ClienteResponse> selecionarCliente(
             @PathVariable Long clienteId

@@ -13,6 +13,8 @@ import "../styles/financial-evolution.css";
 
 export default function Projection() {
   const filtroVisual = useContext(FinancialViewContext);
+  const consolidado = filtroVisual?.consolidado === true;
+  const usuarioAtendido = filtroVisual?.usuarioAtendido;
   const faixa = filtroVisual ? viewRange(filtroVisual) : null;
   const [dados, setDados] = useState<ProjectionPlanning | null>(null);
   const [inputs, setInputs] = useState<ProjectionInputs>({});
@@ -29,7 +31,11 @@ export default function Projection() {
     async function carregar() {
       setCarregando(true);
       try {
-        const resposta = await getProjectionPlanning(inputs, controller.signal);
+        const resposta = await getProjectionPlanning(
+          inputs,
+          controller.signal,
+          consolidado ? { usuarioAtendido } : undefined,
+        );
         if (ativo) {
           setDados(resposta);
           setErro("");
@@ -53,7 +59,7 @@ export default function Projection() {
       ativo = false;
       controller.abort();
     };
-  }, [inputs]);
+  }, [inputs, consolidado, usuarioAtendido]);
   function aplicar(e: FormEvent) {
     e.preventDefault();
     const receita =
@@ -221,6 +227,12 @@ export default function Projection() {
         )}
         {carregando && <p role="status">Calculando simulação…</p>}
       </section>
+      {consolidado && (
+        <p className="fe-card">
+          As premissas de receita mensal, saldo inicial e variação se aplicam
+          ao grupo. Os valores registrados somam as empresas vinculadas.
+        </p>
+      )}
       {!carregando &&
         !erro &&
         dadosVisiveis &&

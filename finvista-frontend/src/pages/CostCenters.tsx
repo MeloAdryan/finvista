@@ -19,6 +19,7 @@ import "../styles/dashboard.css";
 export default function CostCenters() {
   const [revision, setRevision] = useState(0);
   const filtro = useContext(FinancialViewContext);
+  const consolidado = filtro?.consolidado === true;
   const [visao, setVisao] = useState<{
     filtro: typeof filtro;
     gastos: ExpenseAnalysis;
@@ -29,7 +30,9 @@ export default function CostCenters() {
     const controller = new AbortController();
     void Promise.all([
       getExpenseAnalysis({}, controller.signal, filtro ?? undefined),
-      getBudgetPipeline(filtro ?? undefined),
+      consolidado
+        ? Promise.resolve([])
+        : getBudgetPipeline(filtro ?? undefined),
     ])
       .then(([gastos, limites]) => {
         if (!controller.signal.aborted) {
@@ -41,7 +44,7 @@ export default function CostCenters() {
         if (!controller.signal.aborted) setFalha(true);
       });
     return () => controller.abort();
-  }, [filtro]);
+  }, [filtro, consolidado]);
 
   const atual = visao?.filtro === filtro ? visao : null;
   const limites = atual?.limites.filter((item) => item.centroCusto) ?? [];
@@ -62,8 +65,9 @@ export default function CostCenters() {
       <section className="ba-filter" aria-labelledby="center-budget-title">
         <h2 id="center-budget-title">Execução por centro de custo</h2>
         <p>
-          Usa o recorte global. O registrado nos limites segue também as
-          categorias de cada orçamento.
+          {consolidado
+            ? "Gastos das empresas vinculadas, agrupados pelo nome do centro. Orçamentos e classificações estão na visão individual."
+            : "Usa o recorte global. O registrado nos limites segue também as categorias de cada orçamento."}
         </p>
         {falha ? (
           <p role="alert">Não foi possível consultar a execução por centro.</p>
@@ -82,10 +86,12 @@ export default function CostCenters() {
                 <span>Gasto do recorte</span>
                 <strong>{moedaOrcamento(atual.gastos.total)}</strong>
               </div>
-              <div>
-                <span>Orçado para os centros</span>
-                <strong>{moedaOrcamento(orcado)}</strong>
-              </div>
+              {!consolidado && (
+                <div>
+                  <span>Orçado para os centros</span>
+                  <strong>{moedaOrcamento(orcado)}</strong>
+                </div>
+              )}
             </div>
             <div
               className="ba-table-scroll"
@@ -98,9 +104,13 @@ export default function CostCenters() {
                   <tr>
                     <th scope="col">Centro</th>
                     <th scope="col">Gasto total</th>
-                    <th scope="col">Orçado</th>
-                    <th scope="col">Registrado nos limites</th>
-                    <th scope="col">Utilização</th>
+                    {!consolidado && (
+                      <>
+                        <th scope="col">Orçado</th>
+                        <th scope="col">Registrado nos limites</th>
+                        <th scope="col">Utilização</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -125,33 +135,42 @@ export default function CostCenters() {
                       <tr key={nome}>
                         <th scope="row">{nome}</th>
                         <td>{moedaOrcamento(gasto)}</td>
-                        <td>
-                          {doCentro.length
-                            ? moedaOrcamento(limite)
-                            : "Sem orçamento"}
-                        </td>
-                        <td>
-                          {doCentro.length ? moedaOrcamento(utilizado) : "—"}
-                        </td>
-                        <td>
-                          {percentual == null ? (
-                            "—"
-                          ) : (
-                            <>
-                              <meter
-                                aria-label={`Utilização do orçamento de ${nome}`}
-                                min={0}
-                                max={100}
-                                value={Math.min(100, Math.max(0, percentual))}
-                              />
-                              <br />
-                              {percentual.toLocaleString("pt-BR", {
-                                maximumFractionDigits: 1,
-                              })}
-                              %{percentual > 100 ? " · Excedido" : ""}
-                            </>
-                          )}
-                        </td>
+                        {!consolidado && (
+                          <>
+                            <td>
+                              {doCentro.length
+                                ? moedaOrcamento(limite)
+                                : "Sem orçamento"}
+                            </td>
+                            <td>
+                              {doCentro.length
+                                ? moedaOrcamento(utilizado)
+                                : "—"}
+                            </td>
+                            <td>
+                              {percentual == null ? (
+                                "—"
+                              ) : (
+                                <>
+                                  <meter
+                                    aria-label={`Utilização do orçamento de ${nome}`}
+                                    min={0}
+                                    max={100}
+                                    value={Math.min(
+                                      100,
+                                      Math.max(0, percentual),
+                                    )}
+                                  />
+                                  <br />
+                                  {percentual.toLocaleString("pt-BR", {
+                                    maximumFractionDigits: 1,
+                                  })}
+                                  %{percentual > 100 ? " · Excedido" : ""}
+                                </>
+                              )}
+                            </td>
+                          </>
+                        )}
                       </tr>
                     );
                   })}
@@ -162,7 +181,9 @@ export default function CostCenters() {
         )}
       </section>
       <ExpenseExplorer prioridade="centros" revision={revision} />
-      <CostClassificationEditor onSaved={() => setRevision((v) => v + 1)} />
+      {!consolidado && (
+        <CostClassificationEditor onSaved={() => setRevision((v) => v + 1)} />
+      )}
     </div>
   );
 }

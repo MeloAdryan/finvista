@@ -36,6 +36,27 @@ public class Usuario {
     @JoinColumn(name = "cliente_id")
     private Cliente cliente;
 
+    @ManyToMany
+    @JoinTable(name = "usuario_empresas",
+            joinColumns = @JoinColumn(name = "usuario_id"),
+            inverseJoinColumns = @JoinColumn(name = "cliente_id"))
+    private java.util.Set<Cliente> empresasAdicionais = new java.util.HashSet<>();
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public java.util.Set<Cliente> getEmpresasAdicionais() {
+        return java.util.Collections.unmodifiableSet(empresasAdicionais);
+    }
+
+    public void atualizarEmpresasAdicionais(java.util.Collection<Cliente> empresas) {
+        var idsAtuais = empresasAdicionais.stream().map(Cliente::getId).collect(java.util.stream.Collectors.toSet());
+        var novosIds = empresas.stream().map(Cliente::getId).collect(java.util.stream.Collectors.toSet());
+        if (!idsAtuais.equals(novosIds)) {
+            empresasAdicionais.clear();
+            empresasAdicionais.addAll(empresas);
+            revogarAcessos();
+        }
+    }
+
     @Column(nullable = false)
     private Boolean ativo = true;
 

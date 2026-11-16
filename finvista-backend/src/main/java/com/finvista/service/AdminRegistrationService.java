@@ -130,7 +130,24 @@ public class AdminRegistrationService {
         u.setNome(r.nome().trim());
         u.setEmail(email);
         u.setAtivo(r.ativo());
-        // Perfil and company are deliberately preserved, including during password resets.
+        if (r.empresasAdicionais() != null) {
+            var empresas = new java.util.ArrayList<Cliente>();
+            Long principal = u.getCliente() == null ? null : u.getCliente().getId();
+            var idsAnteriores = u.getEmpresasAdicionais().stream()
+                    .collect(java.util.stream.Collectors.toMap(Cliente::getId, c -> c));
+            for (Long empresaId : new java.util.TreeSet<>(r.empresasAdicionais())) {
+                if (empresaId.equals(principal)) {
+                    continue;
+                }
+                Cliente vinculada = idsAnteriores.get(empresaId);
+                if (vinculada == null) {
+                    vinculada = clients.bloquearAtivoPorId(empresaId).orElseThrow(
+                            () -> new IllegalArgumentException("Uma das empresas adicionais foi removida ou está inativa."));
+                }
+                empresas.add(vinculada);
+            }
+            u.atualizarEmpresasAdicionais(empresas);
+        }
         var result = resposta(users.saveAndFlush(u));
         log.info("Cadastro de usuário atualizado: usuario={} autor={} senhaRedefinida={}", id, author, reset);
         return result;
@@ -155,6 +172,7 @@ public class AdminRegistrationService {
 
     private AdminUserResponse resposta(Usuario u) {
         Cliente c = u.getCliente();
-        return new AdminUserResponse(u.getId(), u.getNome(), u.getEmail(), u.getPerfil(), c == null ? null : c.getId(), c == null ? null : c.getNome(), u.getAtivo(), AuthSessionProof.revision(u));
+        return new AdminUserResponse(u.getId(), u.getNome(), u.getEmail(), u.getPerfil(), c == null ? null : c.getId(), c == null ? null : c.getNome(), u.getAtivo(), AuthSessionProof.revision(u),
+                u.getEmpresasAdicionais().stream().map(Cliente::getId).sorted().toList());
     }
 }

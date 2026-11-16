@@ -108,7 +108,7 @@ export default function DashboardFilteredDetail({
                 <tr key={`${i.id}-${i.movimentoId ?? ""}-${i.data}`}>
                   <td>{dataBR(i.data)}</td>
                   <td>
-                    {filter ? (
+                    {filter && analise.clienteId != null ? (
                       <button
                         type="button"
                         onClick={() =>
@@ -163,7 +163,7 @@ export default function DashboardFilteredDetail({
           Próxima
         </button>
       </nav>
-      {record && (
+      {record && analise.clienteId != null && (
         <FinancialRecordDialog
           clienteId={analise.clienteId}
           params={record}

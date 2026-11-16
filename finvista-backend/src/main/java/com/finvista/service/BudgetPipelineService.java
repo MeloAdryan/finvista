@@ -60,6 +60,10 @@ public class BudgetPipelineService {
                 .toList();
     }
 
+    List<Budget> configuracoesDaEmpresa(Long empresaId) {
+        return budgetRepository.findAllByClienteIdOrderByDataInicioDesc(empresaId);
+    }
+
     @Transactional
     public BudgetPipelineResponse cadastrar(
             BudgetRequest request
