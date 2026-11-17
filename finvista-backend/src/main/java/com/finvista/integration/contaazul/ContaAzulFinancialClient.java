@@ -97,16 +97,36 @@ public class ContaAzulFinancialClient {
         } catch (RestClientResponseException e) {
             int code = e.getStatusCode().value();
             if (code == 401 || code == 403) {
-                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "A Conta Azul recusou o acesso. Renove ou autorize a conexão novamente.", ContaAzulAutoDiagnostic.causaSegura(e));
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "A Conta Azul recusou o acesso. Renove ou autorize a conexão novamente.", ContaAzulAutoDiagnostic.causaSegura(e,
+                    " consulta=" + tipo.name() + " pagina=" + pagina + " tamanho=" + TAMANHO
+                    + " vencimentoDe=" + vencimentoInicio + " vencimentoAte=" + vencimentoFim
+                    + " competencia=" + competencia + " competenciaDe=" + (competencia ? inicio : null)
+                    + " competenciaAte=" + (competencia ? fim : null)
+                    + " alteracaoDe=" + desde + " alteracaoAte=" + ate));
             }
             if (code == 429) {
-                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Limite de consultas da Conta Azul atingido. Aguarde antes de tentar novamente.", ContaAzulAutoDiagnostic.causaSegura(e));
+                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Limite de consultas da Conta Azul atingido. Aguarde antes de tentar novamente.", ContaAzulAutoDiagnostic.causaSegura(e,
+                    " consulta=" + tipo.name() + " pagina=" + pagina + " tamanho=" + TAMANHO
+                    + " vencimentoDe=" + vencimentoInicio + " vencimentoAte=" + vencimentoFim
+                    + " competencia=" + competencia + " competenciaDe=" + (competencia ? inicio : null)
+                    + " competenciaAte=" + (competencia ? fim : null)
+                    + " alteracaoDe=" + desde + " alteracaoAte=" + ate));
             }
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "A Conta Azul não concluiu a consulta. Tente novamente mais tarde.", ContaAzulAutoDiagnostic.causaSegura(e));
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "A Conta Azul não concluiu a consulta. Tente novamente mais tarde.", ContaAzulAutoDiagnostic.causaSegura(e,
+                    " consulta=" + tipo.name() + " pagina=" + pagina + " tamanho=" + TAMANHO
+                    + " vencimentoDe=" + vencimentoInicio + " vencimentoAte=" + vencimentoFim
+                    + " competencia=" + competencia + " competenciaDe=" + (competencia ? inicio : null)
+                    + " competenciaAte=" + (competencia ? fim : null)
+                    + " alteracaoDe=" + desde + " alteracaoAte=" + ate));
         } catch (ResponseStatusException e) {
             throw e;
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "A consulta não retornou uma página válida. Nenhum lançamento foi importado.", ContaAzulAutoDiagnostic.causaSegura(e));
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "A consulta não retornou uma página válida. Nenhum lançamento foi importado.", ContaAzulAutoDiagnostic.causaSegura(e,
+                    " consulta=" + tipo.name() + " pagina=" + pagina + " tamanho=" + TAMANHO
+                    + " vencimentoDe=" + vencimentoInicio + " vencimentoAte=" + vencimentoFim
+                    + " competencia=" + competencia + " competenciaDe=" + (competencia ? inicio : null)
+                    + " competenciaAte=" + (competencia ? fim : null)
+                    + " alteracaoDe=" + desde + " alteracaoAte=" + ate));
         }
     }
 

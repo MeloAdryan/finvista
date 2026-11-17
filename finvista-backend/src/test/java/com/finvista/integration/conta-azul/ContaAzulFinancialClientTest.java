@@ -148,4 +148,21 @@ class ContaAzulFinancialClientTest {
         server.verify();
     }
 
+
+    @Test
+    void erro400InformaConsultaEParametrosSemCredenciais() {
+        server.expect(requestTo(url("contas-a-pagar", 1))).andRespond(
+                withBadRequest().body("{\"error\":\"tamanho_pagina invalido SECRET\"}"));
+        var erro = assertThrows(ResponseStatusException.class, this::query);
+        var resumo = ContaAzulAutoDiagnostic.resumir(erro);
+        assertTrue(resumo.contains("http=400"));
+        assertTrue(resumo.contains("consulta=DESPESA"));
+        assertTrue(resumo.contains("pagina=1"));
+        assertTrue(resumo.contains("vencimentoDe=2026-10-01"));
+        assertTrue(resumo.contains("vencimentoAte=2026-10-31"));
+        assertTrue(resumo.contains("campos=[tamanho_pagina]"));
+        assertFalse(resumo.contains("SECRET"));
+        assertFalse(resumo.contains("private-token"));
+        server.verify();
+    }
 }

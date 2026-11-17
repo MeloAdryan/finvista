@@ -53,4 +53,32 @@ class ContaAzulAutoDiagnosticTest {
         assertInstanceOf(IllegalArgumentException.class, seguro);
         assertFalse(seguro.toString().contains("SECRET"));
     }
+
+    @Test
+    void extraiValidacaoSemCopiarCorpoOuValoresSensiveis() {
+        var origem = org.springframework.web.client.HttpClientErrorException.create(
+                HttpStatus.BAD_REQUEST, "SECRET", org.springframework.http.HttpHeaders.EMPTY,
+                ("{\"error\":\"O intervalo de data_alteracao_de e data_alteracao_ate "
+                        + "nao pode passar de 365 dias. SECRET CNPJ 12345678901234\"}")
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                java.nio.charset.StandardCharsets.UTF_8);
+        var resumo = ContaAzulAutoDiagnostic.resumir(ContaAzulAutoDiagnostic.causaSegura(origem));
+        assertTrue(resumo.contains("http=400"));
+        assertTrue(resumo.contains("validacao=PERIODO"));
+        assertTrue(resumo.contains("data_alteracao_de"));
+        assertTrue(resumo.contains("limitesDias=[365]"));
+        assertFalse(resumo.contains("SECRET"));
+        assertFalse(resumo.contains("12345678901234"));
+    }
+
+    @Test
+    void corpoExtensoTemDiagnosticoLimitado() {
+        var origem = org.springframework.web.client.HttpClientErrorException.create(
+                HttpStatus.BAD_REQUEST, "SECRET", org.springframework.http.HttpHeaders.EMPTY,
+                "SECRET".repeat(4000).getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                java.nio.charset.StandardCharsets.UTF_8);
+        var resumo = ContaAzulAutoDiagnostic.resumir(ContaAzulAutoDiagnostic.causaSegura(origem));
+        assertTrue(resumo.contains("RESPOSTA_EXTENSA"));
+        assertFalse(resumo.contains("SECRET"));
+    }
 }
