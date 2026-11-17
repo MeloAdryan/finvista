@@ -47,7 +47,10 @@ class ContaAzulTokenClientTest {
         server.expect(requestTo(ContaAzulTokenClient.ENDPOINT)).andRespond(withBadRequest().body("private credential"));
         var e = assertThrows(IllegalStateException.class, () -> client.trocar("code"));
         assertFalse(e.getMessage().contains("private credential"));
-        assertNull(e.getCause());
+        assertNotNull(e.getCause());
+        assertTrue(ContaAzulAutoDiagnostic.resumir(e).contains("http=400"));
+        assertFalse(ContaAzulAutoDiagnostic.resumir(e).contains("private"));
+        assertFalse(e.getCause().toString().contains("private"));
         server.verify();
     }
 

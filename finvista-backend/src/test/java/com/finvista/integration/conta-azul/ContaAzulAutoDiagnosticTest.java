@@ -36,4 +36,21 @@ class ContaAzulAutoDiagnosticTest {
     void ignoraSqlStateInvalido() {
         assertFalse(ContaAzulAutoDiagnostic.resumir(new java.sql.SQLException("SECRET", "SECRET")).contains("SECRET"));
     }
+
+    @Test
+    void preservaFalhaDeTransporteSemEnderecoOuCredenciais() {
+        var erro = new org.springframework.web.client.ResourceAccessException("SECRET https://private.example");
+        var seguro = ContaAzulAutoDiagnostic.causaSegura(erro);
+        assertInstanceOf(org.springframework.web.client.ResourceAccessException.class, seguro);
+        assertFalse(seguro.toString().contains("SECRET"));
+        assertFalse(seguro.toString().contains("private.example"));
+        assertNull(seguro.getCause());
+    }
+
+    @Test
+    void preservaFalhaDeValidacaoSemConteudoFinanceiro() {
+        var seguro = ContaAzulAutoDiagnostic.causaSegura(new IllegalArgumentException("SECRET"));
+        assertInstanceOf(IllegalArgumentException.class, seguro);
+        assertFalse(seguro.toString().contains("SECRET"));
+    }
 }

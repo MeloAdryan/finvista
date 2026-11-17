@@ -107,7 +107,10 @@ class ContaAzulFinancialClientTest {
         var e = assertThrows(ResponseStatusException.class, this::query);
         assertEquals(429, e.getStatusCode().value());
         assertFalse(e.getMessage().contains("private-token"));
-        assertNull(e.getCause());
+        assertNotNull(e.getCause());
+        assertTrue(ContaAzulAutoDiagnostic.resumir(e).contains("http=429"));
+        assertFalse(ContaAzulAutoDiagnostic.resumir(e).contains("private"));
+        assertFalse(e.getCause().toString().contains("private"));
         server.verify();
     }
 
@@ -117,6 +120,8 @@ class ContaAzulFinancialClientTest {
         var e = assertThrows(ResponseStatusException.class, this::query);
         assertEquals(502, e.getStatusCode().value());
         assertFalse(e.getMessage().contains("private-token"));
+        assertTrue(ContaAzulAutoDiagnostic.resumir(e).contains("http=401"));
+        assertFalse(e.getCause().toString().contains("private-token"));
         server.verify();
     }
 

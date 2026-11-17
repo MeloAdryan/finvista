@@ -97,16 +97,16 @@ public class ContaAzulFinancialClient {
         } catch (RestClientResponseException e) {
             int code = e.getStatusCode().value();
             if (code == 401 || code == 403) {
-                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "A Conta Azul recusou o acesso. Renove ou autorize a conexão novamente.");
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "A Conta Azul recusou o acesso. Renove ou autorize a conexão novamente.", ContaAzulAutoDiagnostic.causaSegura(e));
             }
             if (code == 429) {
-                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Limite de consultas da Conta Azul atingido. Aguarde antes de tentar novamente.");
+                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Limite de consultas da Conta Azul atingido. Aguarde antes de tentar novamente.", ContaAzulAutoDiagnostic.causaSegura(e));
             }
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "A Conta Azul não concluiu a consulta. Tente novamente mais tarde.");
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "A Conta Azul não concluiu a consulta. Tente novamente mais tarde.", ContaAzulAutoDiagnostic.causaSegura(e));
         } catch (ResponseStatusException e) {
             throw e;
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "A consulta não retornou uma página válida. Nenhum lançamento foi importado.");
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "A consulta não retornou uma página válida. Nenhum lançamento foi importado.", ContaAzulAutoDiagnostic.causaSegura(e));
         }
     }
 

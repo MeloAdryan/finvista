@@ -64,7 +64,7 @@ public class ContaAzulTokenClient {
             
             }return t;
         } catch (Exception e) {
-            throw new IllegalStateException("A Conta Azul não confirmou as credenciais. Tente autorizar novamente; nenhum token é exibido nesta resposta.");
+            throw new IllegalStateException("A Conta Azul não confirmou as credenciais. Tente autorizar novamente; nenhum token é exibido nesta resposta.", ContaAzulAutoDiagnostic.causaSegura(e));
         }
     }
 }
