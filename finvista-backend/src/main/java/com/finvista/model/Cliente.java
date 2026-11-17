@@ -21,6 +21,19 @@ public class Cliente {
     @Column(name = "data_criacao", nullable = false)
     private LocalDateTime dataCriacao;
 
+    @Column(name = "data_modificacao")
+    private LocalDateTime dataModificacao;
+
+    public LocalDateTime getDataModificacao() {
+        return dataModificacao;
+    }
+
+    @PreUpdate
+    public void registrarModificacao() {
+        dataModificacao = LocalDateTime.now();
+    }
+
+
     protected Cliente() {
     }
 
@@ -32,6 +45,7 @@ public class Cliente {
 
     @PrePersist
     public void prePersist() {
+        dataModificacao = LocalDateTime.now();
         if (ativo == null) {
             ativo = true;
         }

@@ -71,6 +71,7 @@ import org.springframework.web.server.ResponseStatusException;
             cliente.setAtivo(pedido.ativo());
             clientes.save(cliente);
             alteracoes.save(historico); // Mesma transação: falha no registro impede confirmar a alteração.
+            clientes.flush();
             return resposta(cliente);
         }
 
@@ -102,7 +103,7 @@ import org.springframework.web.server.ResponseStatusException;
         }
 
         private ClienteResponse resposta(Cliente c) {
-            return new ClienteResponse(c.getId(), c.getNome(), c.getAtivo(), c.getDataCriacao());
+            return new ClienteResponse(c.getId(), c.getNome(), c.getAtivo(), c.getDataCriacao(), c.getDataModificacao());
         }
     }
          

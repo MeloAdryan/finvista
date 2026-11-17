@@ -11,6 +11,7 @@ export interface AdminUser {
   ativo: boolean;
   revisao?: string;
   empresasAdicionais?: number[];
+  dataModificacao?: string | null;
 }
 export interface NewUser {
   nome: string;

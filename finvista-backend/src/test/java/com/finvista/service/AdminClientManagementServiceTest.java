@@ -82,6 +82,7 @@ class AdminClientManagementServiceTest {
         assertTrue(registro.getAtivoNovo());
         assertNotNull(registro.getRegistradoEm());
         verify(clientes).save(empresa);
+        verify(clientes).flush();
         verifyNoMoreInteractions(clientes, historico);
     }
 
@@ -90,6 +91,7 @@ class AdminClientManagementServiceTest {
         service.atualizar(1L, pedido("Empresa", false));
         assertFalse(empresa.getAtivo());
         verify(clientes).save(empresa);
+        verify(clientes).flush();
         verifyNoMoreInteractions(clientes);
     }
 

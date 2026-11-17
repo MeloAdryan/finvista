@@ -170,3 +170,15 @@
   margin: 0;
   padding: 0;
 }
+
+.ar-list-order {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .6rem;
+  margin-block: .75rem;
+}
+.ar-list-order select {
+  min-height: 44px;
+  max-width: 100%;
+}

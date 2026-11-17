@@ -76,7 +76,8 @@ import java.util.List;
                     cliente.getId(),
                     cliente.getNome(),
                     cliente.getAtivo(),
-                    cliente.getDataCriacao()
+                    cliente.getDataCriacao(),
+                    cliente.getDataModificacao()
             );
         }
 

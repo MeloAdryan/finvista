@@ -24,6 +24,18 @@ export default function AdminUserManagement({
   aoAtualizar,
   aoRecarregar,
 }: Props) {
+  const [ordem, setOrdem] = useState("AZ");
+  const ordenados = [...usuarios].sort((a, b) => {
+    const porNome = a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base", numeric: true });
+    if (ordem === "AZ") return porNome || a.id - b.id;
+    if (ordem === "ZA") return -porNome || a.id - b.id;
+    if (!a.dataModificacao && !b.dataModificacao) return porNome || a.id - b.id;
+    if (!a.dataModificacao) return 1;
+    if (!b.dataModificacao) return -1;
+    const diferenca = a.dataModificacao.localeCompare(b.dataModificacao);
+    return (ordem === "RECENTES" ? -diferenca : diferenca) || porNome || a.id - b.id;
+  });
+
   const [original, setOriginal] = useState<AdminUser | null>(null),
     [remover, setRemover] = useState<AdminUser | null>(null);
   const [nome, setNome] = useState(""),
@@ -132,6 +144,16 @@ export default function AdminUserManagement({
           {sucesso}
         </p>
       )}
+      <label className="ar-list-order">
+        Ordenar por
+        <select value={ordem} onChange={(event) => setOrdem(event.target.value)}>
+          <option value="AZ">Nome · A–Z</option>
+          <option value="ZA">Nome · Z–A</option>
+          <option value="RECENTES">Modificação · mais recentes</option>
+          <option value="ANTIGOS">Modificação · mais antigas</option>
+        </select>
+      </label>
+      <p>Cadastros sem data de modificação aparecem ao final da ordenação por data.</p>
       <div className="ar-table">
         <table>
           <thead>
@@ -141,11 +163,12 @@ export default function AdminUserManagement({
               <th>Perfil</th>
               <th>Empresa</th>
               <th>Status</th>
+              <th>Última modificação</th>
               <th>Ações</th>
             </tr>
           </thead>
           <tbody>
-            {usuarios.map((u) => (
+            {ordenados.map((u) => (
               <tr key={u.id}>
                 <td>{u.nome}</td>
                 <td>{u.email}</td>
@@ -158,6 +181,9 @@ export default function AdminUserManagement({
                   {u.clienteId != null ? ` · #${u.clienteId}` : ""}
                 </td>
                 <td>{u.ativo ? "Ativo" : "Inativo"}</td>
+                <td>{u.dataModificacao
+                  ? new Date(u.dataModificacao).toLocaleString("pt-BR")
+                  : "Não registrada"}</td>
                 <td>
                   <button
                     type="button"

@@ -6,6 +6,7 @@ export interface Cliente {
   nome: string;
   ativo: boolean;
   dataCriacao: string;
+  dataModificacao?: string | null;
 }
 
 interface ApiErrorResponse {

@@ -42,7 +42,7 @@ public class AdminRegistrationService {
             throw new IllegalArgumentException("Informe um nome de empresa de até 150 caracteres.");
         }
         Cliente c = clients.save(new Cliente(r.nome().trim()));
-        return new ClienteResponse(c.getId(), c.getNome(), c.getAtivo(), c.getDataCriacao());
+        return new ClienteResponse(c.getId(), c.getNome(), c.getAtivo(), c.getDataCriacao(), c.getDataModificacao());
     }
 
     @Transactional
@@ -173,6 +173,6 @@ public class AdminRegistrationService {
     private AdminUserResponse resposta(Usuario u) {
         Cliente c = u.getCliente();
         return new AdminUserResponse(u.getId(), u.getNome(), u.getEmail(), u.getPerfil(), c == null ? null : c.getId(), c == null ? null : c.getNome(), u.getAtivo(), AuthSessionProof.revision(u),
-                u.getEmpresasAdicionais().stream().map(Cliente::getId).sorted().toList());
+                u.getEmpresasAdicionais().stream().map(Cliente::getId).sorted().toList(), u.getDataModificacao());
     }
 }
