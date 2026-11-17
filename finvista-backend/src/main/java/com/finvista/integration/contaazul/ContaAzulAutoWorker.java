@@ -117,6 +117,11 @@ import com.finvista.integration.contaazul.ContaAzulAutoState.*;
                 registrarFalha(reserva, "Execução interrompida. A fila será retomada automaticamente.", false);
             } catch (ResponseStatusException e) {
                 String referencia = diagnosticar(reserva, etapa, e);
+                if (("LISTAR_RECEITAS".equals(etapa) || "LISTAR_DESPESAS".equals(etapa))
+                        && ContaAzulAutoDiagnostic.limiteDePeriodo365(e)
+                        && estado.dividirPeriodoParcelas(reserva)) {
+                    return;
+                }
                 boolean parcial = e.getStatusCode().value() == 409;
                 registrarFalha(reserva, (e.getStatusCode().value() == 429 ? "Limite de consultas atingido. Nova tentativa com espera progressiva."
                         : parcial ? "A listagem não pôde ser conferida integralmente. Reduza o período ou consulte os dados antes de repetir."
@@ -146,6 +151,3 @@ import com.finvista.integration.contaazul.ContaAzulAutoState.*;
             Thread.sleep(600);
         }
     }
-
-    
-

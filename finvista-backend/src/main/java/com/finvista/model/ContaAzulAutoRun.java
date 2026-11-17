@@ -52,6 +52,10 @@ import java.util.UUID;
         public LocalDate movimentosEscopoInicio;
         @Column(name = "movimentos_escopo_fim")
         public LocalDate movimentosEscopoFim;
+        @Column(name = "parcelas_em_janelas")
+        public Boolean parcelasEmJanelas;
+        @Column(name = "parcela_inicio")
+        public LocalDate parcelaInicio;
         @Column(name = "total_esperado")
         public Integer totalEsperado;
         @Column(name = "listagem_mudou")

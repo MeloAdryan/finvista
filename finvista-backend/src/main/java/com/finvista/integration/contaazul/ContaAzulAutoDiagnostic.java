@@ -59,6 +59,16 @@ final class ContaAzulAutoDiagnostic {
         return " validacao=" + categoria + " campos=" + campos + " limitesDias=" + limites;
     }
 
+    static boolean limiteDePeriodo365(Throwable erro) {
+        var vistos = Collections.newSetFromMap(new IdentityHashMap<Throwable, Boolean>());
+        for (Throwable atual = erro; atual != null && vistos.size() < 8 && vistos.add(atual); atual = atual.getCause()) {
+            if (atual instanceof FalhaHttp http && http.getStatusCode().value() == 400
+                    && http.diagnostico.contains("validacao=PERIODO")
+                    && http.diagnostico.contains("limitesDias=[365]")) return true;
+        }
+        return false;
+    }
+
     static String resumir(Throwable erro) {
         var vistos = Collections.newSetFromMap(new IdentityHashMap<Throwable, Boolean>());
         var partes = new ArrayList<String>();

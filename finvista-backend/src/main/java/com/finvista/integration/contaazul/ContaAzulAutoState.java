@@ -285,8 +285,35 @@ import org.springframework.beans.factory.annotation.Value;
                 var janela = janelaMovimentos(r);
                 return new Cursor(janela.inicio(), janela.fim(), r.etapa, r.pagina, true);
             }
+            if (r.etapa <= 1 && Boolean.TRUE.equals(r.parcelasEmJanelas)) {
+                LocalDate inicio = r.parcelaInicio == null ? r.inicio : r.parcelaInicio;
+                if (inicio.isBefore(r.inicio) || inicio.isAfter(r.fim))
+                    throw new IllegalStateException("Cursor de parcelas fora do alcance autorizado.");
+                LocalDate fim = inicio.plusDays(364);
+                if (fim.isAfter(r.fim)) fim = r.fim;
+                return new Cursor(inicio, fim, r.etapa, r.pagina, Boolean.TRUE.equals(r.sincronizacaoCompleta),
+                        r.alteracoesDesde, r.alteracoesAte);
+            }
             return new Cursor(r.inicio, r.fim, r.etapa, r.pagina, Boolean.TRUE.equals(r.sincronizacaoCompleta),
                     r.alteracoesDesde, r.alteracoesAte);
+        }
+
+        @Transactional
+        public boolean dividirPeriodoParcelas(Reserva reserva) {
+            var c = validar(reserva);
+            var r = execucao(c);
+            if (r.etapa > 1 || r.pagina != 1 || r.totalEsperado != null
+                    || Boolean.TRUE.equals(r.parcelasEmJanelas)
+                    || !r.fim.isAfter(r.inicio.plusDays(364))) return false;
+            r.parcelasEmJanelas = true;
+            r.parcelaInicio = r.inicio;
+            r.status = "EM_ANDAMENTO";
+            r.mensagem = "A origem exige consultas de até 365 dias. O histórico será coletado em partes, mantendo o alcance autorizado.";
+            c.falhas = 0;
+            c.proximaEm = clock.instant();
+            c.dono = null;
+            c.reservaAte = null;
+            return true;
         }
 
         @Transactional
@@ -317,7 +344,16 @@ import org.springframework.beans.factory.annotation.Value;
                 enfileirar(r, p.id(), r.etapa == 0 ? "RECEITA" : "DESPESA", p.descricao(), true);
             }
             if ((long) r.pagina * 100 >= pagina.totalItens()) {
-                r.etapa++;
+                LocalDate inicio = r.parcelaInicio == null ? r.inicio : r.parcelaInicio;
+                LocalDate fimJanela = inicio.plusDays(364);
+                if (Boolean.TRUE.equals(r.parcelasEmJanelas) && fimJanela.isBefore(r.fim)) {
+                    r.parcelaInicio = fimJanela.plusDays(1);
+                    r.mensagem = "Conferindo parcelas: próxima faixa a partir de " + r.parcelaInicio
+                            + ". Alcance autorizado mantido.";
+                } else {
+                    r.etapa++;
+                    r.parcelaInicio = null;
+                }
                 r.pagina = 1;
                 r.totalEsperado = null;
             } else {

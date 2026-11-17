@@ -659,4 +659,70 @@ class ContaAzulAutoStateTest {
         assertThrows(IllegalStateException.class,()->state.cursor(res));
     }
 
+
+    @Test
+    void dividePeriodoSemLacunasEConservaCursorNaRetomada() {
+        var reserva = state.assumir(7L);
+        var run = execucoes.get(reserva.execucaoId());
+        run.inicio = LocalDate.of(2024, 1, 1);
+        run.fim = LocalDate.of(2025, 1, 1);
+        assertTrue(state.dividirPeriodoParcelas(reserva));
+        reserva = state.assumir(7L);
+        var primeira = state.cursor(reserva);
+        assertEquals(LocalDate.of(2024, 1, 1), primeira.inicio());
+        assertEquals(LocalDate.of(2024, 12, 30), primeira.fim());
+        state.pagina(reserva, new ContaAzulFinancialClient.Pagina(0, List.of()));
+        var segunda = state.cursor(reserva);
+        assertEquals(primeira.fim().plusDays(1), segunda.inicio());
+        assertEquals(LocalDate.of(2025, 1, 1), segunda.fim());
+        assertEquals(0, segunda.etapa());
+        state.devolver(reserva, false);
+        reserva = state.assumir(7L);
+        assertEquals(segunda, state.cursor(reserva));
+        state.pagina(reserva, new ContaAzulFinancialClient.Pagina(0, List.of()));
+        assertEquals(1, state.cursor(reserva).etapa());
+        assertEquals(run.inicio, state.cursor(reserva).inicio());
+        assertEquals(LocalDate.of(2024, 12, 30), state.cursor(reserva).fim());
+    }
+
+    @Test
+    void naoRedividePaginacaoJaIniciada() {
+        var reserva = state.assumir(7L);
+        var run = execucoes.get(reserva.execucaoId());
+        run.inicio = LocalDate.of(2000, 1, 1);
+        run.fim = LocalDate.of(2200, 12, 31);
+        run.pagina = 2;
+        run.totalEsperado = 101;
+        assertFalse(state.dividirPeriodoParcelas(reserva));
+        assertNull(run.parcelasEmJanelas);
+        assertEquals(2, run.pagina);
+    }
+
+    @Test
+    void todasAsJanelasCobremAsDuasFontesInclusiveFuturas() {
+        var reserva = state.assumir(7L);
+        var run = execucoes.get(reserva.execucaoId());
+        run.inicio = LocalDate.of(2000, 1, 1);
+        run.fim = LocalDate.of(2200, 12, 31);
+        assertTrue(state.dividirPeriodoParcelas(reserva));
+        reserva = state.assumir(7L);
+        LocalDate proxima = run.inicio;
+        int fonte = 0;
+        int consultas = 0;
+        while (state.cursor(reserva).etapa() < 2) {
+            var janela = state.cursor(reserva);
+            if (janela.etapa() != fonte) {
+                assertEquals(run.fim.plusDays(1), proxima);
+                fonte = janela.etapa();
+                proxima = run.inicio;
+            }
+            assertEquals(proxima, janela.inicio());
+            assertTrue(java.time.temporal.ChronoUnit.DAYS.between(janela.inicio(), janela.fim()) <= 364);
+            proxima = janela.fim().plusDays(1);
+            state.pagina(reserva, new ContaAzulFinancialClient.Pagina(0, List.of()));
+            assertTrue(++consultas < 500);
+        }
+        assertEquals(run.fim.plusDays(1), proxima);
+        assertEquals(2, run.etapa);
+    }
 }

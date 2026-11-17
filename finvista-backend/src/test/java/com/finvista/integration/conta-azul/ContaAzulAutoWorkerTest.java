@@ -192,4 +192,20 @@ class ContaAzulAutoWorkerTest {
         verify(state).falhar(eq(reserva),contains("Limite"),eq(false));
     }
 
+
+    @Test
+    void limite365AgendaDivisaoDaConsultaSemMarcarFalha() {
+        when(state.cursor(reserva)).thenReturn(new ContaAzulAutoState.Cursor(
+                LocalDate.of(2000, 1, 1), LocalDate.of(2200, 12, 31), 0, 1));
+        var origem = org.springframework.web.client.HttpClientErrorException.create(
+                HttpStatus.BAD_REQUEST, "Bad Request", org.springframework.http.HttpHeaders.EMPTY,
+                "{\"error\":\"Intervalo maximo de 365 dias\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                java.nio.charset.StandardCharsets.UTF_8);
+        when(financial.consultar(any(), any(), any(), any(), anyInt())).thenThrow(
+                new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Falha", ContaAzulAutoDiagnostic.causaSegura(origem)));
+        when(state.dividirPeriodoParcelas(reserva)).thenReturn(true);
+        worker.executar(7L);
+        verify(state).dividirPeriodoParcelas(reserva);
+        verify(state, never()).falhar(any(), anyString(), anyBoolean());
+    }
 }
