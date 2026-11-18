@@ -253,6 +253,10 @@ import org.springframework.beans.factory.annotation.Value;
                     }
                 }
             }
+            if (Boolean.TRUE.equals(c.sincronizacaoCompleta) && c.fim.isAfter(ContaAzulFullScope.FIM)) {
+                c.fim = ContaAzulFullScope.FIM;
+            }
+            limitarAlcanceParcelas(r);
             boolean retomandoFalha = "AGUARDANDO_REPETICAO".equals(r.status);
             r.status = "EM_ANDAMENTO";
             if (!r.listagemMudou) {
@@ -277,6 +281,7 @@ import org.springframework.beans.factory.annotation.Value;
         public Cursor cursor(Reserva reserva) {
             var c = validar(reserva);
             var r = execucao(c);
+            limitarAlcanceParcelas(r);
             if (Boolean.TRUE.equals(r.incremental) && (r.alteracoesDesde == null || r.alteracoesAte == null || r.alteracoesAte.isBefore(r.alteracoesDesde)))
                 throw new IllegalStateException("Intervalo incremental incompleto.");
             if (Boolean.TRUE.equals(r.sincronizacaoCompleta) && r.etapa >= 2 && r.etapa <= 3) {
@@ -296,6 +301,19 @@ import org.springframework.beans.factory.annotation.Value;
             }
             return new Cursor(r.inicio, r.fim, r.etapa, r.pagina, Boolean.TRUE.equals(r.sincronizacaoCompleta),
                     r.alteracoesDesde, r.alteracoesAte);
+        }
+
+        private void limitarAlcanceParcelas(ContaAzulAutoRun r) {
+            if (r.etapa >= 2 || !Boolean.TRUE.equals(r.sincronizacaoCompleta) || r.inicio.isAfter(ContaAzulFullScope.FIM) || !r.fim.isAfter(ContaAzulFullScope.FIM)) return;
+            // Finish the current page sequence with its original dates before changing its range.
+            if (r.etapa <= 1 && (r.pagina != 1 || r.totalEsperado != null)) return;
+            r.fim = ContaAzulFullScope.FIM;
+            if (r.etapa <= 1 && r.parcelaInicio != null && r.parcelaInicio.isAfter(r.fim)) {
+                // Receipts beyond the new end are done; expenses still start at the beginning.
+                r.etapa++;
+                r.parcelaInicio = null;
+            }
+            r.mensagem = "Alcance das parcelas ajustado até 31/12/2027. Registros já importados preservados.";
         }
 
         @Transactional

@@ -554,9 +554,10 @@ class ContaAzulAutoStateTest {
     }
     @Test void novasListagensDeParcelasPreservamFuturasESeparamMovimentos() {
         var f=movimentos(ContaAzulFullScope.INICIO,ContaAzulFullScope.FIM);f.run().etapa=1;
-        assertEquals(LocalDate.of(2000,1,1),state.cursor(f.reserva()).inicio());assertEquals(LocalDate.of(2200,12,31),state.cursor(f.reserva()).fim());
-        assertTrue(LocalDate.of(2029,3,16).isBefore(state.cursor(f.reserva()).fim()));
-        f.run().etapa=2;state.cursor(f.reserva());assertEquals(LocalDate.of(2026,11,2),f.run().movimentosEscopoFim);assertEquals(LocalDate.of(2200,12,31),f.run().fim);
+        assertEquals(LocalDate.of(2000,1,1),state.cursor(f.reserva()).inicio());assertEquals(LocalDate.of(2027,12,31),state.cursor(f.reserva()).fim());
+        assertTrue(LocalDate.of(2027,3,16).isBefore(state.cursor(f.reserva()).fim()));
+        assertTrue(LocalDate.of(2028,1,1).isAfter(state.cursor(f.reserva()).fim()));
+        f.run().etapa=2;state.cursor(f.reserva());assertEquals(LocalDate.of(2026,11,2),f.run().movimentosEscopoFim);assertEquals(LocalDate.of(2027,12,31),f.run().fim);
     }
     @Test void dataFinalDaColetaFicaCongeladaAposMudancaDeDia() {
         var f=movimentos(ContaAzulFullScope.INICIO,ContaAzulFullScope.FIM);state.cursor(f.reserva());
@@ -725,4 +726,60 @@ class ContaAzulAutoStateTest {
         assertEquals(run.fim.plusDays(1), proxima);
         assertEquals(2, run.etapa);
     }
+    @Test void novaSincronizacaoCompletaLimitaParcelasEm2027() {
+        config.sincronizacaoCompleta = true;
+        config.inicio = LocalDate.of(2000, 1, 1);
+        config.fim = LocalDate.of(2200, 12, 31);
+        var reserva = state.assumir(7L);
+        assertEquals(LocalDate.of(2027, 12, 31), state.cursor(reserva).fim());
+        assertEquals(LocalDate.of(2027, 12, 31), config.fim);
+    }
+
+    @Test void retomadaDeReceitasEm2051IniciaDespesasSemPerderContadores() {
+        config.sincronizacaoCompleta = true;
+        var reserva = state.assumir(7L);
+        var run = atual();
+        run.fim = LocalDate.of(2200, 12, 31);
+        run.parcelasEmJanelas = true;
+        run.parcelaInicio = LocalDate.of(2051, 12, 19);
+        run.incluidas = 1395;
+        var cursor = state.cursor(reserva);
+        assertEquals(1, cursor.etapa());
+        assertEquals(LocalDate.of(2000, 1, 1), cursor.inicio());
+        assertEquals(1395, run.incluidas);
+        assertEquals(reserva.execucaoId(), run.id);
+        assertEquals(LocalDate.of(2027, 12, 31), run.fim);
+    }
+
+    @Test void retomadaDeDespesasEm2051AvancaParaTransferencias() {
+        config.sincronizacaoCompleta = true;
+        var reserva = state.assumir(7L);
+        var run = atual();
+        run.fim = LocalDate.of(2200, 12, 31);
+        run.etapa = 1;
+        run.parcelasEmJanelas = true;
+        run.parcelaInicio = LocalDate.of(2051, 12, 19);
+        assertEquals(2, state.cursor(reserva).etapa());
+        assertNull(run.parcelaInicio);
+        assertEquals(LocalDate.of(2027, 12, 31), run.fim);
+    }
+
+    @Test void ultimaJanelaDe2027NaoPulaPaginaEmAndamento() {
+        config.sincronizacaoCompleta = true;
+        var reserva = state.assumir(7L);
+        var run = atual();
+        run.fim = LocalDate.of(2200, 12, 31);
+        run.parcelasEmJanelas = true;
+        run.parcelaInicio = LocalDate.of(2027, 6, 1);
+        run.pagina = 2;
+        run.totalEsperado = 101;
+        assertEquals(LocalDate.of(2028, 5, 30), state.cursor(reserva).fim());
+        assertEquals(2, state.cursor(reserva).pagina());
+        state.pagina(reserva, new ContaAzulFinancialClient.Pagina(101, List.of(resumo(id))));
+        assertEquals(1, state.cursor(reserva).etapa());
+        assertEquals(LocalDate.of(2000, 1, 1), state.cursor(reserva).inicio());
+        assertEquals(LocalDate.of(2027, 12, 31), run.fim);
+        assertEquals(1, fila.size());
+    }
+
 }

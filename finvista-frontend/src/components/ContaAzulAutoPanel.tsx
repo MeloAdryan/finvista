@@ -303,7 +303,7 @@ export default function ContaAzulAutoPanel({
         {completa && (
           <p>
             Os filtros das páginas não limitam esta coleta. Novas varreduras
-            incluem parcelas desde 2000 e compromissos futuros. Transferências e
+            incluem parcelas de 01/01/2000 até 31/12/2027, inclusive compromissos futuros nesse intervalo. Transferências e
             saldos iniciais são consultados desde 2000 até a data fixada na
             coleta. Parcelas antigas já vinculadas continuam sendo
             reconsultadas. Novas parcelas dependem da autorização abaixo;
@@ -331,7 +331,7 @@ export default function ContaAzulAutoPanel({
         </label>
         <p>
           {completa
-            ? "As datas abaixo não filtram a sincronização ampla. Transferências e saldos iniciais são preservados separadamente das receitas e despesas."
+            ? "Na sincronização completa, o alcance das parcelas é fixo: 01/01/2000 a 31/12/2027. Transferências e saldos iniciais são preservados separadamente das receitas e despesas."
             : movel
               ? "Cada nova varredura recalcula as datas pelo horário de Brasília. Uma varredura em andamento mantém o período com que começou."
               : "Período fixo de até 366 dias. Vencimentos fora dele não serão consultados."}
@@ -416,7 +416,7 @@ export default function ContaAzulAutoPanel({
             onChange={(e) => setConfirmado(e.target.checked)}
           />
           {completa
-            ? "Autorizo as execuções periódicas para consultar parcelas desde 2000 e compromissos futuros, reconsultar vínculos antigos e coletar transferências e saldos iniciais realizados até a data fixada na coleta, conforme as opções acima."
+            ? "Autorizo as execuções periódicas para consultar parcelas de 01/01/2000 até 31/12/2027, reconsultar vínculos antigos e coletar transferências e saldos iniciais realizados até a data fixada na coleta, conforme as opções acima."
             : movel
               ? "Autorizo as execuções periódicas para esta empresa no período móvel, acompanhando o calendário, conforme as opções acima."
               : "Autorizo as execuções periódicas para esta empresa e este período, conforme as opções acima."}

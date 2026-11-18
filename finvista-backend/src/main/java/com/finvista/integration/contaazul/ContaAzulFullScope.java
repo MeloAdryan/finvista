@@ -9,7 +9,7 @@ import java.time.LocalDate;
 public final class ContaAzulFullScope {
 
     public static final LocalDate INICIO = LocalDate.of(2000, 1, 1);
-    public static final LocalDate FIM = LocalDate.of(2200, 12, 31);
+    public static final LocalDate FIM = LocalDate.of(2027, 12, 31);
 
     private ContaAzulFullScope() {
     }
