@@ -15,708 +15,905 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import org.springframework.beans.factory.annotation.Value;
 
-@ Service 
+@Service
 
-    public class ContaAzulAutoState {
+public class ContaAzulAutoState {
 
-        public record Reserva(Long clienteId, UUID execucaoId, UUID dono) {}
+    public record Reserva(Long clienteId, UUID execucaoId, UUID dono) {}
 
-        public record Cursor(LocalDate inicio, LocalDate fim, int etapa, int pagina, boolean completa,
-                Instant alteracoesDesde, Instant alteracoesAte) {
-            public Cursor(LocalDate inicio, LocalDate fim, int etapa, int pagina, boolean completa) {
-                this(inicio, fim, etapa, pagina, completa, null, null);
-            }
+    public record Cursor(LocalDate inicio, LocalDate fim, int etapa, int pagina, boolean completa,
+            Instant alteracoesDesde, Instant alteracoesAte) {
 
-            public Cursor(LocalDate inicio, LocalDate fim, int etapa, int pagina) {
-                this(inicio, fim, etapa, pagina, false);
-            }
-        }
-        @org.springframework.beans.factory.annotation.Autowired
-        private ContaAzulSourceCaptureRepository fontes;
-        @org.springframework.beans.factory.annotation.Autowired
-        private com.fasterxml.jackson.databind.ObjectMapper json;
-
-        public static final class ReservaPerdida extends RuntimeException {
-        }
-        private final ContaAzulAutoConfigRepository configs;
-        private final ContaAzulAutoRunRepository runs;
-        private final ContaAzulAutoItemRepository itens;
-        private final ClienteRepository clientes;
-        private final UsuarioRepository usuarios;
-        private final FinancialTransactionRepository transacoes;
-        private final ContaAzulApiSyncService sync;
-        private final ClienteContextService contexto;
-        private final ContaAzulConfiguration integracao;
-        private final Clock clock;
-        private final boolean habilitado;
-
-        public ContaAzulAutoState(ContaAzulAutoConfigRepository configs, ContaAzulAutoRunRepository runs,
-                ContaAzulAutoItemRepository itens, ClienteRepository clientes, UsuarioRepository usuarios,
-                FinancialTransactionRepository transacoes, ContaAzulApiSyncService sync, ClienteContextService contexto,
-                ContaAzulConfiguration integracao, Clock clock, @Value("${CONTA_AZUL_AUTO_ENABLED:false}") boolean habilitado) {
-            this.configs = configs;
-            this.runs = runs;
-            this.itens = itens;
-            this.clientes = clientes;
-            this.usuarios = usuarios;
-            this.transacoes = transacoes;
-            this.sync = sync;
-            this.contexto = contexto;
-            this.integracao = integracao;
-            this.clock = clock;
-            this.habilitado = habilitado;
+        public Cursor(LocalDate inicio, LocalDate fim, int etapa, int pagina, boolean completa) {
+            this(inicio, fim, etapa, pagina, completa, null, null);
         }
 
-        @Transactional(readOnly = true)
-        public Status status(Long cliente, int pagina) {
-            conferir(cliente);
-            if (pagina < 1 || pagina > 100000) {
-                throw new IllegalArgumentException("Página inválida.");
-            }
-            var c = configs.findById(cliente).orElse(null);
-            LocalDate hoje = LocalDate.now(clock.withZone(ZoneId.of("America/Sao_Paulo")));
-            Config config = c == null ? new Config(cliente, false, hoje.minusDays(90), hoje.plusDays(90), 30, false, null, null)
-                    : new Config(cliente, c.habilitada, Boolean.TRUE.equals(c.sincronizacaoCompleta) ? ContaAzulFullScope.INICIO : Boolean.TRUE.equals(c.periodoMovel) ? hoje.minusDays(90) : c.inicio, Boolean.TRUE.equals(c.sincronizacaoCompleta) ? ContaAzulFullScope.FIM : Boolean.TRUE.equals(c.periodoMovel) ? hoje.plusDays(90) : c.fim, c.intervaloMinutos, c.incluirNovas, c.proximaEm, c.alteradoEm, Boolean.TRUE.equals(c.periodoMovel), Boolean.TRUE.equals(c.sincronizacaoCompleta));
-            var lista = runs.findTop10ByClienteIdOrderByCriadoEmDesc(cliente);
-            List<Execucao> execucoes = lista.stream().map(this::resumo).toList();
-            if (lista.isEmpty()) {
-                return new Status(habilitado, config, execucoes, List.of(), 0, pagina);
-            }
-            var pendentes = itens.findByExecucaoIdAndClienteIdAndStatusOrderByIdAsc(lista.get(0).id, cliente, "CONFERIR", PageRequest.of(pagina - 1, 20));
-            conferir(cliente);
-            return new Status(habilitado, config, execucoes, pendentes.getContent().stream()
-                    .map(i -> new Pendencia(i.parcelaId, i.tipo, i.descricao, i.mensagem, i.lancamentoId)).toList(), pendentes.getTotalElements(), pagina);
+        public Cursor(LocalDate inicio, LocalDate fim, int etapa, int pagina) {
+            this(inicio, fim, etapa, pagina, false);
         }
+    }
+    @org.springframework.beans.factory.annotation.Autowired
+    private ContaAzulSourceCaptureRepository fontes;
+    @org.springframework.beans.factory.annotation.Autowired
+    private ContaAzulConnectionRepository identityConnections;
+    @org.springframework.beans.factory.annotation.Autowired
+    private ContaAzulRunAudit auditoria;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.fasterxml.jackson.databind.ObjectMapper json = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
 
-        private Execucao resumo(ContaAzulAutoRun r) {
-            return new Execucao(r.id, r.status, r.inicio, r.fim, r.criadoEm, r.concluidoEm,
-                    r.incluidas, r.atualizadas, r.mantidas, r.pendentes, itens.countByExecucaoIdAndStatus(r.id, "EM_FILA"), r.mensagem,
-                    Boolean.TRUE.equals(r.incremental) ? "ALTERACOES" : Boolean.TRUE.equals(r.sincronizacaoCompleta) ? "HISTORICO" : "PERIODO",
-                    r.alteracoesDesde, r.alteracoesAte);
+    public static final class ReservaPerdida extends RuntimeException {
+    }
+    private final ContaAzulAutoConfigRepository configs;
+    private final ContaAzulAutoRunRepository runs;
+    private final ContaAzulAutoItemRepository itens;
+    private final ClienteRepository clientes;
+    private final UsuarioRepository usuarios;
+    private final FinancialTransactionRepository transacoes;
+    private final ContaAzulApiSyncService sync;
+    private final ClienteContextService contexto;
+    private final ContaAzulConfiguration integracao;
+    private final Clock clock;
+    private final boolean habilitado;
+
+    public ContaAzulAutoState(ContaAzulAutoConfigRepository configs, ContaAzulAutoRunRepository runs,
+            ContaAzulAutoItemRepository itens, ClienteRepository clientes, UsuarioRepository usuarios,
+            FinancialTransactionRepository transacoes, ContaAzulApiSyncService sync, ClienteContextService contexto,
+            ContaAzulConfiguration integracao, Clock clock, @Value("${CONTA_AZUL_AUTO_ENABLED:false}") boolean habilitado) {
+        this.configs = configs;
+        this.runs = runs;
+        this.itens = itens;
+        this.clientes = clientes;
+        this.usuarios = usuarios;
+        this.transacoes = transacoes;
+        this.sync = sync;
+        this.contexto = contexto;
+        this.integracao = integracao;
+        this.clock = clock;
+        this.habilitado = habilitado;
+    }
+
+    @Transactional(readOnly = true)
+    public Status status(Long cliente, int pagina) {
+        conferir(cliente);
+        if (pagina < 1 || pagina > 100000) {
+            throw new IllegalArgumentException("Página inválida.");
         }
-
-        @Transactional(readOnly = true)
-        public Historico historico(Long cliente, int pagina) {
-            conferir(cliente);
-            if (pagina < 1 || pagina > 100000) {
-                throw new IllegalArgumentException("Página inválida.");
-            }
-            var registros = runs.findByClienteIdOrderByCriadoEmDesc(cliente, PageRequest.of(pagina - 1, 20));
-            var resultado = new Historico(registros.getContent().stream().map(this::resumo).toList(), registros.getTotalElements(), pagina);
-            conferir(cliente);
-            return resultado;
+        var c = configs.findById(cliente).orElse(null);
+        LocalDate hoje = LocalDate.now(clock.withZone(ZoneId.of("America/Sao_Paulo")));
+        Config config = c == null ? new Config(cliente, false, hoje.minusDays(90), hoje.plusDays(90), 30, false, null, null)
+                : new Config(cliente, c.habilitada, Boolean.TRUE.equals(c.sincronizacaoCompleta) ? ContaAzulFullScope.INICIO : Boolean.TRUE.equals(c.periodoMovel) ? hoje.minusDays(90) : c.inicio, Boolean.TRUE.equals(c.sincronizacaoCompleta) ? ContaAzulFullScope.fim(clock) : Boolean.TRUE.equals(c.periodoMovel) ? hoje.plusDays(90) : c.fim, c.intervaloMinutos, c.incluirNovas, c.proximaEm, c.alteradoEm, Boolean.TRUE.equals(c.periodoMovel), Boolean.TRUE.equals(c.sincronizacaoCompleta));
+        var lista = runs.findTop10ByClienteIdOrderByCriadoEmDesc(cliente);
+        List<Execucao> execucoes = lista.stream().map(this::resumo).toList();
+        if (lista.isEmpty()) {
+            return new Status(habilitado, config, execucoes, List.of(), 0, pagina);
         }
+        var pendentes = itens.findByExecucaoIdAndClienteIdAndStatusOrderByIdAsc(lista.get(0).id, cliente, "CONFERIR", PageRequest.of(pagina - 1, 20));
+        conferir(cliente);
+        return new Status(habilitado, config, execucoes, pendentes.getContent().stream()
+                .map(i -> new Pendencia(i.parcelaId, i.tipo, i.descricao, i.mensagem, i.lancamentoId)).toList(), pendentes.getTotalElements(), pagina);
+    }
 
-        @Transactional(readOnly = true)
-        public Revisao revisar(Long cliente, UUID execucao, int pagina) {
-            conferir(cliente);
-            if (pagina < 1 || pagina > 100000) {
-                throw new IllegalArgumentException("Página inválida.");
-            }
-            var r = runs.findByIdAndClienteId(execucao, cliente).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Execução não encontrada nesta empresa."));
-            var p = itens.findByExecucaoIdAndClienteIdAndStatusOrderByIdAsc(execucao, cliente, "CONFERIR", PageRequest.of(pagina - 1, 20));
-            var resultado = new Revisao(resumo(r), p.getContent().stream().map(i -> new Pendencia(i.parcelaId, i.tipo, i.descricao, i.mensagem, i.lancamentoId)).toList(), p.getTotalElements(), pagina);
-            conferir(cliente);
-            return resultado;
+    private Execucao resumo(ContaAzulAutoRun r) {
+        return new Execucao(r.id, r.status, r.inicio, r.fim, r.criadoEm, r.concluidoEm,
+                r.incluidas, r.atualizadas, r.mantidas, r.pendentes, itens.countByExecucaoIdAndStatus(r.id, "EM_FILA"), r.mensagem,
+                Boolean.TRUE.equals(r.incremental) ? "ALTERACOES" : Boolean.TRUE.equals(r.sincronizacaoCompleta) ? "HISTORICO" : "PERIODO",
+                r.alteracoesDesde, r.alteracoesAte);
+    }
+
+    @Transactional(readOnly = true)
+    public Historico historico(Long cliente, int pagina) {
+        conferir(cliente);
+        if (pagina < 1 || pagina > 100000) {
+            throw new IllegalArgumentException("Página inválida.");
         }
+        var registros = runs.findByClienteIdOrderByCriadoEmDesc(cliente, PageRequest.of(pagina - 1, 20));
+        var resultado = new Historico(registros.getContent().stream().map(this::resumo).toList(), registros.getTotalElements(), pagina);
+        conferir(cliente);
+        return resultado;
+    }
 
-        @Transactional
-        public void configurar(Configurar pedido) {
-            Long usuario = conferir(pedido.clienteId());
-            if (pedido.habilitada() && !habilitado) {
-                throw new IllegalStateException("Habilite CONTA_AZUL_AUTO_ENABLED no backend antes de ativar a automação.");
+    @Transactional(readOnly = true)
+    public Revisao revisar(Long cliente, UUID execucao, int pagina) {
+        conferir(cliente);
+        if (pagina < 1 || pagina > 100000) {
+            throw new IllegalArgumentException("Página inválida.");
+        }
+        var r = runs.findByIdAndClienteId(execucao, cliente).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Execução não encontrada nesta empresa."));
+        var p = itens.findByExecucaoIdAndClienteIdAndStatusOrderByIdAsc(execucao, cliente, "CONFERIR", PageRequest.of(pagina - 1, 20));
+        var resultado = new Revisao(resumo(r), p.getContent().stream().map(i -> new Pendencia(i.parcelaId, i.tipo, i.descricao, i.mensagem, i.lancamentoId)).toList(), p.getTotalElements(), pagina);
+        conferir(cliente);
+        return resultado;
+    }
+
+    @Transactional
+    public void configurar(Configurar pedido) {
+        Long usuario = conferir(pedido.clienteId());
+        if (pedido.habilitada() && !habilitado) {
+            throw new IllegalStateException("Habilite CONTA_AZUL_AUTO_ENABLED no backend antes de ativar a automação.");
+        }
+        LocalDate hoje = LocalDate.now(clock.withZone(ZoneId.of("America/Sao_Paulo")));
+        LocalDate inicio = pedido.sincronizacaoCompleta() ? ContaAzulFullScope.INICIO : pedido.periodoMovel() ? hoje.minusDays(90) : pedido.inicio();
+        LocalDate fim = pedido.sincronizacaoCompleta() ? ContaAzulFullScope.fim(clock) : pedido.periodoMovel() ? hoje.plusDays(90) : pedido.fim();
+        if (inicio == null || fim == null || fim.isBefore(inicio)
+                || (!pedido.sincronizacaoCompleta() && ChronoUnit.DAYS.between(inicio, fim) > 365)
+                || !Set.of(30, 60, 360, 1440).contains(pedido.intervaloMinutos())) {
+            throw new IllegalArgumentException("Escolha um período de até 366 dias e um intervalo disponível.");
+        }
+        if (pedido.habilitada() && (!pedido.confirmado() || (pedido.incluirNovas() && !pedido.confirmoHistorico()))) {
+            throw new IllegalArgumentException("Confirme a autorização e a revisão do histórico antes de ativar inclusões automáticas.");
+        }
+        if (pedido.habilitada()) {
+            integracao.exigirAtiva();
+            if (identityConnections != null && identityConnections.findById(pedido.clienteId())
+                    .filter(con -> con.getEmpresaConfirmadaEm() != null).isEmpty()) {
+                throw new IllegalArgumentException("Verifique e confirme a empresa na conexão Conta Azul antes de ativar a automação.");
             }
-            LocalDate hoje = LocalDate.now(clock.withZone(ZoneId.of("America/Sao_Paulo")));
-            LocalDate inicio = pedido.sincronizacaoCompleta() ? ContaAzulFullScope.INICIO : pedido.periodoMovel() ? hoje.minusDays(90) : pedido.inicio();
-            LocalDate fim = pedido.sincronizacaoCompleta() ? ContaAzulFullScope.FIM : pedido.periodoMovel() ? hoje.plusDays(90) : pedido.fim();
-            if (inicio == null || fim == null || fim.isBefore(inicio)
-                    || (!pedido.sincronizacaoCompleta() && ChronoUnit.DAYS.between(inicio, fim) > 365)
-                    || !Set.of(30, 60, 360, 1440).contains(pedido.intervaloMinutos())) {
-                throw new IllegalArgumentException("Escolha um período de até 366 dias e um intervalo disponível.");
-            }
-            if (pedido.habilitada() && (!pedido.confirmado() || (pedido.incluirNovas() && !pedido.confirmoHistorico()))) {
-                throw new IllegalArgumentException("Confirme a autorização e a revisão do histórico antes de ativar inclusões automáticas.");
-            }
-            if (pedido.habilitada()) {
-                integracao.exigirAtiva();
-            }
-            clientes.bloquearAtivoPorId(pedido.clienteId()).orElseThrow(() -> new IllegalArgumentException("Empresa indisponível."));
-            var c = configs.bloquear(pedido.clienteId()).orElseGet(() -> {
-                var novo = new ContaAzulAutoConfig();
-                novo.clienteId = pedido.clienteId();
-                return novo;
-            });
+        }
+        clientes.bloquearAtivoPorId(pedido.clienteId()).orElseThrow(() -> new IllegalArgumentException("Empresa indisponível."));
+        var c = configs.bloquear(pedido.clienteId()).orElseGet(() -> {
+            var novo = new ContaAzulAutoConfig();
+            novo.clienteId = pedido.clienteId();
+            return novo;
+        });
+        cancelar(c);
+        c.habilitada = pedido.habilitada();
+        c.incluirNovas = pedido.incluirNovas();
+        c.inicio = inicio;
+        c.fim = fim;
+        c.periodoMovel = !pedido.sincronizacaoCompleta() && pedido.periodoMovel();
+        c.sincronizacaoCompleta = pedido.sincronizacaoCompleta();
+        c.intervaloMinutos = pedido.intervaloMinutos();
+        c.autorizadoPor = usuario;
+        c.revisao = UUID.randomUUID();
+        c.alteradoEm = clock.instant();
+        c.falhas = 0;
+        c.alteracoesConfirmadasAte = null;
+        c.historicoRevisadoEm = null;
+        c.proximaEm = c.habilitada ? clock.instant() : null;
+        conferir(pedido.clienteId());
+        configs.saveAndFlush(c);
+    }
+
+    @Transactional
+    public void pausar(Long cliente) {
+        conferir(cliente);
+        clientes.bloquearAtivoPorId(cliente).orElseThrow(() -> new IllegalArgumentException("Empresa indisponível."));
+        configs.bloquear(cliente).ifPresent(c -> {
             cancelar(c);
-            c.habilitada = pedido.habilitada();
-            c.incluirNovas = pedido.incluirNovas();
-            c.inicio = inicio;
-            c.fim = fim;
-            c.periodoMovel = !pedido.sincronizacaoCompleta() && pedido.periodoMovel();
-            c.sincronizacaoCompleta = pedido.sincronizacaoCompleta();
-            c.intervaloMinutos = pedido.intervaloMinutos();
-            c.autorizadoPor = usuario;
+            c.habilitada = false;
+            c.proximaEm = null;
             c.revisao = UUID.randomUUID();
             c.alteradoEm = clock.instant();
-            c.falhas = 0;
-            c.alteracoesConfirmadasAte = null;
-            c.historicoRevisadoEm = null;
-            c.proximaEm = c.habilitada ? clock.instant() : null;
-            conferir(pedido.clienteId());
-            configs.saveAndFlush(c);
-        }
+        });
+    }
 
-        @Transactional
-        public void pausar(Long cliente) {
-            conferir(cliente);
-            clientes.bloquearAtivoPorId(cliente).orElseThrow(() -> new IllegalArgumentException("Empresa indisponível."));
-            configs.bloquear(cliente).ifPresent(c -> {
-                cancelar(c);
-                c.habilitada = false;
-                c.proximaEm = null;
-                c.revisao = UUID.randomUUID();
-                c.alteradoEm = clock.instant();
-            });
+    @Transactional
+    public void solicitar(Long cliente) {
+        conferir(cliente);
+        var c = configs.bloquear(cliente).orElseThrow(() -> new IllegalArgumentException("Configure a sincronização automática."));
+        if (!c.habilitada) {
+            throw new IllegalArgumentException("Ative a sincronização para agendar uma execução.");
         }
+        c.proximaEm = clock.instant();
+    }
 
-        @Transactional
-        public void solicitar(Long cliente) {
-            conferir(cliente);
-            var c = configs.bloquear(cliente).orElseThrow(() -> new IllegalArgumentException("Configure a sincronização automática."));
-            if (!c.habilitada) {
-                throw new IllegalArgumentException("Ative a sincronização para agendar uma execução.");
-            }
-            c.proximaEm = clock.instant();
+    @Transactional(readOnly = true)
+    public List<Long> disponiveis() {
+        return configs.disponiveis(clock.instant(), PageRequest.of(0, 10));
+    }
+
+    @Transactional
+    public Reserva assumir(Long cliente) {
+        var c = configs.bloquear(cliente).orElse(null);
+        Instant agora = clock.instant();
+        if (c == null || !c.habilitada || c.proximaEm == null || c.proximaEm.isAfter(agora)
+                || (c.reservaAte != null && c.reservaAte.isAfter(agora))) {
+            return null;
         }
-
-        @Transactional(readOnly = true)
-        public List<Long> disponiveis() {
-            return configs.disponiveis(clock.instant(), PageRequest.of(0, 10));
+        if (!autorizacaoAtiva(c)) {
+            cancelar(c);
+            c.habilitada = false;
+            c.proximaEm = null;
+            return null;
         }
+        var r = c.execucaoId == null ? null : runs.findByIdAndClienteId(c.execucaoId, cliente).orElse(null);
+        if (r == null || finalizada(r.status)) {
+            if (Boolean.TRUE.equals(c.sincronizacaoCompleta)) {
+                LocalDate horizonte = ContaAzulFullScope.fim(clock);
+                if (c.fim == null || c.fim.isBefore(horizonte)) {
 
-        @Transactional
-        public Reserva assumir(Long cliente) {
-            var c = configs.bloquear(cliente).orElse(null);
-            Instant agora = clock.instant();
-            if (c == null || !c.habilitada || c.proximaEm == null || c.proximaEm.isAfter(agora)
-                    || (c.reservaAte != null && c.reservaAte.isAfter(agora))) {
-                return null;
-            }
-            if (!autorizacaoAtiva(c)) {
-                cancelar(c);
-                c.habilitada = false;
-                c.proximaEm = null;
-                return null;
-            }
-            var r = c.execucaoId == null ? null : runs.findByIdAndClienteId(c.execucaoId, cliente).orElse(null);
-            if (r == null || finalizada(r.status)) {
-                r = new ContaAzulAutoRun();
-                r.id = UUID.randomUUID();
-                r.clienteId = cliente;
-                r.autorizadoPor = c.autorizadoPor;
-                r.revisao = c.revisao;
-                LocalDate hoje = LocalDate.now(clock.withZone(ZoneId.of("America/Sao_Paulo")));
-                r.inicio = Boolean.TRUE.equals(c.sincronizacaoCompleta) ? ContaAzulFullScope.INICIO : Boolean.TRUE.equals(c.periodoMovel) ? hoje.minusDays(90) : c.inicio;
-                r.fim = Boolean.TRUE.equals(c.sincronizacaoCompleta) ? ContaAzulFullScope.FIM : Boolean.TRUE.equals(c.periodoMovel) ? hoje.plusDays(90) : c.fim;
-                r.incluirNovas = c.incluirNovas;
-                r.sincronizacaoCompleta = Boolean.TRUE.equals(c.sincronizacaoCompleta);
-                r.incremental = Boolean.TRUE.equals(r.sincronizacaoCompleta)
-                        && c.alteracoesConfirmadasAte != null && c.historicoRevisadoEm != null
-                        && !c.alteracoesConfirmadasAte.isAfter(agora)
-                        && c.historicoRevisadoEm.isAfter(agora.minus(7, ChronoUnit.DAYS));
-                if (Boolean.TRUE.equals(r.incremental)) {
-                    r.alteracoesDesde = c.alteracoesConfirmadasAte.minus(2, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
-                    r.alteracoesAte = agora.truncatedTo(ChronoUnit.SECONDS);
+                    c.alteracoesConfirmadasAte = null;
+                    c.historicoRevisadoEm = null;
                 }
-                r.criadoEm = agora;
-                r.status = "EM_ANDAMENTO";
-                r.pagina = 1;
-                runs.saveAndFlush(r);
-                c.execucaoId = r.id;
-                if (Boolean.TRUE.equals(r.incremental)) {
-                    Set<String> vistos = new HashSet<>();
-                    for (var i : itens.findTerminalByCliente(cliente)) {
-                        if (i.parcelaId != null && vistos.add(i.parcelaId.toLowerCase(Locale.ROOT))
-                                && "CONFERIR".equals(i.status) && uuid(i.parcelaId)
-                                && Set.of("RECEITA", "DESPESA").contains(i.tipo))
-                            enfileirar(r, i.parcelaId, i.tipo, i.descricao, false);
-                    }
-                }
-                for (var t : Boolean.TRUE.equals(r.incremental) ? List.<FinancialTransaction>of()
-                        : transacoes.findByClienteIdAndOrigemOrderByIdAsc(cliente, "CONTA_AZUL_API")) {
-                    if (Boolean.TRUE.equals(r.sincronizacaoCompleta) || (t.getDataVencimento() != null && !t.getDataVencimento().isBefore(r.inicio) && !t.getDataVencimento().isAfter(r.fim))) {
-                        if (uuid(t.getDocumentoReferencia()) && ("RECEITA".equals(t.getTipo()) || "DESPESA".equals(t.getTipo()))) {
-                            enfileirar(r, t.getDocumentoReferencia(), t.getTipo(), t.getDescricao(), false);
-                        } else {
-                            r.listagemMudou = true;
-                            r.mensagem = "Há registros locais com identidade API inválida. Confira os vínculos.";
-                        }
-                    }
-                }
+                c.inicio = ContaAzulFullScope.INICIO;
+                c.fim = horizonte;
             }
-            if (Boolean.TRUE.equals(c.sincronizacaoCompleta) && c.fim.isAfter(ContaAzulFullScope.FIM)) {
-                c.fim = ContaAzulFullScope.FIM;
+            r = new ContaAzulAutoRun();
+            r.id = UUID.randomUUID();
+            r.clienteId = cliente;
+            r.autorizadoPor = c.autorizadoPor;
+            r.revisao = c.revisao;
+            LocalDate hoje = LocalDate.now(clock.withZone(ZoneId.of("America/Sao_Paulo")));
+            r.inicio = Boolean.TRUE.equals(c.sincronizacaoCompleta) ? ContaAzulFullScope.INICIO : Boolean.TRUE.equals(c.periodoMovel) ? hoje.minusDays(90) : c.inicio;
+            r.fim = Boolean.TRUE.equals(c.sincronizacaoCompleta) ? ContaAzulFullScope.fim(clock) : Boolean.TRUE.equals(c.periodoMovel) ? hoje.plusDays(90) : c.fim;
+            r.incluirNovas = c.incluirNovas;
+            r.sincronizacaoCompleta = Boolean.TRUE.equals(c.sincronizacaoCompleta);
+            r.incremental = Boolean.TRUE.equals(r.sincronizacaoCompleta)
+                    && c.alteracoesConfirmadasAte != null && c.historicoRevisadoEm != null
+                    && !c.alteracoesConfirmadasAte.isAfter(agora)
+                    && c.historicoRevisadoEm.isAfter(agora.minus(7, ChronoUnit.DAYS));
+            if (Boolean.TRUE.equals(r.incremental)) {
+                r.alteracoesDesde = c.alteracoesConfirmadasAte.minus(2, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
+                r.alteracoesAte = agora.truncatedTo(ChronoUnit.SECONDS);
             }
-            limitarAlcanceParcelas(r);
-            boolean retomandoFalha = "AGUARDANDO_REPETICAO".equals(r.status);
+            r.criadoEm = agora;
             r.status = "EM_ANDAMENTO";
-            if (!r.listagemMudou) {
-                if (retomandoFalha) r.mensagem = null;
-                if (Boolean.TRUE.equals(r.incremental)) r.mensagem = "Atualizando parcelas alteradas e pendencias. Revisao historica semanal preservada.";
-                else if (Boolean.TRUE.equals(r.sincronizacaoCompleta)) {
-                    if (r.mensagem == null) r.mensagem = "Conferindo o historico financeiro da empresa.";
-                } else r.mensagem = null;
+            r.pagina = 1;
+            runs.saveAndFlush(r);
+            c.execucaoId = r.id;
+            if (Boolean.TRUE.equals(r.incremental)) {
+                Set<String> vistos = new HashSet<>();
+                for (var i : itens.findTerminalByCliente(cliente)) {
+                    if (i.parcelaId != null && vistos.add(i.parcelaId.toLowerCase(Locale.ROOT))
+                            && "CONFERIR".equals(i.status) && uuid(i.parcelaId)
+                            && Set.of("RECEITA", "DESPESA").contains(i.tipo)) {
+                        enfileirar(r, i.parcelaId, i.tipo, i.descricao, false);
+                    }
+                }
             }
-            c.dono = UUID.randomUUID();
-            c.reservaAte = agora.plusSeconds(120);
-            return new Reserva(cliente, r.id, c.dono);
+            for (var t : Boolean.TRUE.equals(r.incremental) ? List.<FinancialTransaction>of()
+                    : transacoes.findByClienteIdAndOrigemOrderByIdAsc(cliente, "CONTA_AZUL_API")) {
+                if (Boolean.TRUE.equals(r.sincronizacaoCompleta) || (t.getDataVencimento() != null && !t.getDataVencimento().isBefore(r.inicio) && !t.getDataVencimento().isAfter(r.fim))) {
+                    if (uuid(t.getDocumentoReferencia()) && ("RECEITA".equals(t.getTipo()) || "DESPESA".equals(t.getTipo()))) {
+                        enfileirar(r, t.getDocumentoReferencia(), t.getTipo(), t.getDescricao(), false);
+                    } else {
+                        r.listagemMudou = true;
+                        r.mensagem = "Há registros locais com identidade API inválida. Confira os vínculos.";
+                    }
+                }
+            }
         }
-
-        @Transactional
-        public ContaAzulAutoItem proximo(Reserva reserva) {
-            validar(reserva);
-            return itens.findFirstByExecucaoIdAndStatusOrderByIdAsc(reserva.execucaoId(), "EM_FILA").orElse(null);
+        if (Boolean.TRUE.equals(c.sincronizacaoCompleta) && LocalDate.of(2200, 12, 31).equals(c.fim)) {
+            c.fim = ContaAzulFullScope.fim(clock);
         }
+        limitarAlcanceParcelas(r);
+        boolean retomandoFalha = "AGUARDANDO_REPETICAO".equals(r.status);
+        r.status = "EM_ANDAMENTO";
+        if (!r.listagemMudou) {
+            if (retomandoFalha) {
+                r.mensagem = null;
+            }
+            if (Boolean.TRUE.equals(r.incremental)) {
+                r.mensagem = "Atualizando parcelas alteradas e pendencias. Revisao historica semanal preservada.";
+            }else if (Boolean.TRUE.equals(r.sincronizacaoCompleta)) {
+                if (r.mensagem == null) {
+                    r.mensagem = "Conferindo o historico financeiro da empresa.";
+                }
+            } else {
+                r.mensagem = null;
+            }
+        }
+        c.dono = UUID.randomUUID();
+        c.reservaAte = agora.plusSeconds(120);
+        return new Reserva(cliente, r.id, c.dono);
+    }
 
-        @Transactional
-        public Cursor cursor(Reserva reserva) {
-            var c = validar(reserva);
-            var r = execucao(c);
-            limitarAlcanceParcelas(r);
-            if (Boolean.TRUE.equals(r.incremental) && (r.alteracoesDesde == null || r.alteracoesAte == null || r.alteracoesAte.isBefore(r.alteracoesDesde)))
-                throw new IllegalStateException("Intervalo incremental incompleto.");
-            if (Boolean.TRUE.equals(r.sincronizacaoCompleta) && r.etapa >= 2 && r.etapa <= 3) {
-                prepararEscopoMovimentos(r);
-                if (r.etapa == 4) return new Cursor(r.inicio, r.fim, r.etapa, r.pagina, true);
-                var janela = janelaMovimentos(r);
-                return new Cursor(janela.inicio(), janela.fim(), r.etapa, r.pagina, true);
+    @Transactional
+    public ContaAzulAutoItem proximo(Reserva reserva) {
+        validar(reserva);
+        return itens.findFirstByExecucaoIdAndStatusOrderByIdAsc(reserva.execucaoId(), "EM_FILA").orElse(null);
+    }
+
+    @Transactional
+    public Cursor cursor(Reserva reserva) {
+        var c = validar(reserva);
+        var r = execucao(c);
+        limitarAlcanceParcelas(r);
+        if (Boolean.TRUE.equals(r.incremental) && (r.alteracoesDesde == null || r.alteracoesAte == null || r.alteracoesAte.isBefore(r.alteracoesDesde))) {
+            throw new IllegalStateException("Intervalo incremental incompleto.");
+        }
+        if (Boolean.TRUE.equals(r.sincronizacaoCompleta) && r.etapa >= 2 && r.etapa <= 3) {
+            prepararEscopoMovimentos(r);
+            if (r.etapa == 4) {
+                return new Cursor(r.inicio, r.fim, r.etapa, r.pagina, true);
             }
-            if (r.etapa <= 1 && Boolean.TRUE.equals(r.parcelasEmJanelas)) {
-                LocalDate inicio = r.parcelaInicio == null ? r.inicio : r.parcelaInicio;
-                if (inicio.isBefore(r.inicio) || inicio.isAfter(r.fim))
-                    throw new IllegalStateException("Cursor de parcelas fora do alcance autorizado.");
-                LocalDate fim = inicio.plusDays(364);
-                if (fim.isAfter(r.fim)) fim = r.fim;
-                return new Cursor(inicio, fim, r.etapa, r.pagina, Boolean.TRUE.equals(r.sincronizacaoCompleta),
-                        r.alteracoesDesde, r.alteracoesAte);
+            var janela = janelaMovimentos(r);
+            return new Cursor(janela.inicio(), janela.fim(), r.etapa, r.pagina, true);
+        }
+        if (r.etapa <= 1 && Boolean.TRUE.equals(r.parcelasEmJanelas)) {
+            LocalDate inicio = r.parcelaInicio == null ? r.inicio : r.parcelaInicio;
+            if (inicio.isBefore(r.inicio) || inicio.isAfter(r.fim)) {
+                throw new IllegalStateException("Cursor de parcelas fora do alcance autorizado.");
             }
-            return new Cursor(r.inicio, r.fim, r.etapa, r.pagina, Boolean.TRUE.equals(r.sincronizacaoCompleta),
+            LocalDate fim = inicio.plusDays(364);
+            if (fim.isAfter(r.fim)) {
+                fim = r.fim;
+            }
+            return new Cursor(inicio, fim, r.etapa, r.pagina, Boolean.TRUE.equals(r.sincronizacaoCompleta),
                     r.alteracoesDesde, r.alteracoesAte);
         }
+        return new Cursor(r.inicio, r.fim, r.etapa, r.pagina, Boolean.TRUE.equals(r.sincronizacaoCompleta),
+                r.alteracoesDesde, r.alteracoesAte);
+    }
 
-        private void limitarAlcanceParcelas(ContaAzulAutoRun r) {
-            if (r.etapa >= 2 || !Boolean.TRUE.equals(r.sincronizacaoCompleta) || r.inicio.isAfter(ContaAzulFullScope.FIM) || !r.fim.isAfter(ContaAzulFullScope.FIM)) return;
-            // Finish the current page sequence with its original dates before changing its range.
-            if (r.etapa <= 1 && (r.pagina != 1 || r.totalEsperado != null)) return;
-            r.fim = ContaAzulFullScope.FIM;
-            if (r.etapa <= 1 && r.parcelaInicio != null && r.parcelaInicio.isAfter(r.fim)) {
-                // Receipts beyond the new end are done; expenses still start at the beginning.
+    private void limitarAlcanceParcelas(ContaAzulAutoRun r) {
+        if (r.etapa >= 2 || !Boolean.TRUE.equals(r.sincronizacaoCompleta) || r.inicio.isAfter(ContaAzulFullScope.fim(clock)) || !LocalDate.of(2200, 12, 31).equals(r.fim)) {
+            return;
+        }
+
+        if (r.etapa <= 1 && (r.pagina != 1 || r.totalEsperado != null)) {
+            return;
+        }
+        r.fim = ContaAzulFullScope.fim(clock);
+        if (r.etapa <= 1 && r.parcelaInicio != null && r.parcelaInicio.isAfter(r.fim)) {
+
+            r.etapa++;
+            r.parcelaInicio = null;
+        }
+        r.mensagem = "Alcance legado das parcelas ajustado ao horizonte de cinco anos. Registros já importados preservados.";
+    }
+
+    @Transactional
+    public boolean dividirPeriodoParcelas(Reserva reserva) {
+        var c = validar(reserva);
+        var r = execucao(c);
+        if (r.etapa > 1 || r.pagina != 1 || r.totalEsperado != null
+                || Boolean.TRUE.equals(r.parcelasEmJanelas)
+                || !r.fim.isAfter(r.inicio.plusDays(364))) {
+            return false;
+        }
+        r.parcelasEmJanelas = true;
+        r.parcelaInicio = r.inicio;
+        r.status = "EM_ANDAMENTO";
+        r.mensagem = "A origem exige consultas de até 365 dias. O histórico será coletado em partes, mantendo o alcance autorizado.";
+        c.falhas = 0;
+        c.proximaEm = clock.instant();
+        c.dono = null;
+        c.reservaAte = null;
+        return true;
+    }
+
+    @Transactional
+    public void pagina(Reserva reserva, ContaAzulFinancialClient.Pagina pagina) {
+        var c = validar(reserva);
+        var r = execucao(c);
+        if (r.etapa > 1) {
+            throw new ReservaPerdida();
+        }
+        if (pagina == null || pagina.itens() == null || pagina.totalItens() == null || pagina.totalItens() < 0
+                || pagina.totalItens() > 100000 || pagina.itens().size() > 100 || r.pagina > 1000) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Listagem acima do limite ou inválida. Reduza o período e revise a consulta.");
+        }
+        Set<String> vistos = new HashSet<>();
+        if (r.parcelasIdsJanela != null && !r.parcelasIdsJanela.isBlank()) {
+            vistos.addAll(Arrays.asList(r.parcelasIdsJanela.split(",")));
+        }
+        if (r.totalEsperado == null) {
+            r.totalEsperado = pagina.totalItens();
+        } else if (!r.totalEsperado.equals(pagina.totalItens())) {
+            r.parcelasJanelaInstavel = true;
+        }
+        int restantes = Math.max(0, pagina.totalItens() - (r.pagina - 1) * 100);
+        if (pagina.itens().size() != Math.min(100, restantes)) {
+            repetirJanelaParcelas(c, r);
+            return;
+        }
+        for (var p : pagina.itens()) {
+            if (p == null || !uuid(p.id())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "A listagem contém identidade de parcela inválida.");
+            }
+            if (!vistos.add(p.id().toLowerCase(Locale.ROOT))) {
+                r.parcelasJanelaInstavel = true;
+            }
+            var item = enfileirar(r, p.id(), r.etapa == 0 ? "RECEITA" : "DESPESA", p.descricao(), true);
+            {
+                try {
+                    item.resumoJson = json.writeValueAsString(p);
+                } catch (Exception erro) {
+                    throw new IllegalStateException("Não foi possível preservar o resumo da parcela.");
+                }
+            }
+        }
+        r.parcelasIdsJanela = String.join(",", new TreeSet<>(vistos));
+        if ((long) r.pagina * 100 >= pagina.totalItens()
+                && (Boolean.TRUE.equals(r.parcelasJanelaInstavel) || vistos.size() != pagina.totalItens())) {
+            repetirJanelaParcelas(c, r);
+            return;
+        }
+        if ((long) r.pagina * 100 >= pagina.totalItens()) {
+            LocalDate inicio = r.parcelaInicio == null ? r.inicio : r.parcelaInicio;
+            LocalDate fimJanela = inicio.plusDays(364);
+            if (Boolean.TRUE.equals(r.parcelasEmJanelas) && fimJanela.isBefore(r.fim)) {
+                r.parcelaInicio = fimJanela.plusDays(1);
+                r.mensagem = "Conferindo parcelas: próxima faixa a partir de " + r.parcelaInicio
+                        + ". Alcance autorizado mantido.";
+            } else {
                 r.etapa++;
                 r.parcelaInicio = null;
             }
-            r.mensagem = "Alcance das parcelas ajustado até 31/12/2027. Registros já importados preservados.";
-        }
-
-        @Transactional
-        public boolean dividirPeriodoParcelas(Reserva reserva) {
-            var c = validar(reserva);
-            var r = execucao(c);
-            if (r.etapa > 1 || r.pagina != 1 || r.totalEsperado != null
-                    || Boolean.TRUE.equals(r.parcelasEmJanelas)
-                    || !r.fim.isAfter(r.inicio.plusDays(364))) return false;
-            r.parcelasEmJanelas = true;
-            r.parcelaInicio = r.inicio;
-            r.status = "EM_ANDAMENTO";
-            r.mensagem = "A origem exige consultas de até 365 dias. O histórico será coletado em partes, mantendo o alcance autorizado.";
-            c.falhas = 0;
-            c.proximaEm = clock.instant();
-            c.dono = null;
-            c.reservaAte = null;
-            return true;
-        }
-
-        @Transactional
-        public void pagina(Reserva reserva, ContaAzulFinancialClient.Pagina pagina) {
-            var c = validar(reserva);
-            var r = execucao(c);
-            if (r.etapa > 1) {
-                throw new ReservaPerdida();
-            }
-            if (pagina == null || pagina.itens() == null || pagina.totalItens() == null || pagina.totalItens() < 0
-                    || pagina.totalItens() > 100000 || pagina.itens().size() > 100 || r.pagina > 1000) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Listagem acima do limite ou inválida. Reduza o período e revise a consulta.");
-            }
-            if (r.totalEsperado == null) {
-                r.totalEsperado = pagina.totalItens();
-            } else if (!r.totalEsperado.equals(pagina.totalItens())) {
-                r.listagemMudou = true;
-            }
-            int restantes = Math.max(0, pagina.totalItens() - (r.pagina - 1) * 100);
-            if (pagina.itens().size() != Math.min(100, restantes)) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "A paginação retornou quantidade inconsistente. A execução ficou incompleta.");
-            }
-            Set<String> ids = new HashSet<>();
-            for (var p : pagina.itens()) {
-                if (p == null || !uuid(p.id()) || !ids.add(p.id().toLowerCase(Locale.ROOT))) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "A listagem contém identidade de parcela inválida ou repetida.");
-                }
-                enfileirar(r, p.id(), r.etapa == 0 ? "RECEITA" : "DESPESA", p.descricao(), true);
-            }
-            if ((long) r.pagina * 100 >= pagina.totalItens()) {
-                LocalDate inicio = r.parcelaInicio == null ? r.inicio : r.parcelaInicio;
-                LocalDate fimJanela = inicio.plusDays(364);
-                if (Boolean.TRUE.equals(r.parcelasEmJanelas) && fimJanela.isBefore(r.fim)) {
-                    r.parcelaInicio = fimJanela.plusDays(1);
-                    r.mensagem = "Conferindo parcelas: próxima faixa a partir de " + r.parcelaInicio
-                            + ". Alcance autorizado mantido.";
-                } else {
-                    r.etapa++;
-                    r.parcelaInicio = null;
-                }
-                r.pagina = 1;
-                r.totalEsperado = null;
-            } else {
-                r.pagina++;
-            }
-        }
-
-        /**
-         * Each source page is committed with its cursor; retrying does not
-         * append it twice.
-         */
-        static record JanelaMovimentos(LocalDate inicio, LocalDate fim, boolean emJanelas) {}
-
-        private static LocalDate inicioMovimentos(ContaAzulAutoRun r) {
-            return r.movimentosEscopoInicio == null ? r.inicio : r.movimentosEscopoInicio;
-        }
-        private static LocalDate fimMovimentos(ContaAzulAutoRun r) {
-            return r.movimentosEscopoFim == null ? r.fim : r.movimentosEscopoFim;
-        }
-
-        /** Adopt the narrower movement policy only between completed pages/windows. */
-        private void prepararEscopoMovimentos(ContaAzulAutoRun r) {
-            if (r.movimentoInicio != null && (r.movimentoInicio.isBefore(r.inicio) || r.movimentoInicio.isAfter(r.fim)))
-                throw new IllegalStateException("Cursor de movimentações fora do alcance autorizado.");
-            if ((r.movimentosEscopoInicio == null) != (r.movimentosEscopoFim == null))
-                throw new IllegalStateException("Escopo de movimentações incompleto.");
-            boolean primeiraPaginaLivre = r.pagina == 1 && r.totalEsperado == null;
-            if (r.movimentosEscopoInicio == null) {
-                if (!primeiraPaginaLivre) return; // Finish the already committed pagination unchanged.
-                LocalDate hoje = LocalDate.now(clock.withZone(ZoneId.of("America/Sao_Paulo")));
-                r.movimentosEscopoInicio = r.inicio.isAfter(ContaAzulFullScope.INICIO) ? r.inicio : ContaAzulFullScope.INICIO;
-                if (Boolean.TRUE.equals(r.incremental)) {
-                    if (r.alteracoesDesde == null || r.alteracoesAte == null || r.alteracoesAte.isBefore(r.alteracoesDesde))
-                        throw new IllegalStateException("Intervalo incremental incompleto.");
-                    LocalDate recente = r.alteracoesDesde.atZone(ZoneId.of("America/Sao_Paulo")).toLocalDate();
-                    if (recente.isAfter(r.movimentosEscopoInicio)) r.movimentosEscopoInicio = recente;
-                }
-                LocalDate limite = Boolean.TRUE.equals(r.incremental)
-                        ? r.alteracoesAte.atZone(ZoneId.of("America/Sao_Paulo")).toLocalDate() : hoje;
-                r.movimentosEscopoFim = r.fim.isBefore(limite) ? r.fim : limite;
-            }
-            if (!primeiraPaginaLivre) return;
-            while (r.etapa >= 2 && r.etapa <= 3) {
-                if (r.movimentoInicio == null || r.movimentoInicio.isBefore(r.movimentosEscopoInicio))
-                    r.movimentoInicio = r.movimentosEscopoInicio;
-                if (!r.movimentoInicio.isAfter(r.movimentosEscopoFim)) return;
-                // Previously completed future/older scopes are preserved, never deleted or replayed.
-                r.etapa++;
-                r.movimentoInicio = null;
-                r.pagina = 1;
-                r.totalEsperado = null;
-            }
-        }
-
-        /** Pure window calculation; legacy in-flight pages retain their original boundaries. */
-        static JanelaMovimentos janelaMovimentos(ContaAzulAutoRun r) {
-            if (r.inicio == null || r.fim == null || r.fim.isBefore(r.inicio))
-                throw new IllegalStateException("Alcance da execução inválido.");
-            if (r.movimentosEscopoInicio == null && r.movimentoInicio == null && (r.pagina > 1 || r.totalEsperado != null))
-                return new JanelaMovimentos(r.inicio, r.fim, false);
-            LocalDate inicio = r.movimentoInicio == null ? inicioMovimentos(r) : r.movimentoInicio;
-            if (inicio.isBefore(inicioMovimentos(r)) || inicio.isAfter(fimMovimentos(r)))
-                throw new IllegalStateException("Cursor de movimentações fora do alcance autorizado.");
-            LocalDate fim = inicio.plusDays(29);
-            if (fim.isAfter(fimMovimentos(r))) fim = fimMovimentos(r);
-            return new JanelaMovimentos(inicio, fim, true);
-        }
-
-        @Transactional
-        public void paginaMovimentos(Reserva reserva, ContaAzulMovementClient.Pagina pagina) {
-            var c = validar(reserva);
-            var r = execucao(c);
-            if (!Boolean.TRUE.equals(r.sincronizacaoCompleta) || r.etapa < 2 || r.etapa > 3) {
-                throw new ReservaPerdida();
-            }
-            if (pagina == null || pagina.itens() == null || pagina.fonte() == null || pagina.total() < 0 || pagina.total() > 100000
-                    || r.pagina < 1 || r.pagina > 1000 || pagina.itens().size() > 100) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Fonte acima do limite de conferência ou inválida. Cobertura não confirmada.");
-            }
-            int etapaConsultada = r.etapa;
-            prepararEscopoMovimentos(r);
-            if (r.etapa != etapaConsultada) throw new ReservaPerdida();
-            // Evaluate before setting totalEsperado, so a first page can select window mode.
-            var janela = janelaMovimentos(r);
-            if (r.totalEsperado == null) {
-                r.totalEsperado = pagina.total();
-            } else if (!r.totalEsperado.equals(pagina.total())) {
-                r.listagemMudou = true;
-            }
-            int remaining = Math.max(0, pagina.total() - (r.pagina - 1) * 100);
-            if (pagina.itens().size() != Math.min(100, remaining)) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Fonte paginada incompleta.");
-            }
-            String tipo = r.etapa == 2 ? "TRANSFERENCIA" : "SALDO_INICIAL";
-            String chave = janela.emJanelas()
-                    ? "periodo:" + janela.inicio() + ":" + janela.fim() + ":pagina:" + r.pagina
-                    : "pagina:" + r.pagina;
-            arquivar(reserva, tipo, chave, pagina.fonte());
-            if (!r.listagemMudou) {
-                r.mensagem = "Coletando " + (r.etapa == 2 ? "transferências" : "saldos iniciais")
-                        + ": " + janela.inicio() + " a " + janela.fim() + ", página " + r.pagina
-                        + ". Faixa de movimentações: " + inicioMovimentos(r) + " a " + fimMovimentos(r)
-                        + ". Parcelas futuras mantidas na listagem; a coleta ainda não terminou.";
-            }
-            if (janela.emJanelas()) r.movimentoInicio = janela.inicio();
-            if ((long) r.pagina * 100 >= pagina.total()) {
-                if (janela.emJanelas() && janela.fim().isBefore(fimMovimentos(r))) {
-                    r.movimentoInicio = janela.fim().plusDays(1);
-                } else {
-                    r.etapa++;
-                    r.movimentoInicio = null;
-                }
-                r.pagina = 1;
-                r.totalEsperado = null;
-            } else {
-                r.pagina++;
-            }
-        }
-
-        @Transactional
-        public void arquivar(Reserva reserva, String tipo, String chave, com.fasterxml.jackson.databind.JsonNode conteudo) {
-            var c = validar(reserva);
-            var r = execucao(c);
-            if (!Boolean.TRUE.equals(r.sincronizacaoCompleta)) {
-                return;
-            }
-            if (!Set.of("PARCELA", "TRANSFERENCIA", "SALDO_INICIAL").contains(tipo) || chave == null || chave.length() > 160 || conteudo == null) {
-                throw new IllegalArgumentException("Fonte inválida.");
-            }
-            var row = new ContaAzulSourceCapture();
-            row.id = UUID.nameUUIDFromBytes((r.id + ":" + tipo + ":" + chave).getBytes(StandardCharsets.UTF_8));
-            row.clienteId = r.clienteId;
-            row.execucaoId = r.id;
-            row.tipo = tipo;
-            row.chave = chave;
-            row.capturadoEm = clock.instant();
-            try {
-                row.conteudo = json.writeValueAsString(conteudo);
-            } catch (Exception e) {
-                throw new IllegalStateException("Não foi possível preservar a fonte.");
-            }
-            fontes.saveAndFlush(row);
-        }
-
-        public record Fonte(String tipo, String chave, Instant capturadoEm, com.fasterxml.jackson.databind.JsonNode dados) {}
-
-        public record Fontes(Long clienteId, UUID execucaoId, String status, List<Fonte> registros, long total, int pagina) {}
-
-        @Transactional(readOnly = true)
-        public Fontes fontes(Long cliente, UUID execucao, String tipo, int pagina) {
-            conferir(cliente);
-            if (pagina < 1 || pagina > 100000 || !Set.of("PARCELA", "TRANSFERENCIA", "SALDO_INICIAL").contains(tipo)) {
-                throw new IllegalArgumentException("Consulta inválida.");
-            }
-            var r = runs.findByIdAndClienteId(execucao, cliente).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Execução não encontrada nesta empresa."));
-            var result = fontes.findByClienteIdAndExecucaoIdAndTipoOrderByChaveAsc(cliente, execucao, tipo, PageRequest.of(pagina - 1, 5));
-            var rows = result.getContent().stream().map(row -> {
-                try {
-                    return new Fonte(row.tipo, row.chave, row.capturadoEm, json.readTree(row.conteudo));
-                } catch (Exception e) {
-                    throw new IllegalStateException("Fonte armazenada inválida.");
-                }
-            }).toList();
-            conferir(cliente);
-            return new Fontes(cliente, execucao, r.status, rows, result.getTotalElements(), pagina);
-        }
-
-        @Transactional
-        public void aplicar(Reserva reserva, UUID itemId, ContaAzulParcelDetail parcela) {
-            Cliente cliente = clientes.bloquearAtivoPorId(reserva.clienteId()).orElseThrow(ReservaPerdida::new);
-            var c = validar(reserva);
-            var r = execucao(c);
-            var i = item(r, itemId);
-            if (!"EM_FILA".equals(i.status)) {
-                return;
-            }
-            if (parcela == null || !i.parcelaId.equalsIgnoreCase(parcela.id()) || parcela.evento() == null || !i.tipo.equals(parcela.evento().tipo())) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "A parcela ou o tipo retornado difere da fila desta empresa.");
-            }
-            var resultado = sync.aplicarAutomatico(cliente, r.autorizadoPor, i.id, parcela, r.incluirNovas);
-            i.status = resultado.acao();
-            i.lancamentoId = resultado.lancamentoId();
-            i.concluidoEm = clock.instant();
-            i.mensagem = null;
-            switch (i.status) {
-                case "INCLUIR" ->
-                    r.incluidas++;
-                case "ATUALIZAR" ->
-                    r.atualizadas++;
-                default ->
-                    r.mantidas++;
-            }
-        }
-
-        @Transactional
-        public void pendencia(Reserva reserva, UUID itemId, String mensagem) {
-            var c = validar(reserva);
-            var r = execucao(c);
-            var i = item(r, itemId);
-            if (!"EM_FILA".equals(i.status)) {
-                return;
-            }
-            i.status = "CONFERIR";
-            i.mensagem = limitar(mensagem, 500);
-            i.concluidoEm = clock.instant();
-            r.pendentes++;
-        }
-
-        @Transactional
-        public void devolver(Reserva reserva, boolean finalizar) {
-            var c = validar(reserva);
-            var r = execucao(c);
-            if (finalizar) {
-                if (r.etapa != (Boolean.TRUE.equals(r.sincronizacaoCompleta) ? 4 : 2) || itens.countByExecucaoIdAndStatus(r.id, "EM_FILA") != 0) {
-                    throw new ReservaPerdida();
-                }
-                r.status = r.listagemMudou ? "PARCIAL" : r.pendentes > 0 ? "CONCLUIDA_COM_PENDENCIAS" : "CONCLUIDA";
-                if (r.listagemMudou && r.mensagem == null) {
-                    r.mensagem = "A listagem mudou durante a consulta. A cobertura não foi confirmada; outra varredura será feita no próximo ciclo.";
-                }
-                if (!r.listagemMudou) {
-                    r.mensagem = null;
-                }
-                r.concluidoEm = clock.instant();
-                if (Boolean.TRUE.equals(r.sincronizacaoCompleta) && !r.listagemMudou) {
-                    // Commit the search watermark only after all sources/pages have completed.
-                    Instant ate = Boolean.TRUE.equals(r.incremental) ? r.alteracoesAte : r.criadoEm;
-                    if (ate == null) throw new IllegalStateException("Marco da coleta ausente.");
-                    if (c.alteracoesConfirmadasAte == null || ate.isAfter(c.alteracoesConfirmadasAte))
-                        c.alteracoesConfirmadasAte = ate;
-                    if (!Boolean.TRUE.equals(r.incremental)) c.historicoRevisadoEm = r.concluidoEm;
-                }
-                c.proximaEm = clock.instant().plusSeconds(c.intervaloMinutos * 60L);
-                c.falhas = 0;
-            } else {
-                c.proximaEm = clock.instant();
-            }
-            c.dono = null;
-            c.reservaAte = null;
-        }
-
-        @Transactional
-        public void falhar(Reserva reserva, String mensagem, boolean parcial) {
-            var c = validar(reserva);
-            var r = execucao(c);
-            r.mensagem = limitar(mensagem, 500);
-            c.falhas = Math.min(5, c.falhas + 1);
-            c.proximaEm = clock.instant().plusSeconds(Math.min(60, 5L * (1L << (c.falhas - 1))) * 60);
-            r.status = parcial ? "PARCIAL" : "AGUARDANDO_REPETICAO";
-            if (parcial) {
-                r.concluidoEm = clock.instant();
-            }
-            c.dono = null;
-            c.reservaAte = null;
-        }
-
-        private ContaAzulAutoConfig validar(Reserva reserva) {
-            var c = configs.bloquear(reserva.clienteId()).orElseThrow(ReservaPerdida::new);
-            if (!c.habilitada || !Objects.equals(c.execucaoId, reserva.execucaoId()) || !Objects.equals(c.dono, reserva.dono())
-                    || c.reservaAte == null || !c.reservaAte.isAfter(clock.instant()) || !autorizacaoAtiva(c)) {
-                throw new ReservaPerdida();
-            }
-            var r = execucao(c);
-            if (!Objects.equals(c.revisao, r.revisao) || finalizada(r.status)) {
-                throw new ReservaPerdida();
-            }
-            c.reservaAte = clock.instant().plusSeconds(120);
-            return c;
-        }
-
-        private ContaAzulAutoRun execucao(ContaAzulAutoConfig c) {
-            return runs.findByIdAndClienteId(c.execucaoId, c.clienteId).orElseThrow(ReservaPerdida::new);
-        }
-
-        private ContaAzulAutoItem item(ContaAzulAutoRun r, UUID id) {
-            var i = itens.findById(id).orElseThrow(ReservaPerdida::new);
-            if (!Objects.equals(i.execucaoId, r.id) || !Objects.equals(i.clienteId, r.clienteId)) {
-                throw new ReservaPerdida();
-
-            }
-            return i;
-        }
-
-        private void enfileirar(ContaAzulAutoRun r, String id, String tipo, String descricao, boolean listada) {
-            id = id.toLowerCase(Locale.ROOT);
-            UUID chave = UUID.nameUUIDFromBytes(("conta-azul-auto:" + r.id + ":" + id).getBytes(StandardCharsets.UTF_8));
-            var existente = itens.findById(chave).orElse(null);
-            if (existente != null) {
-                if (listada && existente.listada) {
-                    r.listagemMudou = true;
-                }
-                if (listada && !tipo.equals(existente.tipo)) {
-                    r.listagemMudou = true;
-                }
-                existente.listada = existente.listada || listada;
-                return;
-            }
-            var i = new ContaAzulAutoItem();
-            i.id = chave;
-            i.execucaoId = r.id;
-            i.clienteId = r.clienteId;
-            i.parcelaId = id;
-            i.tipo = tipo;
-            i.descricao = limitar(descricao, 255);
-            i.status = "EM_FILA";
-            i.listada = listada;
-            itens.save(i);
-        }
-
-        private boolean autorizacaoAtiva(ContaAzulAutoConfig c) {
-            return clientes.findByIdAndAtivoTrue(c.clienteId).isPresent() && c.autorizadoPor != null
-                    && usuarios.findById(c.autorizadoPor).filter(u -> Boolean.TRUE.equals(u.getAtivo()) && "ADMIN".equals(u.getPerfil())).isPresent();
-        }
-
-        private Long conferir(Long cliente) {
-            contexto.validarAdministrador();
-            if (cliente == null || !cliente.equals(contexto.getClienteAtualId())) {
-                throw new IllegalArgumentException("A empresa selecionada mudou. Atualize a tela.");
-            }
-            return contexto.getUsuarioAutenticado().getId();
-        }
-
-        private void cancelar(ContaAzulAutoConfig c) {
-            if (c.execucaoId != null) {
-                runs.findByIdAndClienteId(c.execucaoId, c.clienteId).filter(r -> !finalizada(r.status))
-                        .ifPresent(r -> {
-                            r.status = "CANCELADA";
-                            r.concluidoEm = clock.instant();
-                            r.mensagem = "Execução encerrada por pausa ou alteração da autorização.";
-                        });
-            }
-            c.dono = null;
-            c.reservaAte = null;
-        }
-
-        private boolean finalizada(String status) {
-            return Set.of("CONCLUIDA", "CONCLUIDA_COM_PENDENCIAS", "PARCIAL", "CANCELADA").contains(status);
-        }
-
-        private boolean uuid(String id) {
-            return id != null && id.matches("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
-        }
-
-        private String limitar(String texto, int max) {
-            return texto == null ? null : texto.substring(0, Math.min(max, texto.length()));
+            r.pagina = 1;
+            r.totalEsperado = null;
+            r.parcelasIdsJanela = null;
+            r.parcelasJanelaInstavel = false;
+            r.parcelasRepeticoesJanela = 0;
+        } else {
+            r.pagina++;
         }
     }
-     
+
+    private void repetirJanelaParcelas(ContaAzulAutoConfig c, ContaAzulAutoRun r) {
+        r.parcelasRepeticoesJanela = (r.parcelasRepeticoesJanela == null ? 0 : r.parcelasRepeticoesJanela) + 1;
+        r.pagina = 1;
+        r.totalEsperado = null;
+        r.parcelasIdsJanela = null;
+        r.parcelasJanelaInstavel = false;
+        if (r.parcelasRepeticoesJanela >= 3) {
+
+            r.parcelasRepeticoesJanela = 0;
+            r.status = "AGUARDANDO_REPETICAO";
+            r.mensagem = "A janela continua instável após três tentativas. Será retomada em cinco minutos; cobertura não confirmada.";
+            c.proximaEm = clock.instant().plusSeconds(300);
+            c.dono = null;
+            c.reservaAte = null;
+            return;
+        }
+        r.mensagem = "Listagem alterada: repetindo somente a janela atual, sem duplicar lançamentos.";
+    }
+
+    static record JanelaMovimentos(LocalDate inicio, LocalDate fim, boolean emJanelas) {}
+
+    private static LocalDate inicioMovimentos(ContaAzulAutoRun r) {
+        return r.movimentosEscopoInicio == null ? r.inicio : r.movimentosEscopoInicio;
+    }
+
+    private static LocalDate fimMovimentos(ContaAzulAutoRun r) {
+        return r.movimentosEscopoFim == null ? r.fim : r.movimentosEscopoFim;
+    }
+
+    /**
+     * Adopt the narrower movement policy only between completed pages/windows.
+     */
+    private void prepararEscopoMovimentos(ContaAzulAutoRun r) {
+        if (r.movimentoInicio != null && (r.movimentoInicio.isBefore(r.inicio) || r.movimentoInicio.isAfter(r.fim))) {
+            throw new IllegalStateException("Cursor de movimentações fora do alcance autorizado.");
+        }
+        if ((r.movimentosEscopoInicio == null) != (r.movimentosEscopoFim == null)) {
+            throw new IllegalStateException("Escopo de movimentações incompleto.");
+        }
+        boolean primeiraPaginaLivre = r.pagina == 1 && r.totalEsperado == null;
+        if (r.movimentosEscopoInicio == null) {
+            if (!primeiraPaginaLivre) {
+                return; // Finish the already committed pagination unchanged.
+
+                        }LocalDate hoje = LocalDate.now(clock.withZone(ZoneId.of("America/Sao_Paulo")));
+            r.movimentosEscopoInicio = r.inicio.isAfter(ContaAzulFullScope.INICIO) ? r.inicio : ContaAzulFullScope.INICIO;
+            if (Boolean.TRUE.equals(r.incremental)) {
+                if (r.alteracoesDesde == null || r.alteracoesAte == null || r.alteracoesAte.isBefore(r.alteracoesDesde)) {
+                    throw new IllegalStateException("Intervalo incremental incompleto.");
+                }
+                LocalDate recente = r.alteracoesDesde.atZone(ZoneId.of("America/Sao_Paulo")).toLocalDate();
+                if (recente.isAfter(r.movimentosEscopoInicio)) {
+                    r.movimentosEscopoInicio = recente;
+                }
+            }
+            LocalDate limite = Boolean.TRUE.equals(r.incremental)
+                    ? r.alteracoesAte.atZone(ZoneId.of("America/Sao_Paulo")).toLocalDate() : hoje;
+            r.movimentosEscopoFim = r.fim.isBefore(limite) ? r.fim : limite;
+        }
+        if (!primeiraPaginaLivre) {
+            return;
+        }
+        while (r.etapa >= 2 && r.etapa <= 3) {
+            if (r.movimentoInicio == null || r.movimentoInicio.isBefore(r.movimentosEscopoInicio)) {
+                r.movimentoInicio = r.movimentosEscopoInicio;
+            }
+            if (!r.movimentoInicio.isAfter(r.movimentosEscopoFim)) {
+                return;
+            }
+
+            r.etapa++;
+            r.movimentoInicio = null;
+            r.pagina = 1;
+            r.totalEsperado = null;
+        }
+    }
+
+    static JanelaMovimentos janelaMovimentos(ContaAzulAutoRun r) {
+        if (r.inicio == null || r.fim == null || r.fim.isBefore(r.inicio)) {
+            throw new IllegalStateException("Alcance da execução inválido.");
+        }
+        if (r.movimentosEscopoInicio == null && r.movimentoInicio == null && (r.pagina > 1 || r.totalEsperado != null)) {
+            return new JanelaMovimentos(r.inicio, r.fim, false);
+        }
+        LocalDate inicio = r.movimentoInicio == null ? inicioMovimentos(r) : r.movimentoInicio;
+        if (inicio.isBefore(inicioMovimentos(r)) || inicio.isAfter(fimMovimentos(r))) {
+            throw new IllegalStateException("Cursor de movimentações fora do alcance autorizado.");
+        }
+        LocalDate fim = inicio.plusDays(29);
+        if (fim.isAfter(fimMovimentos(r))) {
+            fim = fimMovimentos(r);
+        }
+        return new JanelaMovimentos(inicio, fim, true);
+    }
+
+    @Transactional
+    public void paginaMovimentos(Reserva reserva, ContaAzulMovementClient.Pagina pagina) {
+        var c = validar(reserva);
+        var r = execucao(c);
+        if (!Boolean.TRUE.equals(r.sincronizacaoCompleta) || r.etapa < 2 || r.etapa > 3) {
+            throw new ReservaPerdida();
+        }
+        if (pagina == null || pagina.itens() == null || pagina.fonte() == null || pagina.total() < 0 || pagina.total() > 100000
+                || r.pagina < 1 || r.pagina > 1000 || pagina.itens().size() > 100) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Fonte acima do limite de conferência ou inválida. Cobertura não confirmada.");
+        }
+        int etapaConsultada = r.etapa;
+        prepararEscopoMovimentos(r);
+        if (r.etapa != etapaConsultada) {
+            throw new ReservaPerdida();
+        }
+
+        var janela = janelaMovimentos(r);
+        if (r.totalEsperado == null) {
+            r.totalEsperado = pagina.total();
+        } else if (!r.totalEsperado.equals(pagina.total())) {
+            r.listagemMudou = true;
+        }
+        int remaining = Math.max(0, pagina.total() - (r.pagina - 1) * 100);
+        if (pagina.itens().size() != Math.min(100, remaining)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Fonte paginada incompleta.");
+        }
+        String tipo = r.etapa == 2 ? "TRANSFERENCIA" : "SALDO_INICIAL";
+        String chave = janela.emJanelas()
+                ? "periodo:" + janela.inicio() + ":" + janela.fim() + ":pagina:" + r.pagina
+                : "pagina:" + r.pagina;
+        arquivar(reserva, tipo, chave, pagina.fonte());
+        if (!r.listagemMudou) {
+            r.mensagem = "Coletando " + (r.etapa == 2 ? "transferências" : "saldos iniciais")
+                    + ": " + janela.inicio() + " a " + janela.fim() + ", página " + r.pagina
+                    + ". Faixa de movimentações: " + inicioMovimentos(r) + " a " + fimMovimentos(r)
+                    + ". Parcelas futuras mantidas na listagem; a coleta ainda não terminou.";
+        }
+        if (janela.emJanelas()) {
+            r.movimentoInicio = janela.inicio();
+        }
+        if ((long) r.pagina * 100 >= pagina.total()) {
+            if (janela.emJanelas() && janela.fim().isBefore(fimMovimentos(r))) {
+                r.movimentoInicio = janela.fim().plusDays(1);
+            } else {
+                r.etapa++;
+                r.movimentoInicio = null;
+            }
+            r.pagina = 1;
+            r.totalEsperado = null;
+        } else {
+            r.pagina++;
+        }
+    }
+
+    @Transactional
+    public void arquivar(Reserva reserva, String tipo, String chave, com.fasterxml.jackson.databind.JsonNode conteudo) {
+        var c = validar(reserva);
+        var r = execucao(c);
+        if (!Boolean.TRUE.equals(r.sincronizacaoCompleta)) {
+            return;
+        }
+        if (!Set.of("PARCELA", "TRANSFERENCIA", "SALDO_INICIAL").contains(tipo) || chave == null || chave.length() > 160 || conteudo == null) {
+            throw new IllegalArgumentException("Fonte inválida.");
+        }
+        var row = new ContaAzulSourceCapture();
+        row.id = UUID.nameUUIDFromBytes((r.id + ":" + tipo + ":" + chave).getBytes(StandardCharsets.UTF_8));
+        row.clienteId = r.clienteId;
+        row.execucaoId = r.id;
+        row.tipo = tipo;
+        row.chave = chave;
+        row.capturadoEm = clock.instant();
+        try {
+            row.conteudo = json.writeValueAsString(conteudo);
+        } catch (Exception e) {
+            throw new IllegalStateException("Não foi possível preservar a fonte.");
+        }
+        fontes.saveAndFlush(row);
+    }
+
+    public record Fonte(String tipo, String chave, Instant capturadoEm, com.fasterxml.jackson.databind.JsonNode dados) {}
+
+    public record Fontes(Long clienteId, UUID execucaoId, String status, List<Fonte> registros, long total, int pagina) {}
+
+    @Transactional(readOnly = true)
+    public Fontes fontes(Long cliente, UUID execucao, String tipo, int pagina) {
+        conferir(cliente);
+        if (pagina < 1 || pagina > 100000 || !Set.of("PARCELA", "TRANSFERENCIA", "SALDO_INICIAL").contains(tipo)) {
+            throw new IllegalArgumentException("Consulta inválida.");
+        }
+        var r = runs.findByIdAndClienteId(execucao, cliente).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Execução não encontrada nesta empresa."));
+        var result = fontes.findByClienteIdAndExecucaoIdAndTipoOrderByChaveAsc(cliente, execucao, tipo, PageRequest.of(pagina - 1, 5));
+        var rows = result.getContent().stream().map(row -> {
+            try {
+                return new Fonte(row.tipo, row.chave, row.capturadoEm, json.readTree(row.conteudo));
+            } catch (Exception e) {
+                throw new IllegalStateException("Fonte armazenada inválida.");
+            }
+        }).toList();
+        conferir(cliente);
+        return new Fontes(cliente, execucao, r.status, rows, result.getTotalElements(), pagina);
+    }
+
+    @Transactional
+    public void aplicar(Reserva reserva, UUID itemId, ContaAzulParcelDetail parcela) {
+        Cliente cliente = clientes.bloquearAtivoPorId(reserva.clienteId()).orElseThrow(ReservaPerdida::new);
+        var c = validar(reserva);
+        var r = execucao(c);
+        var i = item(r, itemId);
+        if (!"EM_FILA".equals(i.status)) {
+            return;
+        }
+        if (parcela == null || !i.parcelaId.equalsIgnoreCase(parcela.id()) || parcela.evento() == null || !i.tipo.equals(parcela.evento().tipo())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A parcela ou o tipo retornado difere da fila desta empresa.");
+        }
+        var resultado = sync.aplicarAutomatico(cliente, r.autorizadoPor, i.id, parcela, r.incluirNovas);
+        i.status = resultado.acao();
+        i.lancamentoId = resultado.lancamentoId();
+        i.concluidoEm = clock.instant();
+        i.mensagem = null;
+        if (i.resumoJson != null) {
+            try {
+                var resumo = json.readValue(i.resumoJson, ContaAzulFinancialClient.Parcela.class);
+                if (sync.resumoConfere(resumo, parcela)) {
+                    i.resumoBancoHash = sync.bancoDaParcela(r.clienteId, i.parcelaId);
+                    i.resumoFonteHash = sync.fonteDaParcela(parcela);
+                    i.resumoVerificadoEm = clock.instant();
+                }
+            } catch (com.fasterxml.jackson.core.JsonProcessingException erro) {
+                throw new IllegalStateException("Resumo armazenado inválido.");
+            }
+        }
+        switch (i.status) {
+            case "INCLUIR" ->
+                r.incluidas++;
+            case "ATUALIZAR" ->
+                r.atualizadas++;
+            default ->
+                r.mantidas++;
+        }
+    }
+
+    @Transactional
+    public boolean falhaItem(Reserva reserva, UUID itemId) {
+        var c = validar(reserva);
+        var r = execucao(c);
+        var i = item(r, itemId);
+        if (!"EM_FILA".equals(i.status)) {
+            return true;
+        }
+        i.tentativas = (i.tentativas == null ? 0 : i.tentativas) + 1;
+        if (i.tentativas < 3) {
+            return false;
+        }
+        i.status = "CONFERIR";
+        i.mensagem = "Não foi possível consultar esta parcela após três tentativas. Revise os detalhes na origem.";
+        i.concluidoEm = clock.instant();
+        r.pendentes++;
+        return true;
+    }
+
+    @Transactional
+    public void pendencia(Reserva reserva, UUID itemId, String mensagem) {
+        var c = validar(reserva);
+        var r = execucao(c);
+        var i = item(r, itemId);
+        if (!"EM_FILA".equals(i.status)) {
+            return;
+        }
+        i.status = "CONFERIR";
+        i.mensagem = limitar(mensagem, 500);
+        i.concluidoEm = clock.instant();
+        r.pendentes++;
+    }
+
+    @Transactional
+    public void devolver(Reserva reserva, boolean finalizar) {
+        var c = validar(reserva);
+        var r = execucao(c);
+        if (finalizar) {
+            if (r.etapa != (Boolean.TRUE.equals(r.sincronizacaoCompleta) ? 4 : 2) || itens.countByExecucaoIdAndStatus(r.id, "EM_FILA") != 0) {
+                throw new ReservaPerdida();
+            }
+            r.status = r.listagemMudou ? "PARCIAL" : r.pendentes > 0 ? "CONCLUIDA_COM_PENDENCIAS" : "CONCLUIDA";
+            if (r.listagemMudou && r.mensagem == null) {
+                r.mensagem = "A listagem mudou durante a consulta. A cobertura não foi confirmada; outra varredura será feita no próximo ciclo.";
+            }
+            if (!r.listagemMudou) {
+                r.mensagem = null;
+            }
+            r.concluidoEm = clock.instant();
+            if (auditoria != null) {
+                auditoria.conferir(r);
+            }
+            if (Boolean.TRUE.equals(r.sincronizacaoCompleta) && !r.listagemMudou) {
+                // Commit the search watermark only after all sources/pages have completed.
+                Instant ate = Boolean.TRUE.equals(r.incremental) ? r.alteracoesAte : r.criadoEm;
+                if (ate == null) {
+                    throw new IllegalStateException("Marco da coleta ausente.");
+                }
+                if (c.alteracoesConfirmadasAte == null || ate.isAfter(c.alteracoesConfirmadasAte)) {
+                    c.alteracoesConfirmadasAte = ate;
+                }
+                if (!Boolean.TRUE.equals(r.incremental)) {
+                    c.historicoRevisadoEm = r.concluidoEm;
+                }
+            }
+            c.proximaEm = clock.instant().plusSeconds(c.intervaloMinutos * 60L);
+            c.falhas = 0;
+        } else {
+            c.proximaEm = clock.instant();
+        }
+        c.dono = null;
+        c.reservaAte = null;
+    }
+
+    @Transactional
+    public void falhar(Reserva reserva, String mensagem, boolean parcial) {
+        falhar(reserva, mensagem, parcial, null);
+    }
+
+    @Transactional
+    public void falhar(Reserva reserva, String mensagem, boolean parcial, Instant retryAfter) {
+        var c = validar(reserva);
+        var r = execucao(c);
+        r.mensagem = limitar(mensagem, 500);
+        c.falhas = Math.min(5, c.falhas + 1);
+        c.proximaEm = retryAfter != null && retryAfter.isAfter(clock.instant()) ? retryAfter
+                : clock.instant().plusSeconds(Math.min(60, 5L * (1L << (c.falhas - 1))) * 60);
+        r.status = parcial ? "PARCIAL" : "AGUARDANDO_REPETICAO";
+        if (parcial) {
+            r.concluidoEm = clock.instant();
+        }
+        c.dono = null;
+        c.reservaAte = null;
+    }
+
+    private ContaAzulAutoConfig validar(Reserva reserva) {
+        var c = configs.bloquear(reserva.clienteId()).orElseThrow(ReservaPerdida::new);
+        if (!c.habilitada || !Objects.equals(c.execucaoId, reserva.execucaoId()) || !Objects.equals(c.dono, reserva.dono())
+                || c.reservaAte == null || !c.reservaAte.isAfter(clock.instant()) || !autorizacaoAtiva(c)) {
+            throw new ReservaPerdida();
+        }
+        var r = execucao(c);
+        if (!Objects.equals(c.revisao, r.revisao) || finalizada(r.status)) {
+            throw new ReservaPerdida();
+        }
+        c.reservaAte = clock.instant().plusSeconds(120);
+        return c;
+    }
+
+    private ContaAzulAutoRun execucao(ContaAzulAutoConfig c) {
+        return runs.findByIdAndClienteId(c.execucaoId, c.clienteId).orElseThrow(ReservaPerdida::new);
+    }
+
+    private ContaAzulAutoItem item(ContaAzulAutoRun r, UUID id) {
+        var i = itens.findById(id).orElseThrow(ReservaPerdida::new);
+        if (!Objects.equals(i.execucaoId, r.id) || !Objects.equals(i.clienteId, r.clienteId)) {
+            throw new ReservaPerdida();
+
+        }
+        return i;
+    }
+
+    private ContaAzulAutoItem enfileirar(ContaAzulAutoRun r, String id, String tipo, String descricao, boolean listada) {
+        id = id.toLowerCase(Locale.ROOT);
+        UUID chave = UUID.nameUUIDFromBytes(("conta-azul-auto:" + r.id + ":" + id).getBytes(StandardCharsets.UTF_8));
+        var existente = itens.findById(chave).orElse(null);
+        if (existente != null) {
+            if (listada && !tipo.equals(existente.tipo)) {
+                r.listagemMudou = true;
+            }
+            existente.listada = existente.listada || listada;
+            return existente;
+        }
+        var i = new ContaAzulAutoItem();
+        i.id = chave;
+        i.execucaoId = r.id;
+        i.clienteId = r.clienteId;
+        i.parcelaId = id;
+        i.tipo = tipo;
+        i.descricao = limitar(descricao, 255);
+        i.status = "EM_FILA";
+        i.listada = listada;
+        return itens.save(i);
+    }
+
+    private boolean autorizacaoAtiva(ContaAzulAutoConfig c) {
+        return (identityConnections == null || identityConnections.findById(c.clienteId)
+                .filter(con -> con.getEmpresaConfirmadaEm() != null).isPresent())
+                && clientes.findByIdAndAtivoTrue(c.clienteId).isPresent() && c.autorizadoPor != null
+                && usuarios.findById(c.autorizadoPor).filter(u -> Boolean.TRUE.equals(u.getAtivo()) && "ADMIN".equals(u.getPerfil())).isPresent();
+    }
+
+    private Long conferir(Long cliente) {
+        contexto.validarAdministrador();
+        if (cliente == null || !cliente.equals(contexto.getClienteAtualId())) {
+            throw new IllegalArgumentException("A empresa selecionada mudou. Atualize a tela.");
+        }
+        return contexto.getUsuarioAutenticado().getId();
+    }
+
+    private void cancelar(ContaAzulAutoConfig c) {
+        if (c.execucaoId != null) {
+            runs.findByIdAndClienteId(c.execucaoId, c.clienteId).filter(r -> !finalizada(r.status))
+                    .ifPresent(r -> {
+                        r.status = "CANCELADA";
+                        r.concluidoEm = clock.instant();
+                        r.mensagem = "Execução encerrada por pausa ou alteração da autorização.";
+                    });
+        }
+        c.dono = null;
+        c.reservaAte = null;
+    }
+
+    private boolean finalizada(String status) {
+        return Set.of("CONCLUIDA", "CONCLUIDA_COM_PENDENCIAS", "PARCIAL", "CANCELADA").contains(status);
+    }
+
+    private boolean uuid(String id) {
+        return id != null && id.matches("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+    }
+
+    private String limitar(String texto, int max) {
+        return texto == null ? null : texto.substring(0, Math.min(max, texto.length()));
+    }
+
+    @Transactional
+    public boolean repetirPaginaInstavel(Reserva reserva) {
+        var c = validar(reserva);
+        var r = execucao(c);
+        if (r.etapa > 1) {
+            return false;
+        }
+        repetirJanelaParcelas(c, r);
+        if (!"AGUARDANDO_REPETICAO".equals(r.status)) {
+            c.proximaEm = clock.instant();
+        }
+        c.dono = null;
+        c.reservaAte = null;
+        return true;
+    }
+
+    @Transactional
+    public boolean reutilizarResumo(Reserva reserva, UUID itemId) {
+        var c = validar(reserva);
+        var r = execucao(c);
+        var i = item(r, itemId);
+        if (!Boolean.TRUE.equals(r.incremental) || !"EM_FILA".equals(i.status) || i.resumoJson == null) {
+            return false;
+        }
+        var anterior = itens.findFirstByClienteIdAndParcelaIdAndStatusInOrderByConcluidoEmDescIdDesc(r.clienteId,
+                i.parcelaId, List.of("INCLUIR", "ATUALIZAR", "SEM_ALTERACAO")).orElse(null);
+        if (anterior == null || anterior.resumoVerificadoEm == null || anterior.resumoVerificadoEm.isAfter(clock.instant())
+                || anterior.resumoVerificadoEm.isBefore(clock.instant().minusSeconds(86400))
+                || anterior.resumoBancoHash == null || anterior.resumoFonteHash == null) {
+            return false;
+        }
+        try {
+            var atual = json.readValue(i.resumoJson, ContaAzulFinancialClient.Parcela.class);
+            var passado = json.readValue(anterior.resumoJson, ContaAzulFinancialClient.Parcela.class);
+            if (!sync.resumoReutilizavel(atual) || !Objects.equals(atual, passado)
+                    || !sync.cacheConfere(r.clienteId, i.parcelaId, anterior.resumoBancoHash, anterior.resumoFonteHash)) {
+                return false;
+            }
+        } catch (Exception erro) {
+            return false;
+        }
+        i.status = "SEM_ALTERACAO";
+        i.lancamentoId = anterior.lancamentoId;
+        i.concluidoEm = clock.instant();
+        i.resumoBancoHash = anterior.resumoBancoHash;
+        i.resumoFonteHash = anterior.resumoFonteHash;
+        i.resumoVerificadoEm = anterior.resumoVerificadoEm;
+        i.reutilizadoDe = anterior.id;
+        i.mensagem = "Resumo e alteração na origem conferidos com detalhe auditado recente.";
+        r.mantidas++;
+        return true;
+    }
+
+}

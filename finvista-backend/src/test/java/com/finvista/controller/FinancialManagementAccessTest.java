@@ -22,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class FinancialManagementAccessTest {
 
-     AnnotationConfigWebApplicationContext  
+     AnnotationConfigWebApplicationContext
 
         context;
         MockMvc mvc;
@@ -32,6 +32,9 @@ class FinancialManagementAccessTest {
         @EnableWebSecurity
         @Import({SecurityConfig.class, FinancialManagementController.class, ManagerialDreMappingController.class, ContaAzulAutoController.class, CsrfReader.class})
         static class Config {
+            @Bean com.finvista.repository.ContaAzulConnectionRepository identities(){return mock(com.finvista.repository.ContaAzulConnectionRepository.class);}
+            @Bean com.finvista.integration.contaazul.ContaAzulRunAudit runAudit(){return mock(com.finvista.integration.contaazul.ContaAzulRunAudit.class);}
+
 
             @Bean com.finvista.integration.contaazul.ContaAzulAutoState autoState(){return mock(com.finvista.integration.contaazul.ContaAzulAutoState.class);}
             @Bean com.finvista.repository.ContaAzulSourceCaptureRepository captures(){return mock(com.finvista.repository.ContaAzulSourceCaptureRepository.class);}
@@ -153,7 +156,7 @@ class FinancialManagementAccessTest {
             mvc.perform(get("/api/gestao-financeira/posicao").param("clienteId", "999").session(session("USUARIO"))).andExpect(status().isOk());
             verify(context.getBean(FinancialManagementService.class)).openPosition();
         }
-    
+
         @org.springframework.web.bind.annotation.RestController
         static class CsrfReader {
             @org.springframework.web.bind.annotation.GetMapping("/api/auth/csrf")

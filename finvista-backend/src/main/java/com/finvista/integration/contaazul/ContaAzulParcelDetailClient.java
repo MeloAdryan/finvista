@@ -27,7 +27,7 @@ public class ContaAzulParcelDetailClient {
 
     private static RestClient criarHttp() {
         var factory = new SimpleClientHttpRequestFactory();
-    
+
 
         factory.setConnectTimeout(5000);
         factory.setReadTimeout(20000);
@@ -61,22 +61,23 @@ public class ContaAzulParcelDetailClient {
                         result.liquido(), result.pago(), result.pendente(), result.composicao(), result.evento(),
                         result.perda(), result.renegociacao(), java.util.Arrays.asList(baixas), result.contaId(), result.conta());
             }
-            // Classification defects are retained in the source and reviewed by the plan.
-            // They must not prevent capture of financially valid payments.
+
             return new Consulta(result,raw);
         } catch (RestClientResponseException erro) {
             int status = erro.getStatusCode().value();
             if (status == 429) {
-                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
-                        "Limite de consultas da Conta Azul atingido. Aguarde antes de tentar novamente.");
-            }
+    throw new ResponseStatusException(
+            HttpStatus.TOO_MANY_REQUESTS,
+            "Limite de consultas da Conta Azul atingido. Aguarde antes de tentar novamente.",
+            ContaAzulAutoDiagnostic.causaSegura(erro));
+}
             if (status == 404) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "A parcela não está mais disponível na Conta Azul. Atualize a listagem.");
             }
             if (status == 401 || status == 403) {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
-                        "A Conta Azul recusou o acesso. Renove ou autorize a conexão novamente.");
+                        "A Conta Azul recusou o acesso. Renove ou autorize a conexão novamente.", ContaAzulAutoDiagnostic.causaSegura(erro));
             }
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     "A Conta Azul não concluiu a consulta dos detalhes.");
@@ -84,6 +85,6 @@ public class ContaAzulParcelDetailClient {
                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     "Os detalhes retornados não são válidos. Nenhum lançamento foi importado.");
         }
-    } 
+    }
 
 }

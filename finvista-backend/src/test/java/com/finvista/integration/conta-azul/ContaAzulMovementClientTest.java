@@ -25,10 +25,10 @@ class ContaAzulMovementClientTest {
 
     @Test
     void transferenciasPreservamContaDestinoValorAssinadoECamposAdicionais() {
-        server.expect(requestTo(ContaAzulFinancialClient.BASE + "/v1/financeiro/transferencias?pagina=2&tamanho_pagina=100&data_inicio=2000-01-01&data_fim=2200-12-31"))
+        server.expect(requestTo(ContaAzulFinancialClient.BASE + "/v1/financeiro/transferencias?pagina=2&tamanho_pagina=100&data_inicio=2000-01-01&data_fim=2027-12-31"))
                 .andExpect(method(HttpMethod.GET)).andExpect(header("Authorization", "Bearer teste"))
                 .andRespond(withSuccess("{\"itens_totais\":101,\"itens\":[{\"id\":\"tr-101\",\"valor\":-100.25,\"conta_destino\":\"c2\",\"adicional\":true}]}", MediaType.APPLICATION_JSON));
-        var p = client.consultar("teste", "TRANSFERENCIA", ContaAzulFullScope.INICIO, ContaAzulFullScope.FIM, 2);
+        var p = client.consultar("teste", "TRANSFERENCIA", ContaAzulFullScope.INICIO, LocalDate.of(2027, 12, 31), 2);
         assertEquals(101, p.total());
         assertEquals(-100.25, p.itens().get(0).path("valor").doubleValue());
         assertEquals("c2", p.itens().get(0).path("conta_destino").asText());
@@ -48,13 +48,13 @@ class ContaAzulMovementClientTest {
     @Test
     void respostaIncompletaNaoViraZero() {
         server.expect(anything()).andRespond(withSuccess("{\"itens\":[]}", MediaType.APPLICATION_JSON));
-        assertEquals(502, assertThrows(ResponseStatusException.class, () -> client.consultar("t", "TRANSFERENCIA", ContaAzulFullScope.INICIO, ContaAzulFullScope.FIM, 1)).getStatusCode().value());
+        assertEquals(502, assertThrows(ResponseStatusException.class, () -> client.consultar("t", "TRANSFERENCIA", ContaAzulFullScope.INICIO, LocalDate.of(2027, 12, 31), 1)).getStatusCode().value());
     }
 
     @Test
     void limiteDeRequisicoesPreservaStatus429() {
         server.expect(anything()).andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
-        assertEquals(429, assertThrows(ResponseStatusException.class, () -> client.consultar("t", "TRANSFERENCIA", ContaAzulFullScope.INICIO, ContaAzulFullScope.FIM, 1)).getStatusCode().value());
+        assertEquals(429, assertThrows(ResponseStatusException.class, () -> client.consultar("t", "TRANSFERENCIA", ContaAzulFullScope.INICIO, LocalDate.of(2027, 12, 31), 1)).getStatusCode().value());
     }
 
     @Test
@@ -62,7 +62,7 @@ class ContaAzulMovementClientTest {
         for (var status : List.of(HttpStatus.BAD_REQUEST, HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN, HttpStatus.NOT_FOUND, HttpStatus.INTERNAL_SERVER_ERROR)) {
             server.reset();
             server.expect(anything()).andRespond(withStatus(status).contentType(MediaType.APPLICATION_JSON).body("{\"error\":\"Bearer SECRET_NAO_EXIBIR\"}"));
-            var erro = assertThrows(ResponseStatusException.class, () -> client.consultar("teste", "TRANSFERENCIA", ContaAzulFullScope.INICIO, ContaAzulFullScope.FIM, 1));
+            var erro = assertThrows(ResponseStatusException.class, () -> client.consultar("teste", "TRANSFERENCIA", ContaAzulFullScope.INICIO, LocalDate.of(2027, 12, 31), 1));
             assertEquals(502, erro.getStatusCode().value());
             var origem = assertInstanceOf(org.springframework.web.client.RestClientResponseException.class, erro.getCause());
             assertEquals(status.value(), origem.getStatusCode().value());
@@ -77,7 +77,7 @@ class ContaAzulMovementClientTest {
     @Test
     void preservaCausaDaRespostaInvalidaSemConsiderarEtapaConcluida() {
         server.expect(anything()).andRespond(withSuccess("{\"itens\":[]}", MediaType.APPLICATION_JSON));
-        var erro = assertThrows(ResponseStatusException.class, () -> client.consultar("teste", "TRANSFERENCIA", ContaAzulFullScope.INICIO, ContaAzulFullScope.FIM, 1));
+        var erro = assertThrows(ResponseStatusException.class, () -> client.consultar("teste", "TRANSFERENCIA", ContaAzulFullScope.INICIO, LocalDate.of(2027, 12, 31), 1));
         assertEquals(502, erro.getStatusCode().value());
         assertInstanceOf(IllegalArgumentException.class, erro.getCause());
         server.verify();

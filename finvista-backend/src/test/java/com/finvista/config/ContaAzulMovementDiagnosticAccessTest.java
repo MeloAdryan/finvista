@@ -28,6 +28,8 @@ class ContaAzulMovementDiagnosticAccessTest {
  static final String URL="/api/integracoes/conta-azul/diagnostico-movimentos";
  @Configuration @Import(ContaAzulMovementDiagnosticController.class)
  static class Config {
+  @Bean ContaAzulTokenJournal journal(){return mock(ContaAzulTokenJournal.class);}
+  @Bean com.finvista.repository.ContaAzulAutoConfigRepository autoConfigs(){return mock(com.finvista.repository.ContaAzulAutoConfigRepository.class);}
   @Bean ClienteContextService contextService(){var s=mock(ClienteContextService.class);when(s.getClienteAtualId()).thenReturn(7L);return s;}
   @Bean ContaAzulAutoAccess access(){var a=mock(ContaAzulAutoAccess.class);when(a.acesso(7L)).thenReturn("TOKEN_NAO_EXIBIR");return a;}
   @Bean ContaAzulMovementClient movements(){return mock(ContaAzulMovementClient.class);}

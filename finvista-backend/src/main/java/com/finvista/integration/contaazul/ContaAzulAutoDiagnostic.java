@@ -16,10 +16,12 @@ final class ContaAzulAutoDiagnostic {
 
     private static final class FalhaHttp extends ResponseStatusException {
         private final String diagnostico;
+        private final java.time.Instant retryAfter;
 
-        private FalhaHttp(org.springframework.http.HttpStatusCode status, String diagnostico) {
+        private FalhaHttp(org.springframework.http.HttpStatusCode status, String diagnostico, java.time.Instant retryAfter) {
             super(status, "Falha HTTP na origem.");
             this.diagnostico = diagnostico;
+            this.retryAfter = retryAfter;
         }
     }
 
@@ -29,7 +31,8 @@ final class ContaAzulAutoDiagnostic {
 
     static RuntimeException causaSegura(Exception erro, String consulta) {
         if (erro instanceof RestClientResponseException http) {
-            return new FalhaHttp(http.getStatusCode(), consulta + validacaoSegura(http));
+            return new FalhaHttp(http.getStatusCode(), consulta + validacaoSegura(http),
+                    ContaAzulHttpTransport.retryAfter(http.getResponseHeaders() == null ? null : http.getResponseHeaders().getFirst("Retry-After"), java.time.Instant.now()));
         }
         if (erro instanceof org.springframework.web.client.ResourceAccessException) {
             return new org.springframework.web.client.ResourceAccessException("Falha de comunicação com a origem.");
@@ -38,7 +41,7 @@ final class ContaAzulAutoDiagnostic {
     }
 
     private static String validacaoSegura(RestClientResponseException erro) {
-        // Only fixed labels and bounded day counts may leave the provider response.
+
         String corpo = erro.getResponseBodyAsString();
         if (corpo.length() > 16384) return " validacao=RESPOSTA_EXTENSA";
         String texto = java.text.Normalizer.normalize(corpo, java.text.Normalizer.Form.NFD)
@@ -89,4 +92,27 @@ final class ContaAzulAutoDiagnostic {
         }
         return String.join(" <- ", partes);
     }
+
+    static boolean http(Throwable erro, int status) {
+        var vistos = Collections.newSetFromMap(new IdentityHashMap<Throwable, Boolean>());
+        for (Throwable t = erro; t != null && vistos.size() < 8 && vistos.add(t); t = t.getCause()) {
+            if (t instanceof ResponseStatusException e && e.getStatusCode().value() == status) return true;
+            if (t instanceof RestClientResponseException e && e.getStatusCode().value() == status) return true;
+        }
+        return false;
+    }
+
+
+    static java.time.Instant retryAfter(Throwable erro) {
+        var vistos = Collections.newSetFromMap(new IdentityHashMap<Throwable, Boolean>());
+        for (Throwable t = erro; t != null && vistos.size() < 8 && vistos.add(t); t = t.getCause()) {
+            if (t instanceof FalhaHttp e && e.retryAfter != null) return e.retryAfter;
+            if (t instanceof RestClientResponseException e && e.getResponseHeaders() != null) {
+                var at = ContaAzulHttpTransport.retryAfter(e.getResponseHeaders().getFirst("Retry-After"), java.time.Instant.now());
+                if (at != null) return at;
+            }
+        }
+        return null;
+    }
+
 }

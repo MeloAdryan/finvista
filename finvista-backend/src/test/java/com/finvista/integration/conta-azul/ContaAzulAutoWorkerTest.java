@@ -102,7 +102,7 @@ class ContaAzulAutoWorkerTest {
         worker = spy(new ContaAzulAutoWorker(state, access, financial, details, source));
         doNothing().when(worker).limitar();
         var a = ContaAzulFullScope.INICIO;
-        var b = ContaAzulFullScope.FIM;
+        var b = LocalDate.of(2027, 12, 31);
         when(state.cursor(reserva)).thenReturn(new ContaAzulAutoState.Cursor(a, b, 0, 1, true), new ContaAzulAutoState.Cursor(a, b, 1, 1, true), new ContaAzulAutoState.Cursor(a, b, 2, 1, true), new ContaAzulAutoState.Cursor(a, b, 3, 1, true), new ContaAzulAutoState.Cursor(a, b, 4, 1, true));
         when(financial.consultar(any(), any(), any(), any(), anyInt())).thenReturn(new ContaAzulFinancialClient.Pagina(0, List.of()));
         var raw = new com.fasterxml.jackson.databind.ObjectMapper().readTree("{\"itens_totais\":0,\"itens\":[]}");
@@ -123,7 +123,7 @@ class ContaAzulAutoWorkerTest {
         doNothing().when(worker).limitar();
         var i = item();
         when(state.proximo(reserva)).thenReturn(i, (ContaAzulAutoItem) null);
-        when(state.cursor(reserva)).thenReturn(new ContaAzulAutoState.Cursor(ContaAzulFullScope.INICIO, ContaAzulFullScope.FIM, 0, 1, true), new ContaAzulAutoState.Cursor(ContaAzulFullScope.INICIO, ContaAzulFullScope.FIM, 4, 1, true));
+        when(state.cursor(reserva)).thenReturn(new ContaAzulAutoState.Cursor(ContaAzulFullScope.INICIO, LocalDate.of(2027, 12, 31), 0, 1, true), new ContaAzulAutoState.Cursor(ContaAzulFullScope.INICIO, LocalDate.of(2027, 12, 31), 4, 1, true));
         var p = mock(ContaAzulParcelDetail.class);
         var raw = new com.fasterxml.jackson.databind.ObjectMapper().readTree("{\"campo_extra\":true}");
         when(details.consultarCompleto("access-teste", i.parcelaId)).thenReturn(new ContaAzulParcelDetailClient.Consulta(p, raw));
@@ -148,7 +148,7 @@ class ContaAzulAutoWorkerTest {
             verify(state, never()).pendencia(any(), any(), any());
             verify(state, never()).aplicar(any(), any(), any());
             var line = appender.list.get(0).getFormattedMessage();
-            assertTrue(line.contains("etapa=ACESSO"));
+            assertTrue(line.contains("etapa=CONSULTAR_PARCELA"));
             assertTrue(line.contains("IllegalStateException"));
             assertFalse(line.contains("NAO_EXIBIR"));
         } finally {
@@ -166,7 +166,7 @@ class ContaAzulAutoWorkerTest {
         try {
             var i = item();
             when(state.proximo(reserva)).thenReturn(i);
-            when(state.cursor(reserva)).thenReturn(new ContaAzulAutoState.Cursor(ContaAzulFullScope.INICIO, ContaAzulFullScope.FIM, 0, 1, true));
+            when(state.cursor(reserva)).thenReturn(new ContaAzulAutoState.Cursor(ContaAzulFullScope.INICIO, LocalDate.of(2027, 12, 31), 0, 1, true));
             var raw = new com.fasterxml.jackson.databind.ObjectMapper().readTree("{}");
             when(details.consultarCompleto("access-teste", i.parcelaId)).thenReturn(new ContaAzulParcelDetailClient.Consulta(mock(ContaAzulParcelDetail.class), raw));
             doThrow(new IllegalStateException("password=NAO_EXIBIR")).when(state).arquivar(any(), any(), any(), any());
@@ -208,4 +208,65 @@ class ContaAzulAutoWorkerTest {
         verify(state).dividirPeriodoParcelas(reserva);
         verify(state, never()).falhar(any(), anyString(), anyBoolean());
     }
+
+    @Test void terceiraFalhaDeDetalheSegueParaProximoItem() {
+        var i = item();
+        when(state.proximo(reserva)).thenReturn(i, (ContaAzulAutoItem) null);
+        when(details.consultar(any(), any())).thenThrow(new ResponseStatusException(HttpStatus.BAD_GATEWAY));
+        when(state.falhaItem(reserva, i.id)).thenReturn(true);
+        worker.executar(7L);
+        verify(state).falhaItem(reserva, i.id);
+        verify(state).devolver(reserva, true);
+        verify(state, never()).falhar(any(), any(), anyBoolean());
+    }
+
+    @Test void primeiraFalhaDeDetalheAguardaAntesDeRepetir() {
+        var i = item(); when(state.proximo(reserva)).thenReturn(i);
+        when(details.consultar(any(), any())).thenThrow(new ResponseStatusException(HttpStatus.BAD_GATEWAY));
+        worker.executar(7L);
+        verify(state).falhaItem(reserva, i.id);
+        verify(state).falhar(eq(reserva), any(), eq(false));
+    }
+
+    @Test void recusa401RenovaUmaVezERepeteConsulta() {
+        var i = item(); when(state.proximo(reserva)).thenReturn(i, (ContaAzulAutoItem) null);
+        when(details.consultar(eq("access-teste"), any())).thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        when(access.renovarAposRecusa(7L, "access-teste")).thenReturn("novo-token");
+        worker.executar(7L);
+        verify(access).renovarAposRecusa(7L, "access-teste");
+        verify(details).consultar("novo-token", i.parcelaId);
+        verify(state, never()).falhaItem(any(), any());
+        verify(state).devolver(reserva, true);
+    }
+
+    @Test void segundaRecusa401PausaSemConsumirTentativasDaParcela() {
+        var i = item(); when(state.proximo(reserva)).thenReturn(i);
+        when(details.consultar(any(), any())).thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        when(access.renovarAposRecusa(any(), any())).thenReturn("novo-token");
+        doThrow(new ContaAzulReauthorizationRequired()).when(access).invalidar(7L);
+        worker.executar(7L);
+        verify(access).invalidar(7L);
+        verify(state, never()).falhaItem(any(), any());
+        verify(state, never()).falhar(any(), any(), anyBoolean());
+    }
+
+
+    @Test void duplicacaoDentroDaPaginaRepeteJanelaEmVezDeEncerrarExecucao() {
+        when(state.cursor(reserva)).thenReturn(new ContaAzulAutoState.Cursor(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), 0, 1));
+        when(financial.consultar(any(), any(), any(), any(), anyInt())).thenThrow(new ContaAzulFinancialClient.PaginaInstavel());
+        when(state.repetirPaginaInstavel(reserva)).thenReturn(true);
+        worker.executar(7L);
+        verify(state).repetirPaginaInstavel(reserva);
+        verify(state, never()).falhar(any(), any(), anyBoolean());
+    }
+
+
+    @Test void resumoAuditadoReutilizadoNaoConsultaDetalhes() {
+        var i = item(); when(state.proximo(reserva)).thenReturn(i, (ContaAzulAutoItem)null);
+        when(state.reutilizarResumo(reserva, i.id)).thenReturn(true);
+        worker.executar(7L);
+        verifyNoInteractions(details, access);
+        verify(state).devolver(reserva, true);
+    }
+
 }

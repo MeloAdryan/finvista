@@ -5,7 +5,7 @@ import java.time.LocalDate;
 import java.util.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -17,20 +17,15 @@ public class ContaAzulMovementClient {
     private final RestClient http;
 
     @Autowired
-    public ContaAzulMovementClient() {
-        this(criar());
-    }
+    public ContaAzulMovementClient(ContaAzulHttpTransport transport) { this(transport.client()); }
+
+    public ContaAzulMovementClient() { this(ContaAzulHttpTransport.shared()); }
 
     public ContaAzulMovementClient(RestClient http) {
         this.http = http;
     }
 
-    private static RestClient criar() {
-        var f = new SimpleClientHttpRequestFactory();
-        f.setConnectTimeout(5000);
-        f.setReadTimeout(20000);
-        return RestClient.builder().requestFactory(f).build();
-    }
+
 
     public Pagina consultar(String acesso, String tipo, LocalDate inicio, LocalDate fim, int pagina) {
         if (pagina < 1 || inicio == null || fim == null || fim.isBefore(inicio)) {

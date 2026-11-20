@@ -60,4 +60,20 @@ class ContaAzulTokenClientTest {
         assertThrows(IllegalStateException.class, () -> client.trocar("code"));
         server.verify();
     }
+
+    @Test void refreshInvalidGrantExigeNovaAutorizacaoSemVazarResposta() {
+        server.expect(requestTo(ContaAzulTokenClient.ENDPOINT)).andRespond(withBadRequest().body("{\"error\":\"invalid_grant\",\"error_description\":\"SECRET\"}"));
+        var e = assertThrows(ContaAzulReauthorizationRequired.class, () -> client.renovar("refresh-old"));
+        assertFalse(e.toString().contains("SECRET"));
+        assertNull(e.getCause());
+        server.verify();
+    }
+
+    @Test void falhaTemporariaDoRefreshNaoRevogaConexao() {
+        server.expect(requestTo(ContaAzulTokenClient.ENDPOINT)).andRespond(withServerError());
+        var e = assertThrows(IllegalStateException.class, () -> client.renovar("refresh-old"));
+        assertFalse(e instanceof ContaAzulReauthorizationRequired);
+        server.verify();
+    }
+
 }

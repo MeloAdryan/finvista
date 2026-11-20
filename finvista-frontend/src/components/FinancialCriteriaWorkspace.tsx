@@ -1,3 +1,4 @@
+import FinancialSyncHealth from "./FinancialSyncHealth";
 import {
   useCallback,
   useEffect,
@@ -98,7 +99,10 @@ export default function FinancialCriteriaWorkspace({
   useEffect(() => {
     if (!enabled || projection) return;
     const c = new AbortController();
-    void getFinancialView({ ...scopedFilter, categoria: "", centro: "" }, c.signal)
+    void getFinancialView(
+      { ...scopedFilter, categoria: "", centro: "" },
+      c.signal,
+    )
       .then((data) => {
         if (!c.signal.aborted) {
           setMetadata({ filter: scopedFilter, data });
@@ -130,6 +134,11 @@ export default function FinancialCriteriaWorkspace({
   return (
     <FinancialViewContext.Provider value={scopedFilter}>
       <FinancialViewUpdateContext.Provider value={update}>
+        <FinancialSyncHealth
+          clienteId={clienteId}
+          consolidado={consolidado}
+          usuarioAtendido={usuarioAtendido}
+        />
         {page === "dashboard" && (
           <header className="exec-compact-header">
             <div>

@@ -10,15 +10,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ContaAzulConnectionService {
 
-    public record Status(Long clienteId, boolean habilitado, boolean configurado, boolean conectado, Instant expiraEm, String mensagem) {}
+    public record Status(Long clienteId, boolean habilitado, boolean configurado, boolean conectado, Instant expiraEm, String mensagem, String status, String ultimoErro) {}
     private final ContaAzulProperties p;
     private final ContaAzulConfiguration cfg;
     private final ContaAzulTokenCipher cipher;
     private final ContaAzulTokenClient tokens;
     private final ContaAzulConnectionRepository repo;
     private final ClienteContextService context;
+    private final ContaAzulAutoAccess automatico;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.finvista.repository.ContaAzulAutoConfigRepository automacoes;
 
     public ContaAzulConnectionService(ContaAzulProperties p, ContaAzulConfiguration cfg, ContaAzulTokenCipher cipher, ContaAzulTokenClient tokens, ContaAzulConnectionRepository repo, ClienteContextService context) {
+        this(p, cfg, cipher, tokens, repo, context, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ContaAzulConnectionService(ContaAzulProperties p, ContaAzulConfiguration cfg, ContaAzulTokenCipher cipher, ContaAzulTokenClient tokens, ContaAzulConnectionRepository repo, ClienteContextService context, ContaAzulAutoAccess automatico) {
+        this.automatico = automatico;
         this.p = p;
         this.cfg = cfg;
         this.cipher = cipher;
@@ -32,7 +41,7 @@ public class ContaAzulConnectionService {
         context.validarAdministrador();
         Long id = context.getClienteAtualId();
         var c = repo.findById(id).orElse(null);
-        return new Status(id, p.isEnabled(), cfg.pronta(), c != null, c == null ? null : c.getExpiresAt(), !p.isEnabled() ? "Conexão desabilitada; importação por arquivo disponível." : !cfg.pronta() ? "Configure as credenciais, callback e chave no backend." : c == null ? "A empresa ainda não autorizou a conexão." : "Autorização armazenada. Acompanhe a automação e as pendências no painel de sincronização.");
+        return new Status(id, p.isEnabled(), cfg.pronta(), c != null && !"REAUTORIZAR".equals(c.getStatus()), c == null ? null : c.getExpiresAt(), !p.isEnabled() ? "Conexão desabilitada; importação por arquivo disponível." : !cfg.pronta() ? "Configure as credenciais, callback e chave no backend." : c == null ? "A empresa ainda não autorizou a conexão." : "REAUTORIZAR".equals(c.getStatus()) ? c.getUltimoErro() : "Autorização armazenada. Acompanhe a automação e as pendências no painel de sincronização.", c == null ? "NAO_CONECTADA" : c.getStatus(), c == null ? null : c.getUltimoErro());
     }
 
     @Transactional
@@ -44,17 +53,19 @@ public class ContaAzulConnectionService {
 
         }
         var t = tokens.trocar(code);
+        if(automacoes!=null) automacoes.bloquear(clienteId);
         var c = repo.bloquear(clienteId).orElseGet(() -> new ContaAzulConnection(clienteId));
         salvar(c, t);
+        c.exigirConfirmacaoEmpresa();
+        if(automacoes!=null) automacoes.bloquear(clienteId).ifPresent(a -> { a.habilitada=false; a.proximaEm=null; a.dono=null; a.reservaAte=null; });
     }
 
-    @Transactional
     public Status renovar() {
         context.validarAdministrador();
         cfg.exigirAtiva();
         Long id = context.getClienteAtualId();
-        var c = repo.bloquear(id).orElseThrow(() -> new IllegalArgumentException("Empresa ainda não conectada."));
-        salvar(c, tokens.renovar(cipher.decifrar(c.getRefreshCipher(), id, "refresh")));
+        automatico.renovarAgora(id);
+        if (!id.equals(context.getClienteAtualId())) throw new IllegalArgumentException("A empresa selecionada mudou. Atualize a consulta.");
         return status();
     }
 
@@ -64,21 +75,17 @@ public class ContaAzulConnectionService {
         repo.saveAndFlush(c);
     }
 
-     
 
-    @Transactional(readOnly = true)
+
     public String acessoParaConsulta(Long clienteEsperado) {
-    context.validarAdministrador();
+        context.validarAdministrador();
         cfg.exigirAtiva();
         Long id = context.getClienteAtualId();
-        if (!id.equals(clienteEsperado)) {
-
-    throw new IllegalArgumentException("A empresa selecionada mudou. Atualize a consulta.");
-        }
-        var c = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("Autorize esta empresa na Conta Azul antes de consultar."));
-        if (c.getExpiresAt() == null || !c.getExpiresAt().isAfter(Instant.now().plusSeconds(30))) {
-            throw new IllegalArgumentException("O acesso precisa ser renovado. Use Renovar acesso no painel da conexão.");
-        }
-        return cipher.decifrar(c.getAccessCipher(), id, "access");
+        if (!id.equals(clienteEsperado)) throw new IllegalArgumentException("A empresa selecionada mudou. Atualize a consulta.");
+        var conexao = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("Autorize esta empresa na Conta Azul antes de consultar."));
+        if(conexao.getEmpresaConfirmadaEm()==null) throw new IllegalArgumentException("Verifique e confirme a empresa na conexão Conta Azul antes de consultar seus dados financeiros.");
+        String token = automatico.acesso(id);
+        if (!id.equals(context.getClienteAtualId())) throw new IllegalArgumentException("A empresa selecionada mudou. Atualize a consulta.");
+        return token;
     }
 }

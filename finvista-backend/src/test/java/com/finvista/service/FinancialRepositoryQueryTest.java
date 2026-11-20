@@ -32,6 +32,11 @@ class FinancialRepositoryQueryTest {
                         }
                     }
                 }
+                for (var query : com.finvista.repository.FinancialTransactionRepository.class.getMethods()) {
+                    var annotation = query.getAnnotation(Query.class);
+                    if (annotation != null && !annotation.nativeQuery())
+                        assertNotNull(factory.getQueryEngine().getHqlTranslator().translate(annotation.value(), null));
+                }
                 var method = ContaAzulAutoItemRepository.class.getMethod("findTerminalByCliente", Long.class);
                 String hql = method.getAnnotation(Query.class).value();
                 assertNotNull(factory.getQueryEngine().getHqlTranslator().translate(hql, com.finvista.model.ContaAzulAutoItem.class));

@@ -121,7 +121,13 @@ class ContaAzulParcelDetailClientTest {
         var e = assertThrows(ResponseStatusException.class, this::query);
         assertEquals(expected, e.getStatusCode().value());
         assertFalse(e.getMessage().contains("private-token"));
-        assertNull(e.getCause());
+        if (status == HttpStatus.UNAUTHORIZED || status == HttpStatus.FORBIDDEN || status == HttpStatus.TOO_MANY_REQUESTS) {
+            assertNotNull(e.getCause());
+            assertTrue(ContaAzulAutoDiagnostic.http(e, status.value()));
+            assertFalse(e.getCause().toString().contains("private-token"));
+        } else {
+            assertNull(e.getCause());
+        }
         server.verify();
     }
 

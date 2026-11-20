@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.time.*;
 import java.util.UUID;
 
-@ Entity 
+@ Entity
 
     @Table(name = "conta_azul_auto_execucoes")
     public class ContaAzulAutoRun {
@@ -70,4 +70,16 @@ import java.util.UUID;
         public int mantidas;
         @Column(name = "pendentes")
         public int pendentes;
-    }
+
+        @Column(name = "parcelas_ids_janela", columnDefinition = "text")
+        public String parcelasIdsJanela;
+        @Column(name = "parcelas_janela_instavel")
+        public Boolean parcelasJanelaInstavel;
+        @Column(name = "parcelas_repeticoes_janela")
+        public Integer parcelasRepeticoesJanela;
+
+
+    @Column(name="conferencia_status",length=40) public String conferenciaStatus;
+    @Column(name="conferencia_json",columnDefinition="text") public String conferenciaJson;
+    @Column(name="conferido_em") public Instant conferidoEm;
+}

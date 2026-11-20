@@ -215,7 +215,9 @@ class ContaAzulAutoStateTest {
     @Test
     void rejeitaPaginaCurtaQuePoderiaOcultarDados() {
         var r = state.assumir(7L);
-        assertThrows(ResponseStatusException.class, () -> state.pagina(r, new ContaAzulFinancialClient.Pagina(101, List.of(resumo(id)))));
+        state.pagina(r, new ContaAzulFinancialClient.Pagina(101, List.of(resumo(id))));
+        assertEquals(1, atual().pagina);
+        assertEquals(1, atual().parcelasRepeticoesJanela);
         assertTrue(fila.isEmpty());
     }
 
@@ -265,7 +267,8 @@ class ContaAzulAutoStateTest {
         state.pagina(r, new ContaAzulFinancialClient.Pagina(101, page));
         state.pagina(r, new ContaAzulFinancialClient.Pagina(101, List.of(page.get(0))));
         assertEquals(100, fila.size());
-        assertTrue(atual().listagemMudou);
+        assertFalse(atual().listagemMudou);
+        assertEquals(1, atual().parcelasRepeticoesJanela);
     }
 
     @Test
@@ -419,13 +422,13 @@ class ContaAzulAutoStateTest {
         assertEquals(Boolean.TRUE,config.sincronizacaoCompleta);
         assertEquals(Boolean.FALSE,config.periodoMovel);
         assertEquals(ContaAzulFullScope.INICIO,config.inicio);
-        assertEquals(ContaAzulFullScope.FIM,config.fim);
+        assertEquals(ContaAzulFullScope.fim(clock),config.fim);
         assertTrue(state.status(7L,1).configuracao().sincronizacaoCompleta());
     }
 
     @Test
     void modoCompletoReconsultaVinculoAntigoMesmoSemVencimento() {
-        config.sincronizacaoCompleta=true;
+        config.sincronizacaoCompleta=true;config.fim=ContaAzulFullScope.fim(clock);
         var t=new FinancialTransaction();t.setOrigem("CONTA_AZUL_API");t.setDocumentoReferencia(id);t.setTipo("RECEITA");
         when(tx.findByClienteIdAndOrigemOrderByIdAsc(7L,"CONTA_AZUL_API")).thenReturn(List.of(t));
         var reserva=state.assumir(7L);
@@ -439,7 +442,7 @@ class ContaAzulAutoStateTest {
         var archive=mock(ContaAzulSourceCaptureRepository.class);
         var mapper=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
         ReflectionTestUtils.setField(state,"fontes",archive);ReflectionTestUtils.setField(state,"json",mapper);
-        config.sincronizacaoCompleta=true;var reserva=state.assumir(7L);
+        config.sincronizacaoCompleta=true;config.fim=ContaAzulFullScope.fim(clock);var reserva=state.assumir(7L);
         // This test isolates stage completion over one window; full-range coverage is tested below.
         execucoes.get(reserva.execucaoId()).inicio=LocalDate.of(2026,9,1);
         execucoes.get(reserva.execucaoId()).fim=LocalDate.of(2026,9,30);
@@ -462,7 +465,7 @@ class ContaAzulAutoStateTest {
         var archive=mock(ContaAzulSourceCaptureRepository.class);
         var mapper=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
         ReflectionTestUtils.setField(state,"fontes",archive);ReflectionTestUtils.setField(state,"json",mapper);
-        config.sincronizacaoCompleta=true;var reserva=state.assumir(7L);
+        config.sincronizacaoCompleta=true;config.fim=ContaAzulFullScope.fim(clock);var reserva=state.assumir(7L);
         var body=mapper.readTree("{\"id\":\"parcela\",\"campo_extra\":\"preservado\"}");
         state.arquivar(reserva,"PARCELA",id,body);state.arquivar(reserva,"PARCELA",id,body);
         var captor=org.mockito.ArgumentCaptor.forClass(ContaAzulSourceCapture.class);verify(archive,times(2)).saveAndFlush(captor.capture());
@@ -480,7 +483,7 @@ class ContaAzulAutoStateTest {
         var archive=mock(ContaAzulSourceCaptureRepository.class);
         var mapper=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
         ReflectionTestUtils.setField(state,"fontes",archive);ReflectionTestUtils.setField(state,"json",mapper);
-        config.sincronizacaoCompleta=true;var reserva=state.assumir(7L);var r=execucoes.get(reserva.execucaoId());
+        config.sincronizacaoCompleta=true;config.fim=ContaAzulFullScope.fim(clock);var reserva=state.assumir(7L);var r=execucoes.get(reserva.execucaoId());
         r.inicio=inicio;r.fim=fim;r.etapa=2;
         return new MovimentoFixture(reserva,r,archive,mapper);
     }
@@ -490,9 +493,9 @@ class ContaAzulAutoStateTest {
         return new ContaAzulMovementClient.Pagina(total,rows,raw);
     }
     @Test void janelaInicialPreservaAlcanceCompletoAutorizado() {
-        var f=movimentos(ContaAzulFullScope.INICIO,ContaAzulFullScope.FIM);var cursor=state.cursor(f.reserva());
+        var f=movimentos(ContaAzulFullScope.INICIO,LocalDate.of(2027, 12, 31));var cursor=state.cursor(f.reserva());
         assertEquals(ContaAzulFullScope.INICIO,cursor.inicio());assertEquals(ContaAzulFullScope.INICIO.plusDays(29),cursor.fim());
-        assertEquals(ContaAzulFullScope.INICIO,f.run().inicio);assertEquals(ContaAzulFullScope.FIM,f.run().fim);
+        assertEquals(ContaAzulFullScope.INICIO,f.run().inicio);assertEquals(LocalDate.of(2027, 12, 31),f.run().fim);
     }
     @Test void paginaDentroDaJanelaAvancaAntesDeMudarPeriodo() {
         var f=movimentos(LocalDate.of(2026,9,1),LocalDate.of(2026,10,31));
@@ -530,7 +533,7 @@ class ContaAzulAutoStateTest {
         assertEquals(3,state.cursor(f.reserva()).etapa());assertEquals(LocalDate.of(2026,9,30),state.cursor(f.reserva()).fim());
     }
     @Test void planejamentoCompletoCobreTodosOsDiasSemLacunasNemSobreposicao() {
-        var r=new ContaAzulAutoRun();r.inicio=ContaAzulFullScope.INICIO;r.fim=ContaAzulFullScope.FIM;r.pagina=1;
+        var r=new ContaAzulAutoRun();r.inicio=ContaAzulFullScope.INICIO;r.fim=LocalDate.of(2027, 12, 31);r.pagina=1;
         long dias=0;int janelas=0;LocalDate esperado=r.inicio;
         while(true){var janela=ContaAzulAutoState.janelaMovimentos(r);assertEquals(esperado,janela.inicio());long tamanho=java.time.temporal.ChronoUnit.DAYS.between(janela.inicio(),janela.fim())+1;assertTrue(tamanho>=1&&tamanho<=30);dias+=tamanho;assertTrue(++janelas<5000);if(janela.fim().equals(r.fim))break;esperado=janela.fim().plusDays(1);r.movimentoInicio=esperado;}
         assertEquals(java.time.temporal.ChronoUnit.DAYS.between(r.inicio,r.fim)+1,dias);
@@ -553,14 +556,14 @@ class ContaAzulAutoStateTest {
         assertEquals(LocalDate.of(2026,11,2),f.run().movimentosEscopoFim);verifyNoInteractions(f.archive());
     }
     @Test void novasListagensDeParcelasPreservamFuturasESeparamMovimentos() {
-        var f=movimentos(ContaAzulFullScope.INICIO,ContaAzulFullScope.FIM);f.run().etapa=1;
+        var f=movimentos(ContaAzulFullScope.INICIO,LocalDate.of(2027, 12, 31));f.run().etapa=1;
         assertEquals(LocalDate.of(2000,1,1),state.cursor(f.reserva()).inicio());assertEquals(LocalDate.of(2027,12,31),state.cursor(f.reserva()).fim());
         assertTrue(LocalDate.of(2027,3,16).isBefore(state.cursor(f.reserva()).fim()));
         assertTrue(LocalDate.of(2028,1,1).isAfter(state.cursor(f.reserva()).fim()));
         f.run().etapa=2;state.cursor(f.reserva());assertEquals(LocalDate.of(2026,11,2),f.run().movimentosEscopoFim);assertEquals(LocalDate.of(2027,12,31),f.run().fim);
     }
     @Test void dataFinalDaColetaFicaCongeladaAposMudancaDeDia() {
-        var f=movimentos(ContaAzulFullScope.INICIO,ContaAzulFullScope.FIM);state.cursor(f.reserva());
+        var f=movimentos(ContaAzulFullScope.INICIO,LocalDate.of(2027, 12, 31));state.cursor(f.reserva());
         var fim=f.run().movimentosEscopoFim;state.devolver(f.reserva(),false);agora=agora.plusSeconds(86400);
         var outra=state.assumir(7L);state.cursor(outra);assertEquals(f.reserva().execucaoId(),outra.execucaoId());assertEquals(fim,f.run().movimentosEscopoFim);
     }
@@ -575,7 +578,7 @@ class ContaAzulAutoStateTest {
         var c=state.cursor(f.reserva());assertEquals(3,c.etapa());assertEquals(LocalDate.of(2000,1,1),c.inicio());verifyNoInteractions(f.archive());
     }
     @Test void ultimaJanelaRecortaNaDataFixaAntesDeIniciarSaldos() {
-        var f=movimentos(ContaAzulFullScope.INICIO,ContaAzulFullScope.FIM);f.run().movimentoInicio=LocalDate.of(2026,10,20);
+        var f=movimentos(ContaAzulFullScope.INICIO,LocalDate.of(2027, 12, 31));f.run().movimentoInicio=LocalDate.of(2026,10,20);
         assertEquals(LocalDate.of(2026,11,2),state.cursor(f.reserva()).fim());
         state.paginaMovimentos(f.reserva(),paginaMov(f,0,0));assertEquals(3,state.cursor(f.reserva()).etapa());assertEquals(LocalDate.of(2000,1,1),state.cursor(f.reserva()).inicio());
         var captor=org.mockito.ArgumentCaptor.forClass(ContaAzulSourceCapture.class);verify(f.archive()).saveAndFlush(captor.capture());assertEquals("periodo:2026-10-20:2026-11-02:pagina:1",captor.getValue().chave);
@@ -585,11 +588,11 @@ class ContaAzulAutoStateTest {
         assertEquals(LocalDate.of(2029,1,1),f.run().inicio);assertEquals(LocalDate.of(2030,1,1),f.run().fim);
     }
     @Test void escopoPersistidoIncompletoFalhaSemReescreverDados() {
-        var f=movimentos(ContaAzulFullScope.INICIO,ContaAzulFullScope.FIM);f.run().movimentosEscopoInicio=LocalDate.of(2000,1,1);
+        var f=movimentos(ContaAzulFullScope.INICIO,LocalDate.of(2027, 12, 31));f.run().movimentosEscopoInicio=LocalDate.of(2000,1,1);
         assertThrows(IllegalStateException.class,()->state.cursor(f.reserva()));verifyNoInteractions(f.archive());
     }
     private ContaAzulAutoState.Reserva incremental() {
-        config.sincronizacaoCompleta=true;
+        config.sincronizacaoCompleta=true;config.fim=ContaAzulFullScope.fim(clock);
         config.alteracoesConfirmadasAte=agora.minusSeconds(3600);
         config.historicoRevisadoEm=agora.minusSeconds(86400);
         return state.assumir(7L);
@@ -598,17 +601,17 @@ class ContaAzulAutoStateTest {
         var res=incremental();var run=execucoes.get(res.execucaoId());var cursor=state.cursor(res);
         assertTrue(run.incremental);assertEquals(agora.minusSeconds(3600+2*86400),cursor.alteracoesDesde());
         assertEquals(agora,cursor.alteracoesAte());
-        assertEquals(ContaAzulFullScope.INICIO,cursor.inicio());assertEquals(ContaAzulFullScope.FIM,cursor.fim());
+        assertEquals(ContaAzulFullScope.INICIO,cursor.inicio());assertEquals(ContaAzulFullScope.fim(clock),cursor.fim());
         verify(tx,never()).findByClienteIdAndOrigemOrderByIdAsc(anyLong(),anyString());
     }
     @Test void cargaHistoricaConcluidaEstabelecePrimeiroMarcoMesmoComPendencias() {
-        config.sincronizacaoCompleta=true;var res=state.assumir(7L);var run=execucoes.get(res.execucaoId());
+        config.sincronizacaoCompleta=true;config.fim=ContaAzulFullScope.fim(clock);var res=state.assumir(7L);var run=execucoes.get(res.execucaoId());
         run.etapa=4;run.pendentes=2;agora=agora.plusSeconds(60);state.devolver(res,true);
         assertEquals(run.criadoEm,config.alteracoesConfirmadasAte);assertEquals(agora,config.historicoRevisadoEm);
         assertEquals("CONCLUIDA_COM_PENDENCIAS",run.status);
     }
     @Test void historicoVencidoForcaNovaRevisaoCompleta() {
-        config.sincronizacaoCompleta=true;config.alteracoesConfirmadasAte=agora.minusSeconds(3600);
+        config.sincronizacaoCompleta=true;config.fim=ContaAzulFullScope.fim(clock);config.alteracoesConfirmadasAte=agora.minusSeconds(3600);
         config.historicoRevisadoEm=agora.minusSeconds(7*86400);
         var res=state.assumir(7L);assertFalse(execucoes.get(res.execucaoId()).incremental);
         assertNull(state.cursor(res).alteracoesDesde());
@@ -641,7 +644,7 @@ class ContaAzulAutoStateTest {
         var res=incremental();assertEquals(1,fila.size());assertEquals(id,state.proximo(res).parcelaId);
     }
     @Test void legadoEmAndamentoMantemIdEtapaEAlcance() {
-        config.sincronizacaoCompleta=true;var res=state.assumir(7L);var run=execucoes.get(res.execucaoId());run.etapa=1;
+        config.sincronizacaoCompleta=true;config.fim=ContaAzulFullScope.fim(clock);var res=state.assumir(7L);var run=execucoes.get(res.execucaoId());run.etapa=1;
         state.devolver(res,false);config.alteracoesConfirmadasAte=agora.minusSeconds(3600);config.historicoRevisadoEm=agora;
         var again=state.assumir(7L);assertEquals(res.execucaoId(),again.execucaoId());assertFalse(run.incremental);
         assertEquals(1,state.cursor(again).etapa());assertNull(state.cursor(again).alteracoesDesde());
@@ -651,7 +654,7 @@ class ContaAzulAutoStateTest {
         assertNull(config.alteracoesConfirmadasAte);assertNull(config.historicoRevisadoEm);
     }
     @Test void fontesAuxiliaresIncrementaisUsamJanelaRecenteCongelada() throws Exception {
-        var f=movimentos(ContaAzulFullScope.INICIO,ContaAzulFullScope.FIM);
+        var f=movimentos(ContaAzulFullScope.INICIO,LocalDate.of(2027, 12, 31));
         f.run().incremental=true;f.run().alteracoesDesde=Instant.parse("2026-10-29T12:00:00Z");f.run().alteracoesAte=Instant.parse("2026-10-31T12:00:00Z");
         var c=state.cursor(f.reserva());assertEquals(LocalDate.of(2026,10,29),c.inicio());assertEquals(LocalDate.of(2026,10,31),c.fim());
     }
@@ -726,13 +729,13 @@ class ContaAzulAutoStateTest {
         assertEquals(run.fim.plusDays(1), proxima);
         assertEquals(2, run.etapa);
     }
-    @Test void novaSincronizacaoCompletaLimitaParcelasEm2027() {
+    @Test void novaSincronizacaoCompletaUsaHorizonteDeCincoAnos() {
         config.sincronizacaoCompleta = true;
         config.inicio = LocalDate.of(2000, 1, 1);
         config.fim = LocalDate.of(2200, 12, 31);
         var reserva = state.assumir(7L);
-        assertEquals(LocalDate.of(2027, 12, 31), state.cursor(reserva).fim());
-        assertEquals(LocalDate.of(2027, 12, 31), config.fim);
+        assertEquals(LocalDate.of(2031, 10, 17), state.cursor(reserva).fim());
+        assertEquals(LocalDate.of(2031, 10, 17), config.fim);
     }
 
     @Test void retomadaDeReceitasEm2051IniciaDespesasSemPerderContadores() {
@@ -748,7 +751,7 @@ class ContaAzulAutoStateTest {
         assertEquals(LocalDate.of(2000, 1, 1), cursor.inicio());
         assertEquals(1395, run.incluidas);
         assertEquals(reserva.execucaoId(), run.id);
-        assertEquals(LocalDate.of(2027, 12, 31), run.fim);
+        assertEquals(LocalDate.of(2031, 10, 17), run.fim);
     }
 
     @Test void retomadaDeDespesasEm2051AvancaParaTransferencias() {
@@ -761,25 +764,176 @@ class ContaAzulAutoStateTest {
         run.parcelaInicio = LocalDate.of(2051, 12, 19);
         assertEquals(2, state.cursor(reserva).etapa());
         assertNull(run.parcelaInicio);
-        assertEquals(LocalDate.of(2027, 12, 31), run.fim);
+        assertEquals(LocalDate.of(2031, 10, 17), run.fim);
     }
 
-    @Test void ultimaJanelaDe2027NaoPulaPaginaEmAndamento() {
+    @Test void ultimaJanelaDoHorizonteNaoPulaPaginaEmAndamento() {
         config.sincronizacaoCompleta = true;
         var reserva = state.assumir(7L);
         var run = atual();
         run.fim = LocalDate.of(2200, 12, 31);
         run.parcelasEmJanelas = true;
-        run.parcelaInicio = LocalDate.of(2027, 6, 1);
+        run.parcelaInicio = LocalDate.of(2031, 6, 1);
         run.pagina = 2;
         run.totalEsperado = 101;
-        assertEquals(LocalDate.of(2028, 5, 30), state.cursor(reserva).fim());
+        assertEquals(LocalDate.of(2032, 5, 30), state.cursor(reserva).fim());
         assertEquals(2, state.cursor(reserva).pagina());
         state.pagina(reserva, new ContaAzulFinancialClient.Pagina(101, List.of(resumo(id))));
-        assertEquals(1, state.cursor(reserva).etapa());
-        assertEquals(LocalDate.of(2000, 1, 1), state.cursor(reserva).inicio());
-        assertEquals(LocalDate.of(2027, 12, 31), run.fim);
+        assertEquals(0, state.cursor(reserva).etapa());
+        assertEquals(LocalDate.of(2031, 6, 1), state.cursor(reserva).inicio());
+        assertEquals(LocalDate.of(2031, 10, 17), run.fim);
         assertEquals(1, fila.size());
     }
 
+
+    @Test void tresFalhasDeItemViramConferenciaSemApagarFila() {
+        var reserva = comItem();
+        var item = state.proximo(reserva);
+        assertFalse(state.falhaItem(reserva, item.id));
+        assertFalse(state.falhaItem(reserva, item.id));
+        assertTrue(state.falhaItem(reserva, item.id));
+        assertEquals(3, item.tentativas);
+        assertEquals("CONFERIR", item.status);
+        assertEquals(1, atual().pendentes);
+        assertNull(state.proximo(reserva));
+        assertTrue(state.falhaItem(reserva, item.id));
+        assertEquals(1, atual().pendentes);
+    }
+
+    @Test void janelaInstavelEhRefeitaSemDuplicarFilaNemMarcarTodaExecucao() {
+        var reserva = state.assumir(7L);
+        var primeira = new ArrayList<ContaAzulFinancialClient.Parcela>();
+        for (int n = 1; n <= 100; n++) primeira.add(resumo(new UUID(0, n).toString()));
+        state.pagina(reserva, new ContaAzulFinancialClient.Pagina(101, primeira));
+        state.pagina(reserva, new ContaAzulFinancialClient.Pagina(101, List.of(primeira.get(0))));
+        assertEquals(0, atual().etapa);
+        assertEquals(1, atual().pagina);
+        state.devolver(reserva, false);
+        reserva = state.assumir(7L); // evidence/retry survive another worker lease.
+        state.pagina(reserva, new ContaAzulFinancialClient.Pagina(101, primeira));
+        state.pagina(reserva, new ContaAzulFinancialClient.Pagina(101, List.of(resumo(new UUID(0, 101).toString()))));
+        assertEquals(101, fila.size());
+        assertEquals(1, atual().etapa);
+        assertFalse(atual().listagemMudou);
+        assertNull(atual().parcelasIdsJanela);
+    }
+
+    @Test void mudancaDoTotalRepeteSomenteJanelaAtualELimitaTentativas() {
+        var reserva = state.assumir(7L);
+        var primeira = new ArrayList<ContaAzulFinancialClient.Parcela>();
+        for (int n = 1; n <= 100; n++) primeira.add(resumo(new UUID(0, n).toString()));
+        for (int tentativa = 0; tentativa < 2; tentativa++) {
+            state.pagina(reserva, new ContaAzulFinancialClient.Pagina(101, primeira));
+            state.pagina(reserva, new ContaAzulFinancialClient.Pagina(100, List.of()));
+            assertEquals(0, atual().etapa);
+            assertEquals(1, atual().pagina);
+        }
+        state.pagina(reserva, new ContaAzulFinancialClient.Pagina(101, primeira));
+        state.pagina(reserva, new ContaAzulFinancialClient.Pagina(100, List.of()));
+        assertEquals("AGUARDANDO_REPETICAO", atual().status);
+        assertEquals(agora.plusSeconds(300), config.proximaEm);
+        assertEquals(0, atual().etapa);
+        assertEquals(1, atual().pagina);
+        assertNull(config.dono);
+        assertNull(config.alteracoesConfirmadasAte);
+    }
+
+    @Test void janelaDe365DiasInclui2028ESemConsultasAlemDoHorizonte() {
+        config.sincronizacaoCompleta = true;
+        var reserva = state.assumir(7L);
+        var run = atual();
+        assertTrue(state.dividirPeriodoParcelas(reserva));
+        reserva = state.assumir(7L);
+        boolean encontrou2028 = false;
+        int consultas = 0;
+        while (state.cursor(reserva).etapa() < 2) {
+            var janela = state.cursor(reserva);
+            assertFalse(janela.fim().isAfter(LocalDate.of(2031, 10, 17)));
+            if (!janela.inicio().isAfter(LocalDate.of(2028, 1, 1)) && !janela.fim().isBefore(LocalDate.of(2028, 1, 1))) encontrou2028 = true;
+            state.pagina(reserva, new ContaAzulFinancialClient.Pagina(0, List.of()));
+            assertTrue(++consultas < 100);
+        }
+        assertTrue(encontrou2028);
+        assertEquals(LocalDate.of(2031, 10, 17), run.fim);
+    }
+
+
+    @Test void ampliacaoDoHorizonteExigeHistoricoAntesDeUsarMarcaAntiga() {
+        config.sincronizacaoCompleta = true;
+        config.fim = LocalDate.of(2027, 12, 31);
+        config.alteracoesConfirmadasAte = agora.minusSeconds(3600);
+        config.historicoRevisadoEm = agora.minusSeconds(3600);
+        state.assumir(7L);
+        assertFalse(atual().incremental);
+        assertNull(config.alteracoesConfirmadasAte);
+        assertNull(config.historicoRevisadoEm);
+        assertEquals(LocalDate.of(2031, 10, 17), atual().fim);
+    }
+
+    @Test void retryAfterPrevaleceSobreBackoffPadrao() {
+        var reserva = state.assumir(7L);
+        state.falhar(reserva, "Limite da origem", false, agora.plusSeconds(60));
+        assertEquals(agora.plusSeconds(60), config.proximaEm);
+        assertEquals("AGUARDANDO_REPETICAO", atual().status);
+    }
+
+
+    private ContaAzulAutoState.Reserva filaIncrementalComResumo(boolean versao) throws Exception {
+        var json = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        ReflectionTestUtils.setField(state, "json", json);
+        var reserva = incremental();
+        var resumo = new ContaAzulFinancialClient.Parcela(id, "Venda", LocalDate.of(2026,10,21), LocalDate.of(2026,9,21),
+                "PENDENTE", null, new java.math.BigDecimal("100"), java.math.BigDecimal.ZERO, new java.math.BigDecimal("100"),
+                List.of(), List.of(), versao ? "2026-10-17T09:00:00" : null);
+        state.pagina(reserva, new ContaAzulFinancialClient.Pagina(1, List.of(resumo)));
+        return reserva;
+    }
+
+    private ContaAzulAutoItem detalheAnterior(ContaAzulAutoItem atual) {
+        var antigo = new ContaAzulAutoItem(); antigo.id = UUID.randomUUID(); antigo.clienteId=7L;
+        antigo.parcelaId=id; antigo.status="ATUALIZAR"; antigo.lancamentoId=99L;
+        antigo.resumoJson=atual.resumoJson; antigo.resumoBancoHash="banco"; antigo.resumoFonteHash="fonte";
+        antigo.resumoVerificadoEm=agora.minusSeconds(3600); antigo.concluidoEm=agora.minusSeconds(1800);
+        when(itens.findFirstByClienteIdAndParcelaIdAndStatusInOrderByConcluidoEmDescIdDesc(eq(7L),eq(id),anyCollection())).thenReturn(Optional.of(antigo));
+        when(sync.resumoReutilizavel(any())).thenReturn(true);
+        when(sync.cacheConfere(7L,id,"banco","fonte")).thenReturn(true);
+        return antigo;
+    }
+
+    @Test void resumoComMesmaVersaoReutilizaAuditoriaSemEstenderPrazo() throws Exception {
+        var reserva=filaIncrementalComResumo(true); var atual=state.proximo(reserva); var antigo=detalheAnterior(atual);
+        assertTrue(state.reutilizarResumo(reserva,atual.id));
+        assertEquals("SEM_ALTERACAO",atual.status); assertEquals(antigo.id,atual.reutilizadoDe);
+        assertEquals(antigo.resumoVerificadoEm,atual.resumoVerificadoEm);
+        assertEquals(1,execucoes.get(reserva.execucaoId()).mantidas);
+    }
+    @Test void semVersaoNaListagemNaoReutilizaSomentePeloTotal() throws Exception {
+        var reserva=filaIncrementalComResumo(false);var atual=state.proximo(reserva);
+        assertFalse(state.reutilizarResumo(reserva,atual.id));assertEquals("EM_FILA",atual.status);
+        verify(sync,never()).cacheConfere(any(),any(),any(),any());
+    }
+    @Test void alteracaoNaOrigemMesmoComTotaisIguaisExigeDetalhe() throws Exception {
+        var reserva=filaIncrementalComResumo(true);var atual=state.proximo(reserva);detalheAnterior(atual);
+        atual.resumoJson=atual.resumoJson.replace("2026-10-17T09:00:00","2026-10-17T10:00:00");
+        assertFalse(state.reutilizarResumo(reserva,atual.id));
+        verify(sync,never()).cacheConfere(any(),any(),any(),any());
+    }
+    @Test void detalheComMaisDe24HorasNaoRenovaValidadeViaCache() throws Exception {
+        var reserva=filaIncrementalComResumo(true);var atual=state.proximo(reserva);var antigo=detalheAnterior(atual);
+        antigo.resumoVerificadoEm=agora.minusSeconds(86401);
+        assertFalse(state.reutilizarResumo(reserva,atual.id));assertEquals("EM_FILA",atual.status);
+    }
+    @Test void edicaoLocalDepoisDoDetalheImpedeReutilizacao() throws Exception {
+        var reserva=filaIncrementalComResumo(true);var atual=state.proximo(reserva);detalheAnterior(atual);
+        when(sync.cacheConfere(7L,id,"banco","fonte")).thenReturn(false);
+        assertFalse(state.reutilizarResumo(reserva,atual.id));assertEquals("EM_FILA",atual.status);
+    }
+
+
+    @Test void empresaSemIdentidadeConfirmadaNaoAssumeAutomacao() {
+        var identities=mock(ContaAzulConnectionRepository.class);
+        when(identities.findById(7L)).thenReturn(Optional.of(new ContaAzulConnection(7L)));
+        ReflectionTestUtils.setField(state,"identityConnections",identities);
+        assertNull(state.assumir(7L));assertFalse(config.habilitada);
+    }
 }

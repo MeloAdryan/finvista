@@ -1,0 +1,54 @@
+.sync-health {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--fv-border, #e5e2dc);
+  border-radius: 0.75rem;
+  color: inherit;
+  background: var(--fv-surface, transparent);
+  font-size: 0.875rem;
+}
+.sync-health p {
+  margin: 0.35rem 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.sync-health summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  text-decoration: underline;
+}
+.sync-health-warning {
+  border-inline-start: 3px solid #b7791f;
+  padding-inline-start: 0.75rem;
+}
+.sync-health-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  padding-bottom: 0.5rem;
+}
+.sync-health table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 700px;
+}
+.sync-health th,
+.sync-health td {
+  padding: 0.6rem;
+  border-bottom: 1px solid var(--fv-border, #e5e2dc);
+  text-align: start;
+  white-space: nowrap;
+}
+.sync-health :focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.ca-company-identity {
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--fv-border, #e5e2dc);
+}
+.ca-company-identity button {
+  min-height: 44px;
+  margin: 0.25rem 0.5rem 0.25rem 0;
+}

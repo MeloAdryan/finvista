@@ -31,4 +31,20 @@ public class ContaAzulAutoItem {
     public Long lancamentoId;
     @Column(name = "concluido_em")
     public Instant concluidoEm;
+
+    @Column(name = "tentativas")
+    public Integer tentativas;
+
+
+    @Column(name = "resumo_json", columnDefinition = "text")
+    public String resumoJson;
+    @Column(name = "resumo_banco_hash", length = 64)
+    public String resumoBancoHash;
+    @Column(name = "resumo_fonte_hash", length = 64)
+    public String resumoFonteHash;
+    @Column(name = "resumo_verificado_em")
+    public Instant resumoVerificadoEm;
+    @Column(name = "reutilizado_de")
+    public UUID reutilizadoDe;
+
 }

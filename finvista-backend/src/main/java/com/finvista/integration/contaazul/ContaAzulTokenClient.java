@@ -3,7 +3,7 @@ package com.finvista.integration.contaazul;
 import com.fasterxml.jackson.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestClient;
@@ -25,20 +25,17 @@ public class ContaAzulTokenClient {
     private final RestClient http;
 
     @Autowired
+    public ContaAzulTokenClient(ContaAzulProperties p, ContaAzulHttpTransport transport) {
+        this(p, transport.client());
+    }
+
     public ContaAzulTokenClient(ContaAzulProperties p) {
-        this(p, criarHttp());
+        this(p, ContaAzulHttpTransport.shared());
     }
 
     public ContaAzulTokenClient(ContaAzulProperties p, RestClient http) {
         this.p = p;
         this.http = http;
-    }
-
-    private static RestClient criarHttp() {
-        var f = new SimpleClientHttpRequestFactory();
-        f.setConnectTimeout(5000);
-        f.setReadTimeout(20000);
-        return RestClient.builder().requestFactory(f).build();
     }
 
     public Tokens trocar(String code) {
@@ -61,9 +58,25 @@ public class ContaAzulTokenClient {
             Tokens t = http.post().uri(ENDPOINT).headers(h -> h.setBasicAuth(p.getClientId(), p.getClientSecret())).contentType(MediaType.APPLICATION_FORM_URLENCODED).body(form).retrieve().body(Tokens.class);
             if (t == null || t.access() == null || t.access().isBlank() || t.refresh() == null || t.refresh().isBlank() || t.expires() <= 0 || t.expires() > 86400 || !"Bearer".equalsIgnoreCase(t.tipo())) {
                 throw new IllegalArgumentException();
-            
-            }return t;
+
+            }
+            return t;
         } catch (Exception e) {
+            if ("refresh_token".equals(form.getFirst("grant_type"))
+                    && e instanceof org.springframework.web.client.RestClientResponseException http
+                    && (http.getStatusCode().value() == 400 || http.getStatusCode().value() == 401)) {
+                try {
+                    String body = http.getResponseBodyAsString();
+                    if (body.length() <= 16384) {
+                        var response = new com.fasterxml.jackson.databind.ObjectMapper().readTree(body);
+                        if (response != null && "invalid_grant".equals(response.path("error").asText())) {
+                            throw new ContaAzulReauthorizationRequired();
+                        }
+                    }
+                } catch (com.fasterxml.jackson.core.JsonProcessingException ignored) {
+
+                }
+            }
             throw new IllegalStateException("A Conta Azul não confirmou as credenciais. Tente autorizar novamente; nenhum token é exibido nesta resposta.", ContaAzulAutoDiagnostic.causaSegura(e));
         }
     }

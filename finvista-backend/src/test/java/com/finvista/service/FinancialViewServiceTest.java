@@ -384,4 +384,24 @@ class FinancialViewServiceTest {
         assertTrue(r.linhas().isEmpty());
         assertEquals(1,r.exclusoes().get("Renegociação: competência depende de vínculo conferido com o novo evento"));
     }
+
+    @Test void baixaDeMilReaisDistribui400EmSetembroE600EmOutubroParaReceitaEDespesa() throws Exception {
+        for (String tipo : List.of("RECEITA", "DESPESA")) {
+            var t = item(); t.setTipo(tipo); t.setOrigem("CONTA_AZUL_API");
+            t.setDocumentoReferencia("parcela"); t.setSituacao("QUITADO");
+            t.setValor(new BigDecimal("1000")); t.setValorRealizado(new BigDecimal("1000"));
+            t.setValorTotalRealizado(new BigDecimal("1000")); t.setValorTotalAberto(BigDecimal.ZERO);
+            t.setDataRealizacao(LocalDate.of(2026, 10, 10)); // Deliberately the last payment date.
+            var a = new ContaAzulParcelDetail.Baixa("a", "parcela", LocalDate.of(2026, 9, 10), composition("400", "0"));
+            var b = new ContaAzulParcelDetail.Baixa("b", "parcela", LocalDate.of(2026, 10, 10), composition("600", "0"));
+            var p = new ContaAzulParcelDetail("parcela", "Conta", "QUITADO", LocalDate.of(2027, 1, 5), new BigDecimal("1000"), new BigDecimal("1000"), BigDecimal.ZERO, composition("1000", "0"), new ContaAzulParcelDetail.Evento("evento", tipo, t.getDataCompetencia(), new ContaAzulParcelDetail.Condicao(1), List.of()), null, null, List.of(a, b));
+            var op = new ContaAzulApiOperation(UUID.randomUUID(), new Cliente("Teste"), 3L, "parcela", "INCLUIR", 1L, Instant.now(), null, "{}", new ObjectMapper().findAndRegisterModules().writeValueAsString(p));
+            when(operations.snapshotsAtuais(7L)).thenReturn(List.of(op));
+            var setembro = service.consultar(filter(Criterio.BAIXA, Periodo.PERSONALIZADO));
+            var outubro = service.consultar(new Filtro(Criterio.BAIXA, Periodo.PERSONALIZADO, Situacao.TODAS, today, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31), null, null));
+            assertEquals(0, new BigDecimal("400").compareTo("RECEITA".equals(tipo) ? setembro.totais().receita() : setembro.totais().despesa()));
+            assertEquals(0, new BigDecimal("600").compareTo("RECEITA".equals(tipo) ? outubro.totais().receita() : outubro.totais().despesa()));
+        }
+    }
+
 }

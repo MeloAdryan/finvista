@@ -186,7 +186,7 @@ public class ContaAzulApiSyncService {
         if (com.finvista.service.FinancialStatusPolicy.cancelado(parcela.status())) {
             return cancelarConfirmado(cliente, operador, operacaoId, parcela);
         }
-        var estado = estado(cliente.getId());
+        var estado = estadoAutomatico(cliente.getId(), parcela);
         var proposta = propor(cliente.getId(), parcela, estado, null, true);
         if ("INCLUIR".equals(proposta.acao()) && !incluirNovas) {
             throw conflito("Inclusão automática de novas parcelas desativada. Revise e sincronize individualmente ou autorize a inclusão na configuração.");
@@ -244,7 +244,7 @@ public class ContaAzulApiSyncService {
         if (p.evento() == null || p.evento().tipo() == null) {
             throw conflito("Cancelamento sem identificação do evento exige revisão.");
         }
-        var estado = estado(cliente.getId());
+        var estado = estadoIdentificado(cliente.getId(), p.id());
         var identificados = estado.registros().stream().filter(t -> ORIGEM.equals(t.getOrigem()) && p.id().equalsIgnoreCase(t.getDocumentoReferencia())).toList();
         if (identificados.size() != 1) {
             throw conflito("Parcela cancelada sem vínculo API único. Nenhum registro foi criado ou excluído.");
@@ -253,13 +253,17 @@ public class ContaAzulApiSyncService {
         if (!p.evento().tipo().equals(destino.getTipo())) {
             throw conflito("Cancelamento com tipo diferente do lançamento.");
         }
-        try { ContaAzulSettlementPolicy.conferir(p); }
-        catch (IllegalArgumentException e) { throw conflito("Cancelamento sem financeiro conferido: " + e.getMessage()); }
+        try {
+            ContaAzulSettlementPolicy.conferir(p);
+        } catch (IllegalArgumentException e) {
+            throw conflito("Cancelamento sem financeiro conferido: " + e.getMessage());
+        }
         var atuais = alocacoes(destino, estado.alocacoes());
         String antes = escrever(snapshot(destino, atuais));
         preencher(destino, cliente, p, atuais);
-        if (antes.equals(escrever(snapshot(destino, atuais))) && !baixasMudaram(destino, p))
+        if (antes.equals(escrever(snapshot(destino, atuais))) && !baixasMudaram(destino, p)) {
             return new Resultado(operacaoId, cliente.getId(), p.id(), "SEM_ALTERACAO", destino.getId(), clock.instant());
+        }
         transacoes.saveAndFlush(destino);
         var registro = new ContaAzulApiOperation(operacaoId, cliente, usuario, p.id(), "ATUALIZAR", destino.getId(), clock.instant(), antes, escrever(snapshot(destino, atuais)), escrever(p));
         operacoes.saveAndFlush(registro);
@@ -368,7 +372,7 @@ public class ContaAzulApiSyncService {
                 moeda(p.composicao().bruto()), financeiro.totalPago(), financeiro.totalAberto(), ordenados, detalhe(financeiro));
         var avisos = new ArrayList<String>(plano.avisos());
         avisos.addAll(destino == null ? List.of("A ausência de correspondências não comprova que a parcela seja nova. Confira os lançamentos da empresa antes de confirmar.")
-                        : List.of("Atualização restrita ao registro já identificado pelo ID externo da API."));
+                : List.of("Atualização restrita ao registro já identificado pelo ID externo da API."));
         return new Proposta(destino == null ? "INCLUIR" : "ATUALIZAR", destino, antes, depois, ordenados, List.copyOf(avisos));
     }
 
@@ -448,8 +452,7 @@ public class ContaAzulApiSyncService {
     private Estado estado(Long cliente) {
         var registros = transacoes.findByClienteId(cliente).stream().sorted(Comparator.comparing(FinancialTransaction::getId)).toList();
         var ids = registros.stream().map(FinancialTransaction::getId).toList();
-        var alocacoes = ids.isEmpty() ? List.<FinancialAllocation>of()
-                : rateios.findByLancamentoClienteIdAndLancamentoIdInOrderByLancamentoIdAscBlocoAsc(cliente, ids);
+        var alocacoes = carregarRateios(cliente, ids);
         return new Estado(registros, alocacoes);
     }
 
@@ -499,7 +502,7 @@ public class ContaAzulApiSyncService {
 
     private String assinar(Assinatura valor) {
         String payload = Base64.getUrlEncoder().withoutPadding().encodeToString(escrever(valor).getBytes(StandardCharsets.UTF_8));
-        return "v1." + payload + "." + Base64.getUrlEncoder().withoutPadding().encodeToString(mac(payload));
+        return "v2." + payload + "." + Base64.getUrlEncoder().withoutPadding().encodeToString(mac(payload));
     }
 
     private Assinatura ler(String token) {
@@ -508,7 +511,7 @@ public class ContaAzulApiSyncService {
                 throw new IllegalArgumentException();
             }
             String[] partes = token.split("\\.");
-            if (partes.length != 3 || !"v1".equals(partes[0])
+            if (partes.length != 3 || !"v2".equals(partes[0])
                     || !MessageDigest.isEqual(mac(partes[1]), Base64.getUrlDecoder().decode(partes[2]))) {
                 throw new IllegalArgumentException();
             }
@@ -520,13 +523,13 @@ public class ContaAzulApiSyncService {
 
     private byte[] mac(String payload) {
         try {
-            byte[] chave = Base64.getDecoder().decode(properties.getEncryptionKey());
+            byte[] chave = ContaAzulKeyDerivation.derive(properties.getEncryptionKey(), "preview-signing");
             if (chave.length != 32) {
                 throw new IllegalArgumentException();
             }
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(chave, "HmacSHA256"));
-            return mac.doFinal(("finvista:conta-azul-sync:v1:" + payload).getBytes(StandardCharsets.UTF_8));
+            return mac.doFinal(("finvista:conta-azul-sync:v2:" + payload).getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             throw new IllegalStateException("Não foi possível assinar a prévia. Confira a configuração da integração.");
         }
@@ -559,4 +562,122 @@ public class ContaAzulApiSyncService {
     private static ResponseStatusException conflito(String mensagem) {
         return new ResponseStatusException(HttpStatus.CONFLICT, mensagem);
     }
+
+    private List<FinancialAllocation> carregarRateios(Long cliente, List<Long> ids) {
+        var result = new ArrayList<FinancialAllocation>();
+        for (int n = 0; n < ids.size(); n += 500) {
+            result.addAll(rateios.findByLancamentoClienteIdAndLancamentoIdInOrderByLancamentoIdAscBlocoAsc(
+                    cliente, ids.subList(n, Math.min(ids.size(), n + 500))));
+        }
+        return List.copyOf(result);
+    }
+
+    private Estado estadoIdentificado(Long cliente, String referencia) {
+        var registros = transacoes.identidadeApi(cliente, ORIGEM, referencia.toLowerCase(Locale.ROOT),
+                org.springframework.data.domain.PageRequest.of(0, 2));
+        return new Estado(registros, carregarRateios(cliente, registros.stream().map(FinancialTransaction::getId).toList()));
+    }
+
+    private Estado estadoAutomatico(Long cliente, ContaAzulParcelDetail p) {
+        var identificado = estadoIdentificado(cliente, p.id());
+        if (identificado.registros().isEmpty() && transacoes.apiSemIdentidade(cliente, ORIGEM)) {
+            throw conflito("Há registros de API sem identidade externa. Revise-os antes de incluir parcelas.");
+        }
+
+        if (p.evento() == null || p.evento().tipo() == null || p.evento().competencia() == null || p.vencimento() == null || p.composicao() == null || p.descricao() == null) {
+            return identificado;
+        }
+        var encontrados = new LinkedHashMap<Long, FinancialTransaction>();
+        identificado.registros().forEach(t -> encontrados.put(t.getId(), t));
+        for (int pagina = 0;; pagina++) {
+            if (pagina >= 10000) {
+                throw conflito("Candidatos acima do limite de análise automática. Confira a parcela individualmente.");
+            }
+            var candidatos = transacoes.candidatosApi(cliente, p.id().toLowerCase(Locale.ROOT), p.evento().tipo(),
+                    p.vencimento(), p.evento().competencia(), p.descricao().trim(), p.composicao().bruto(), !identificado.registros().isEmpty(),
+                    org.springframework.data.domain.PageRequest.of(pagina, 256));
+            for (var t : candidatos) {
+                if (planos.possivel(t, p) || (!ORIGEM.equals(t.getOrigem()) && sobrepoe(t, p))) {
+                    encontrados.put(t.getId(), t);
+                }
+            }
+            if (encontrados.size() > 100) {
+                throw conflito("Há muitos candidatos a correspondência. Confira a parcela individualmente.");
+            }
+            if (candidatos.size() < 256) {
+                break;
+            }
+        }
+        return new Estado(encontrados.values().stream().sorted(Comparator.comparing(FinancialTransaction::getId)).toList(),
+                identificado.alocacoes());
+    }
+
+    boolean resumoReutilizavel(ContaAzulFinancialClient.Parcela r) {
+        if (r == null || r.alteradoEm() == null || r.alteradoEm().length() > 80
+                || r.total() == null || r.pago() == null || r.pendente() == null
+                || r.total().signum() <= 0 || r.pago().signum() < 0 || r.pendente().signum() < 0
+                || r.pago().add(r.pendente()).compareTo(r.total()) != 0
+                || !Set.of("PENDENTE", "EM_ABERTO", "QUITADO", "RECEBIDO", "RECEBIDO_PARCIAL", "ATRASADO").contains(r.status() == null ? "" : r.status())) {
+            return false;
+        }
+        try {
+            java.time.OffsetDateTime.parse(r.alteradoEm());
+            return true;
+        } catch (java.time.format.DateTimeParseException ignored) {
+            try {
+                java.time.LocalDateTime.parse(r.alteradoEm());
+                return true;
+            } catch (java.time.format.DateTimeParseException erro) {
+                return false;
+            }
+        }
+    }
+
+    boolean resumoConfere(ContaAzulFinancialClient.Parcela r, ContaAzulParcelDetail p) {
+        return resumoReutilizavel(r) && Objects.equals(r.id(), p.id()) && Objects.equals(r.status(), p.status())
+                && Objects.equals(r.vencimento(), p.vencimento()) && p.evento() != null
+                && Objects.equals(r.competencia(), p.evento().competencia())
+                && p.liquidoConferido() != null && p.pago() != null && p.pendente() != null
+                && r.total().compareTo(p.liquidoConferido()) == 0 && r.pago().compareTo(p.pago()) == 0
+                && r.pendente().compareTo(p.pendente()) == 0;
+    }
+
+    String bancoDaParcela(Long cliente, String parcela) {
+        var estado = estadoIdentificado(cliente, parcela);
+        if (estado.registros().size() != 1) {
+            return null;
+        }
+        return hash(snapshot(estado.registros().get(0), alocacoes(estado.registros().get(0), estado.alocacoes())));
+    }
+
+    String fonteDaParcela(ContaAzulParcelDetail parcela) {
+        return hash(parcela);
+    }
+
+    boolean cacheConfere(Long cliente, String parcela, String bancoHash, String fonteHash) {
+        var estado = estadoIdentificado(cliente, parcela);
+        if (estado.registros().size() != 1) {
+            return false;
+        }
+        var t = estado.registros().get(0);
+        if (!Objects.equals(bancoHash, hash(snapshot(t, alocacoes(t, estado.alocacoes()))))) {
+            return false;
+        }
+        var ultima = operacoes.findFirstByClienteIdAndLancamentoIdOrderByConcluidoEmDescIdDesc(cliente, t.getId());
+        if (ultima.isEmpty()) {
+            return false;
+        }
+        try {
+            var p = json.readValue(ultima.get().getOrigemSnapshot(), ContaAzulParcelDetail.class);
+            if (!Objects.equals(fonteHash, hash(p))) {
+                return false;
+            }
+
+            var atual = estadoAutomatico(cliente, p);
+            return atual.registros().stream().allMatch(x -> Objects.equals(x.getId(), t.getId()));
+        } catch (Exception erro) {
+            return false;
+        }
+    }
+
 }

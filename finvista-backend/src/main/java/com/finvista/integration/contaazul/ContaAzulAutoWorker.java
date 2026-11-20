@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import com.finvista.integration.contaazul.ContaAzulAutoState.*;
 
-@ Service 
+@ Service
 
     public class ContaAzulAutoWorker {
 
@@ -48,22 +48,21 @@ import com.finvista.integration.contaazul.ContaAzulAutoState.*;
                     var item = estado.proximo(reserva);
                     if (item != null) {
                         try {
+                            if (estado.reutilizarResumo(reserva, item.id)) continue;
                             limitar();
                             etapa = "OBTER_CURSOR";
                             if (estado.cursor(reserva).completa()) {
                                 etapa = "ACESSO";
-                                var token = acesso.acesso(cliente);
                                 etapa = "CONSULTAR_PARCELA_COMPLETA";
-                                var consulta = detalhes.consultarCompleto(token, item.parcelaId);
+                                var consulta = consultarAutorizado(cliente, token -> detalhes.consultarCompleto(token, item.parcelaId));
                                 etapa = "ARQUIVAR_PARCELA";
                                 estado.arquivar(reserva, "PARCELA", item.parcelaId, consulta.fonte());
                                 etapa = "APLICAR_PARCELA";
                                 estado.aplicar(reserva, item.id, consulta.parcela());
                             } else {
                                 etapa = "ACESSO";
-                                var token = acesso.acesso(cliente);
                                 etapa = "CONSULTAR_PARCELA";
-                                var parcela = detalhes.consultar(token, item.parcelaId);
+                                var parcela = consultarAutorizado(cliente, token -> detalhes.consultar(token, item.parcelaId));
                                 etapa = "APLICAR_PARCELA";
                                 estado.aplicar(reserva, item.id, parcela);
                             }
@@ -72,6 +71,9 @@ import com.finvista.integration.contaazul.ContaAzulAutoState.*;
                             if (status == 400 || status == 404 || status == 409) {
                                 estado.pendencia(reserva, item.id,
                                         e.getReason() == null ? "A parcela exige conferência individual." : e.getReason());
+                            } else if (("CONSULTAR_PARCELA".equals(etapa) || "CONSULTAR_PARCELA_COMPLETA".equals(etapa))
+                                    && status >= 500 && !ContaAzulAutoDiagnostic.http(e, 401) && !ContaAzulAutoDiagnostic.http(e, 403)) {
+                                if (!estado.falhaItem(reserva, item.id)) throw e;
                             } else {
                                 throw e;
                             }
@@ -90,26 +92,26 @@ import com.finvista.integration.contaazul.ContaAzulAutoState.*;
                                 throw new IllegalStateException("Cliente de movimentações indisponível.");
                             }
                             etapa = "ACESSO";
-                            var token = acesso.acesso(cliente);
                             etapa = cursor.etapa() == 2 ? "CONSULTAR_TRANSFERENCIAS" : "CONSULTAR_SALDOS_INICIAIS";
-                            var pagina = movimentos.consultar(token, cursor.etapa() == 2 ? "TRANSFERENCIA" : "SALDO_INICIAL", cursor.inicio(), cursor.fim(), cursor.pagina());
+                            var pagina = consultarAutorizado(cliente, token -> movimentos.consultar(token, cursor.etapa() == 2 ? "TRANSFERENCIA" : "SALDO_INICIAL", cursor.inicio(), cursor.fim(), cursor.pagina()));
                             etapa = "GRAVAR_MOVIMENTOS";
                             estado.paginaMovimentos(reserva, pagina);
                             continue;
                         }
                         var tipo = cursor.etapa() == 0 ? ContaAzulFinancialClient.Tipo.RECEITA : ContaAzulFinancialClient.Tipo.DESPESA;
                         etapa = "ACESSO";
-                        var token = acesso.acesso(cliente);
                         etapa = cursor.etapa() == 0 ? "LISTAR_RECEITAS" : "LISTAR_DESPESAS";
-                        var pagina = cursor.alteracoesDesde() == null
+                        var pagina = consultarAutorizado(cliente, token -> cursor.alteracoesDesde() == null
                                 ? financeiro.consultar(token, tipo, cursor.inicio(), cursor.fim(), cursor.pagina())
-                                : financeiro.consultarAlteradas(token, tipo, cursor.inicio(), cursor.fim(), cursor.pagina(), cursor.alteracoesDesde(), cursor.alteracoesAte());
+                                : financeiro.consultarAlteradas(token, tipo, cursor.inicio(), cursor.fim(), cursor.pagina(), cursor.alteracoesDesde(), cursor.alteracoesAte()));
                         etapa = "GRAVAR_PAGINA";
                         estado.pagina(reserva, pagina);
                     }
                 }
                 etapa = "DEVOLVER_RESERVA";
                 estado.devolver(reserva, false);
+            } catch (ContaAzulReauthorizationRequired e) {
+                // Connection state and pause were committed in their own transaction.
             } catch (ReservaPerdida e) {
                 // Outra instância, pausa ou alteração de configuração assumiu a execução.
             } catch (InterruptedException e) {
@@ -122,13 +124,14 @@ import com.finvista.integration.contaazul.ContaAzulAutoState.*;
                         && estado.dividirPeriodoParcelas(reserva)) {
                     return;
                 }
+                if (e instanceof ContaAzulFinancialClient.PaginaInstavel && estado.repetirPaginaInstavel(reserva)) return;
                 boolean parcial = e.getStatusCode().value() == 409;
                 registrarFalha(reserva, (e.getStatusCode().value() == 429 ? "Limite de consultas atingido. Nova tentativa com espera progressiva."
                         : parcial ? "A listagem não pôde ser conferida integralmente. Reduza o período ou consulte os dados antes de repetir."
-                                : "A Conta Azul não concluiu a consulta. Confira a conexão; a execução será retomada com espera progressiva.") + " Referência: " + referencia + ".", parcial);
+                                : "A Conta Azul não concluiu a consulta. Confira a conexão; a execução será retomada com espera progressiva.") + " Referência: " + referencia + ".", parcial, ContaAzulAutoDiagnostic.retryAfter(e));
             } catch (Exception e) {
                 String referencia = diagnosticar(reserva, etapa, e);
-                registrarFalha(reserva, "Não foi possível concluir esta etapa. Confira a autorização e os registros; a fila será retomada com espera progressiva. Referência: " + referencia + ".", false);
+                registrarFalha(reserva, "Não foi possível concluir esta etapa. Confira a autorização e os registros; a fila será retomada com espera progressiva. Referência: " + referencia + ".", false, ContaAzulAutoDiagnostic.retryAfter(e));
             }
         }
 
@@ -148,6 +151,30 @@ import com.finvista.integration.contaazul.ContaAzulAutoState.*;
         }
 
         protected void limitar() throws InterruptedException {
-            Thread.sleep(600);
+            // Network pacing is shared at the HTTP boundary; cached items incur no fixed sleep.
         }
-    }
+
+        private <T> T consultarAutorizado(Long cliente, java.util.function.Function<String, T> consulta) {
+            String token = acesso.acesso(cliente);
+            try {
+                return consulta.apply(token);
+            } catch (ResponseStatusException erro) {
+                if (!ContaAzulAutoDiagnostic.http(erro, 401)) throw erro;
+                String renovado = acesso.renovarAposRecusa(cliente, token);
+                try {
+                    return consulta.apply(renovado);
+                } catch (ResponseStatusException segunda) {
+                    if (ContaAzulAutoDiagnostic.http(segunda, 401)) acesso.invalidar(cliente);
+                    throw segunda;
+                }
+            }
+        }
+
+
+        private void registrarFalha(Reserva reserva, String mensagem, boolean parcial, java.time.Instant retryAfter) {
+            if (retryAfter == null) { registrarFalha(reserva, mensagem, parcial); return; }
+            try { estado.falhar(reserva, mensagem, parcial, retryAfter); }
+            catch (ReservaPerdida ignored) { }
+        }
+
+}

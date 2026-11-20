@@ -31,7 +31,9 @@ class ContaAzulConnectionServiceTest {
         repo = mock(ContaAzulConnectionRepository.class);
         ctx = mock(ClienteContextService.class);
         when(ctx.getClienteAtualId()).thenReturn(1L);
-        service = new ContaAzulConnectionService(p, new ContaAzulConfiguration(p), cipher, tokens, repo, ctx);
+        var access = new ContaAzulAutoAccess(repo, cipher, tokens, new ContaAzulConfiguration(p), java.time.Clock.systemUTC());
+        org.springframework.test.util.ReflectionTestUtils.setField(access, "journal", mock(ContaAzulTokenJournal.class));
+        service = new ContaAzulConnectionService(p, new ContaAzulConfiguration(p), cipher, tokens, repo, ctx, access);
     }
 
     @Test
@@ -67,4 +69,21 @@ class ContaAzulConnectionServiceTest {
         assertThrows(IllegalStateException.class, () -> service.renovar());
         verifyNoInteractions(tokens, repo);
     }
+
+    @Test void statusExplicaReautorizacaoENovaConexaoLimpaErro() {
+        var c = new ContaAzulConnection(1L);
+        c.atualizar("ac", "rc", Instant.now(), Instant.now());
+        c.reautorizar(Instant.now());
+        when(repo.findById(1L)).thenReturn(Optional.of(c));
+        assertEquals("REAUTORIZAR", service.status().status());
+        assertFalse(service.status().conectado());
+        assertNotNull(service.status().ultimoErro());
+        when(repo.bloquear(1L)).thenReturn(Optional.of(c));
+        when(tokens.trocar("code")).thenReturn(new ContaAzulTokenClient.Tokens("novo", "refresh", 3600, "Bearer"));
+        service.conectar(1L, "code");
+        assertEquals("ATIVA", service.status().status());
+        assertTrue(service.status().conectado());
+        assertNull(service.status().ultimoErro());
+    }
+
 }

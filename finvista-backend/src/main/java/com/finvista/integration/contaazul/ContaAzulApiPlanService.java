@@ -96,8 +96,8 @@ public class ContaAzulApiPlanService {
                         l.getDataCompetencia(), l.getDataVencimento(), l.getValor(), l.getOrigem())).toList(), encontrados.size());
     }
 
-    private boolean possivel(FinancialTransaction l, ContaAzulParcelDetail p) {
-       
+    boolean possivel(FinancialTransaction l, ContaAzulParcelDetail p) {
+
         if (ORIGEM_API.equals(l.getOrigem()) && texto(l.getDocumentoReferencia())
                 .matches("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) return false;
         if (p.evento() == null || !Objects.equals(l.getTipo(), p.evento().tipo())) {

@@ -16,6 +16,7 @@ class ContaAzulReadAccessTest {
     ContaAzulConnectionRepository repo;
     ClienteContextService ctx;
     ContaAzulConnectionService service;
+    ContaAzulTokenClient tokens;
 
     @BeforeEach
     void setup() {
@@ -29,7 +30,11 @@ class ContaAzulReadAccessTest {
         repo = mock(ContaAzulConnectionRepository.class);
         ctx = mock(ClienteContextService.class);
         when(ctx.getClienteAtualId()).thenReturn(1L);
-        service = new ContaAzulConnectionService(p, new ContaAzulConfiguration(p), cipher, mock(ContaAzulTokenClient.class), repo, ctx);
+        tokens = mock(ContaAzulTokenClient.class);
+        when(tokens.renovar("refresh")).thenReturn(new ContaAzulTokenClient.Tokens("novo-access", "novo-refresh", 3600, "Bearer"));
+        var access = new ContaAzulAutoAccess(repo, cipher, tokens, new ContaAzulConfiguration(p), java.time.Clock.systemUTC());
+        org.springframework.test.util.ReflectionTestUtils.setField(access, "journal", mock(ContaAzulTokenJournal.class));
+        service = new ContaAzulConnectionService(p, new ContaAzulConfiguration(p), cipher, tokens, repo, ctx, access);
     }
 
     @Test
@@ -54,21 +59,33 @@ class ContaAzulReadAccessTest {
     ContaAzulConnection record(Instant expiration) {
         var c = new ContaAzulConnection(1L);
         c.atualizar(cipher.cifrar("access", 1L, "access"), cipher.cifrar("refresh", 1L, "refresh"), expiration, Instant.now());
+        c.identificar("external","05206246000138","Empresa",Instant.now());
+        c.confirmarEmpresa(3L,Instant.now());
         when(repo.findById(1L)).thenReturn(Optional.of(c));
+        when(repo.bloquear(1L)).thenReturn(Optional.of(c));
         return c;
     }
 
     @Test
-    void expiredRejected() {
-        record(Instant.now().minusSeconds(1));
-        assertThrows(IllegalArgumentException.class, () -> service.acessoParaConsulta(1L));
-        verify(repo, never()).saveAndFlush(any());
+    void unconfirmedCompanyCannotReadFinancialData() {
+        var c=record(Instant.now().plusSeconds(3600));c.exigirConfirmacaoEmpresa();
+        assertThrows(IllegalArgumentException.class,()->service.acessoParaConsulta(1L));
+        verifyNoInteractions(tokens);
     }
 
     @Test
-    void imminentExpiryRejected() {
+    void expiredRenewsAutomatically() {
+        record(Instant.now().minusSeconds(1));
+        assertEquals("novo-access", service.acessoParaConsulta(1L));
+        verify(tokens).renovar("refresh");
+        verify(repo).saveAndFlush(any());
+    }
+
+    @Test
+    void imminentExpiryRenewsAutomatically() {
         record(Instant.now().plusSeconds(10));
-        assertThrows(IllegalArgumentException.class, () -> service.acessoParaConsulta(1L));
+        assertEquals("novo-access", service.acessoParaConsulta(1L));
+        verify(tokens).renovar("refresh");
     }
 
     @Test

@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.util.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -25,20 +25,15 @@ public class ContaAzulAccountsClient {
     private final RestClient http;
 
     @Autowired
-    public ContaAzulAccountsClient() {
-        this(criarHttp());
-    }
+    public ContaAzulAccountsClient(ContaAzulHttpTransport transport) { this(transport.client()); }
+
+    public ContaAzulAccountsClient() { this(ContaAzulHttpTransport.shared()); }
 
     public ContaAzulAccountsClient(RestClient http) {
         this.http = http;
     }
 
-    private static RestClient criarHttp() {
-        var factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(3000);
-        factory.setReadTimeout(5000);
-        return RestClient.builder().requestFactory(factory).build();
-    }
+
 
     public List<Conta> listar(String acesso) {
         try {

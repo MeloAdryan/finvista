@@ -7,6 +7,8 @@ export interface ContaAzulStatus {
   conectado: boolean;
   expiraEm: string | null;
   mensagem: string;
+  status?: "ATIVA" | "REAUTORIZAR" | "NAO_CONECTADA";
+  ultimoErro?: string | null;
 }
 async function request<T>(
   path: string,
@@ -41,3 +43,51 @@ export const autorizarContaAzul = () =>
   request<{ authorizationUrl: string }>("autorizacao", "POST");
 export const renovarContaAzul = () =>
   request<ContaAzulStatus>("renovar", "POST");
+
+export type EmpresaContaAzul = {
+  clienteId: number;
+  id: string | null;
+  documento: string | null;
+  nome: string | null;
+  verificadaEm: string | null;
+  confirmadaEm: string | null;
+};
+export async function empresaContaAzul(
+  acao: "consultar" | "verificar" | "confirmar",
+  pedido?: EmpresaContaAzul,
+): Promise<EmpresaContaAzul> {
+  const r = await apiFetch(
+    `${API_URL}/api/integracoes/conta-azul/empresa${acao === "consultar" ? "" : `/${acao}`}`,
+    {
+      method: acao === "consultar" ? "GET" : "POST",
+      credentials: "include",
+      headers:
+        acao === "consultar"
+          ? undefined
+          : {
+              "X-Finvista-Integration": "1",
+              "Content-Type": "application/json",
+            },
+      body:
+        acao === "confirmar"
+          ? JSON.stringify({
+              clienteId: pedido?.clienteId,
+              id: pedido?.id,
+              documento: pedido?.documento,
+              confirmo: true,
+            })
+          : undefined,
+    },
+  );
+  if (!r.ok) {
+    let mensagem = "Não foi possível verificar ou confirmar a empresa.";
+    try {
+      const d = await r.json();
+      mensagem = d.mensagem || d.erro || d.message || mensagem;
+    } catch {
+      /* use safe fallback */
+    }
+    throw new Error(mensagem);
+  }
+  return r.json() as Promise<EmpresaContaAzul>;
+}

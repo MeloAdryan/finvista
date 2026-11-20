@@ -7,7 +7,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.HashSet;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -38,27 +38,29 @@ public class ContaAzulFinancialClient {
             @JsonProperty("data_competencia") LocalDate competencia,
             String status, @JsonProperty("status_traduzido") String statusTraduzido,
             BigDecimal total, BigDecimal pago, @JsonProperty("nao_pago") BigDecimal pendente,
-            List<Classificacao> categorias, @JsonProperty("centros_custo") List<Classificacao> centros) {}
+            List<Classificacao> categorias, @JsonProperty("centros_custo") List<Classificacao> centros,
+            @JsonProperty("data_alteracao") String alteradoEm) {
+        public Parcela(String id, String descricao, LocalDate vencimento, LocalDate competencia,
+                String status, String statusTraduzido, BigDecimal total, BigDecimal pago, BigDecimal pendente,
+                List<Classificacao> categorias, List<Classificacao> centros) {
+            this(id, descricao, vencimento, competencia, status, statusTraduzido, total, pago, pendente, categorias, centros, null);
+        }
+    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Pagina(@JsonProperty("itens_totais") Integer totalItens, List<Parcela> itens) {}
     private final RestClient http;
 
     @Autowired
-    public ContaAzulFinancialClient() {
-        this(criarHttp());
-    }
+    public ContaAzulFinancialClient(ContaAzulHttpTransport transport) { this(transport.client()); }
+
+    public ContaAzulFinancialClient() { this(ContaAzulHttpTransport.shared()); }
 
     public ContaAzulFinancialClient(RestClient http) {
         this.http = http;
     }
 
-    private static RestClient criarHttp() {
-        var f = new SimpleClientHttpRequestFactory();
-        f.setConnectTimeout(5000);
-        f.setReadTimeout(20000);
-        return RestClient.builder().requestFactory(f).build();
-    }
+
 
     public Pagina consultar(String acesso, Tipo tipo, LocalDate inicio, LocalDate fim, int pagina) {
         return consultar(acesso, tipo, inicio, fim, pagina, false, inicio, fim, null, null);
@@ -76,6 +78,10 @@ public class ContaAzulFinancialClient {
 
     private Pagina consultar(String acesso, Tipo tipo, LocalDate inicio, LocalDate fim, int pagina, boolean competencia, LocalDate vencimentoInicio, LocalDate vencimentoFim,
             java.time.Instant desde, java.time.Instant ate) {
+        String consulta = " consulta=" + tipo.name() + " pagina=" + pagina + " tamanho=" + TAMANHO
+                + " vencimentoDe=" + vencimentoInicio + " vencimentoAte=" + vencimentoFim
+                + " competencia=" + competencia + " competenciaDe=" + (competencia ? inicio : null)
+                + " competenciaAte=" + (competencia ? fim : null) + " alteracaoDe=" + desde + " alteracaoAte=" + ate;
         try {
             String endpoint = BASE + "/v1/financeiro/eventos-financeiros/" + tipo.segmento + "/buscar";
             var builder = org.springframework.web.util.UriComponentsBuilder.fromUriString(endpoint)
@@ -96,37 +102,16 @@ public class ContaAzulFinancialClient {
             return result;
         } catch (RestClientResponseException e) {
             int code = e.getStatusCode().value();
-            if (code == 401 || code == 403) {
-                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "A Conta Azul recusou o acesso. Renove ou autorize a conexão novamente.", ContaAzulAutoDiagnostic.causaSegura(e,
-                    " consulta=" + tipo.name() + " pagina=" + pagina + " tamanho=" + TAMANHO
-                    + " vencimentoDe=" + vencimentoInicio + " vencimentoAte=" + vencimentoFim
-                    + " competencia=" + competencia + " competenciaDe=" + (competencia ? inicio : null)
-                    + " competenciaAte=" + (competencia ? fim : null)
-                    + " alteracaoDe=" + desde + " alteracaoAte=" + ate));
-            }
-            if (code == 429) {
-                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Limite de consultas da Conta Azul atingido. Aguarde antes de tentar novamente.", ContaAzulAutoDiagnostic.causaSegura(e,
-                    " consulta=" + tipo.name() + " pagina=" + pagina + " tamanho=" + TAMANHO
-                    + " vencimentoDe=" + vencimentoInicio + " vencimentoAte=" + vencimentoFim
-                    + " competencia=" + competencia + " competenciaDe=" + (competencia ? inicio : null)
-                    + " competenciaAte=" + (competencia ? fim : null)
-                    + " alteracaoDe=" + desde + " alteracaoAte=" + ate));
-            }
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "A Conta Azul não concluiu a consulta. Tente novamente mais tarde.", ContaAzulAutoDiagnostic.causaSegura(e,
-                    " consulta=" + tipo.name() + " pagina=" + pagina + " tamanho=" + TAMANHO
-                    + " vencimentoDe=" + vencimentoInicio + " vencimentoAte=" + vencimentoFim
-                    + " competencia=" + competencia + " competenciaDe=" + (competencia ? inicio : null)
-                    + " competenciaAte=" + (competencia ? fim : null)
-                    + " alteracaoDe=" + desde + " alteracaoAte=" + ate));
-        } catch (ResponseStatusException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "A consulta não retornou uma página válida. Nenhum lançamento foi importado.", ContaAzulAutoDiagnostic.causaSegura(e,
-                    " consulta=" + tipo.name() + " pagina=" + pagina + " tamanho=" + TAMANHO
-                    + " vencimentoDe=" + vencimentoInicio + " vencimentoAte=" + vencimentoFim
-                    + " competencia=" + competencia + " competenciaDe=" + (competencia ? inicio : null)
-                    + " competenciaAte=" + (competencia ? fim : null)
-                    + " alteracaoDe=" + desde + " alteracaoAte=" + ate));
+            String mensagem = code == 401 || code == 403
+                    ? "A Conta Azul recusou o acesso. Renove ou autorize a conexão novamente."
+                    : code == 429 ? "Limite de consultas da Conta Azul atingido. Aguarde antes de tentar novamente."
+                    : "A Conta Azul não concluiu a consulta. Tente novamente mais tarde.";
+            throw new ResponseStatusException(code == 429 ? HttpStatus.TOO_MANY_REQUESTS : HttpStatus.BAD_GATEWAY,
+                    mensagem, ContaAzulAutoDiagnostic.causaSegura(e, consulta));
+        } catch (ResponseStatusException e) { throw e; }
+        catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "A consulta não retornou uma página válida. Nenhum lançamento foi importado.", ContaAzulAutoDiagnostic.causaSegura(e, consulta));
         }
     }
 
@@ -136,15 +121,21 @@ public class ContaAzulFinancialClient {
         }
         var ids = new HashSet<String>();
         for (Parcela item : p.itens()) {
-            if (item == null || item.id() == null || item.id().isBlank() || !ids.add(item.id())) {
+            if (item == null || item.id() == null || item.id().isBlank()) {
                 throw new IllegalArgumentException();
             }
+            if (!ids.add(item.id().toLowerCase(java.util.Locale.ROOT))) throw new PaginaInstavel();
             LocalDate dataFiltro = competencia ? item.competencia() : item.vencimento();
             if (dataFiltro != null && (dataFiltro.isBefore(inicio) || dataFiltro.isAfter(fim))) {
                 throw new IllegalArgumentException();
             }
-            
+
 
         }
     }
+
+    static final class PaginaInstavel extends ResponseStatusException {
+        PaginaInstavel() { super(HttpStatus.CONFLICT, "A paginação repetiu uma identidade de parcela; repita a janela."); }
+    }
+
 }

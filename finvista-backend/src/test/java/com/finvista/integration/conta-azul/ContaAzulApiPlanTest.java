@@ -258,6 +258,7 @@ class ContaAzulApiPlanTest {
         assertThrows(IllegalArgumentException.class, () -> controller.planejar("id-invalido", 1L));
         verifyNoInteractions(conexoes, detalhes, planos);
     }
+
     private void classificacaoPendente(ContaAzulParcelDetail p) {
         var plano = service.planejar(1L, p);
         assertEquals(ContaAzulApiPlanService.Situacao.SEM_CORRESPONDENCIA, plano.situacao());
